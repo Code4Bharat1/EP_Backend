@@ -1,0 +1,22 @@
+{
+  "port": 3306,
+  "mysql": {
+    "host": "auth-db982.hstgr.io",
+    "username": "u273147311_admin",
+    "password": "Code4bharat@123",
+    "database": "u273147311_examportal",
+    "dialect": "mysql",
+    "logging": false
+  },
+  "jwtSecret": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+  "mailAuth": {
+    "user": "globalinnovatorolympiad@gmail.com",
+    "pass": "jrmd jhry luqr pbed"
+  },
+  "cloudinaryauth": {
+    "name": "dzr2tkhhx",
+    "api_key": "279447799618653",
+    "api_secret": "lOLD453DVeu1DcKoo1wz-691sPo"
+  },
+  "airPredictorApi": "http://127.0.0.1:8000/predict"
+}

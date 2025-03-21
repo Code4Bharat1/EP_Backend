@@ -1,0 +1,834 @@
+{
+    "Physics": {
+        "High Weightage Chapters": {
+            "Mechanics (Laws of Motion": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Work": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Power & Energy": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Circular Motion)": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Electrostatics (Electric Charges & Fields": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Potential & Capacitance)": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Optics (Ray Optics & Wave Optics)": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Modern Physics (Atomic Structure": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Nuclei)": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Thermodynamics (Laws of Thermodynamics)": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            }
+        },
+        "Moderate Weightage Chapters": {
+            "Units & Measurements": {
+                "weightage": "Moderate",
+                "expected_questions": 5,
+                "difficulty": "Moderate",
+                "time_to_complete": "4 hours",
+                "recommended_tests": 3,
+                "focus_priority": "Medium"
+            },
+            "Kinematics": {
+                "weightage": "Moderate",
+                "expected_questions": 5,
+                "difficulty": "Moderate",
+                "time_to_complete": "4 hours",
+                "recommended_tests": 3,
+                "focus_priority": "Medium"
+            },
+            "Current Electricity": {
+                "weightage": "Moderate",
+                "expected_questions": 5,
+                "difficulty": "Moderate",
+                "time_to_complete": "4 hours",
+                "recommended_tests": 3,
+                "focus_priority": "Medium"
+            },
+            "Magnetic Effects of Current": {
+                "weightage": "Moderate",
+                "expected_questions": 5,
+                "difficulty": "Moderate",
+                "time_to_complete": "4 hours",
+                "recommended_tests": 3,
+                "focus_priority": "Medium"
+            },
+            "Electromagnetic Induction": {
+                "weightage": "Moderate",
+                "expected_questions": 5,
+                "difficulty": "Moderate",
+                "time_to_complete": "4 hours",
+                "recommended_tests": 3,
+                "focus_priority": "Medium"
+            },
+            "Oscillations & Waves": {
+                "weightage": "Moderate",
+                "expected_questions": 5,
+                "difficulty": "Moderate",
+                "time_to_complete": "4 hours",
+                "recommended_tests": 3,
+                "focus_priority": "Medium"
+            }
+        },
+        "Low Weightage Chapters": {
+            "Gravitation": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Fluid Mechanics": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Electromagnetic Waves": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Ray Optics 2. Chemistry High Weightage Chapters (8-10 questions): Physical Chemistry (Chemical Equilibrium": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Thermodynamics": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Solutions)": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Inorganic Chemistry (p-Block Elements": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Coordination Compounds)": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Organic Chemistry (Carbonyl Compounds": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Biomolecules) Moderate Weightage Chapters (5-7 questions): Chemical Kinetics": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "States of Matter": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Chemical Bonding": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "s-Block Elements": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "d-Block Elements": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Alkanes & Alkenes Low Weightage Chapters (1-3 questions): Surface Chemistry": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Polymers": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Chemistry in Everyday Life": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Haloalkanes & Haloarenes 3. Biology: High Weightage Chapters (12-15 questions): Ecology & Environment": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Unit I & II of Zoology (Animal Kingdom": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Human Physiology)": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Unit I & II of Botany (Morphology": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Plant Physiology) Moderate Weightage Chapters (8-10 questions): Cell Biology & Genetics": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Unit III of Zoology (Reproduction & Genetics)": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Unit III of Botany (Reproduction": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Plant Growth & Development) Low Weightage Chapters (4-6 questions): Diversity of Living Organisms": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Biological Classification": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Biotechnology & Its Application.": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            }
+        }
+    },
+    "Chemistry": {
+        "High Weightage Chapters": {
+            "Mechanics (Laws of Motion": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Work": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Power & Energy": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Circular Motion)": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Electrostatics (Electric Charges & Fields": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Potential & Capacitance)": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Optics (Ray Optics & Wave Optics)": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Modern Physics (Atomic Structure": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Nuclei)": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            },
+            "Thermodynamics (Laws of Thermodynamics)": {
+                "weightage": "High",
+                "expected_questions": 10,
+                "difficulty": "Hard",
+                "time_to_complete": "8 hours",
+                "recommended_tests": 6,
+                "focus_priority": "High"
+            }
+        },
+        "Moderate Weightage Chapters": {
+            "Units & Measurements": {
+                "weightage": "Moderate",
+                "expected_questions": 5,
+                "difficulty": "Moderate",
+                "time_to_complete": "4 hours",
+                "recommended_tests": 3,
+                "focus_priority": "Medium"
+            },
+            "Kinematics": {
+                "weightage": "Moderate",
+                "expected_questions": 5,
+                "difficulty": "Moderate",
+                "time_to_complete": "4 hours",
+                "recommended_tests": 3,
+                "focus_priority": "Medium"
+            },
+            "Current Electricity": {
+                "weightage": "Moderate",
+                "expected_questions": 5,
+                "difficulty": "Moderate",
+                "time_to_complete": "4 hours",
+                "recommended_tests": 3,
+                "focus_priority": "Medium"
+            },
+            "Magnetic Effects of Current": {
+                "weightage": "Moderate",
+                "expected_questions": 5,
+                "difficulty": "Moderate",
+                "time_to_complete": "4 hours",
+                "recommended_tests": 3,
+                "focus_priority": "Medium"
+            },
+            "Electromagnetic Induction": {
+                "weightage": "Moderate",
+                "expected_questions": 5,
+                "difficulty": "Moderate",
+                "time_to_complete": "4 hours",
+                "recommended_tests": 3,
+                "focus_priority": "Medium"
+            },
+            "Oscillations & Waves": {
+                "weightage": "Moderate",
+                "expected_questions": 5,
+                "difficulty": "Moderate",
+                "time_to_complete": "4 hours",
+                "recommended_tests": 3,
+                "focus_priority": "Medium"
+            }
+        },
+        "Low Weightage Chapters": {
+            "Gravitation": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Fluid Mechanics": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Electromagnetic Waves": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Ray Optics 2. Chemistry High Weightage Chapters (8-10 questions): Physical Chemistry (Chemical Equilibrium": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Thermodynamics": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Solutions)": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Inorganic Chemistry (p-Block Elements": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Coordination Compounds)": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Organic Chemistry (Carbonyl Compounds": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Biomolecules) Moderate Weightage Chapters (5-7 questions): Chemical Kinetics": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "States of Matter": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Chemical Bonding": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "s-Block Elements": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "d-Block Elements": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Alkanes & Alkenes Low Weightage Chapters (1-3 questions): Surface Chemistry": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Polymers": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Chemistry in Everyday Life": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Haloalkanes & Haloarenes 3. Biology: High Weightage Chapters (12-15 questions): Ecology & Environment": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Unit I & II of Zoology (Animal Kingdom": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Human Physiology)": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Unit I & II of Botany (Morphology": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Plant Physiology) Moderate Weightage Chapters (8-10 questions): Cell Biology & Genetics": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Unit III of Zoology (Reproduction & Genetics)": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Unit III of Botany (Reproduction": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Plant Growth & Development) Low Weightage Chapters (4-6 questions): Diversity of Living Organisms": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Biological Classification": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            },
+            "Biotechnology & Its Application.": {
+                "weightage": "Low",
+                "expected_questions": 2,
+                "difficulty": "Easy",
+                "time_to_complete": "2 hours",
+                "recommended_tests": 2,
+                "focus_priority": "Low"
+            }
+        }
+    },
+    "Biology": {
+        "Zoology": {
+            "High Weightage Chapters": {},
+            "Moderate Weightage Chapters": {
+                "Cell Biology & Genetics": {
+                    "weightage": "Moderate",
+                    "expected_questions": 5,
+                    "difficulty": "Moderate",
+                    "time_to_complete": "4 hours",
+                    "recommended_tests": 3,
+                    "focus_priority": "Medium"
+                },
+                "Unit III of Zoology (Reproduction & Genetics)": {
+                    "weightage": "Moderate",
+                    "expected_questions": 5,
+                    "difficulty": "Moderate",
+                    "time_to_complete": "4 hours",
+                    "recommended_tests": 3,
+                    "focus_priority": "Medium"
+                },
+                "Unit III of Botany (Reproduction": {
+                    "weightage": "Moderate",
+                    "expected_questions": 5,
+                    "difficulty": "Moderate",
+                    "time_to_complete": "4 hours",
+                    "recommended_tests": 3,
+                    "focus_priority": "Medium"
+                },
+                "Plant Growth & Development)": {
+                    "weightage": "Moderate",
+                    "expected_questions": 5,
+                    "difficulty": "Moderate",
+                    "time_to_complete": "4 hours",
+                    "recommended_tests": 3,
+                    "focus_priority": "Medium"
+                }
+            },
+            "Low Weightage Chapters": {
+                "Diversity of Living Organisms": {
+                    "weightage": "Low",
+                    "expected_questions": 2,
+                    "difficulty": "Easy",
+                    "time_to_complete": "2 hours",
+                    "recommended_tests": 2,
+                    "focus_priority": "Low"
+                },
+                "Biological Classification": {
+                    "weightage": "Low",
+                    "expected_questions": 2,
+                    "difficulty": "Easy",
+                    "time_to_complete": "2 hours",
+                    "recommended_tests": 2,
+                    "focus_priority": "Low"
+                },
+                "Biotechnology & Its Application.": {
+                    "weightage": "Low",
+                    "expected_questions": 2,
+                    "difficulty": "Easy",
+                    "time_to_complete": "2 hours",
+                    "recommended_tests": 2,
+                    "focus_priority": "Low"
+                }
+            }
+        },
+        "Botany": {
+            "High Weightage Chapters": {},
+            "Moderate Weightage Chapters": {
+                "Cell Biology & Genetics": {
+                    "weightage": "Moderate",
+                    "expected_questions": 5,
+                    "difficulty": "Moderate",
+                    "time_to_complete": "4 hours",
+                    "recommended_tests": 3,
+                    "focus_priority": "Medium"
+                },
+                "Unit III of Zoology (Reproduction & Genetics)": {
+                    "weightage": "Moderate",
+                    "expected_questions": 5,
+                    "difficulty": "Moderate",
+                    "time_to_complete": "4 hours",
+                    "recommended_tests": 3,
+                    "focus_priority": "Medium"
+                },
+                "Unit III of Botany (Reproduction": {
+                    "weightage": "Moderate",
+                    "expected_questions": 5,
+                    "difficulty": "Moderate",
+                    "time_to_complete": "4 hours",
+                    "recommended_tests": 3,
+                    "focus_priority": "Medium"
+                },
+                "Plant Growth & Development)": {
+                    "weightage": "Moderate",
+                    "expected_questions": 5,
+                    "difficulty": "Moderate",
+                    "time_to_complete": "4 hours",
+                    "recommended_tests": 3,
+                    "focus_priority": "Medium"
+                }
+            },
+            "Low Weightage Chapters": {
+                "Diversity of Living Organisms": {
+                    "weightage": "Low",
+                    "expected_questions": 2,
+                    "difficulty": "Easy",
+                    "time_to_complete": "2 hours",
+                    "recommended_tests": 2,
+                    "focus_priority": "Low"
+                },
+                "Biological Classification": {
+                    "weightage": "Low",
+                    "expected_questions": 2,
+                    "difficulty": "Easy",
+                    "time_to_complete": "2 hours",
+                    "recommended_tests": 2,
+                    "focus_priority": "Low"
+                },
+                "Biotechnology & Its Application.": {
+                    "weightage": "Low",
+                    "expected_questions": 2,
+                    "difficulty": "Easy",
+                    "time_to_complete": "2 hours",
+                    "recommended_tests": 2,
+                    "focus_priority": "Low"
+                }
+            }
+        }
+    }
+}

@@ -11,6 +11,8 @@ import airPredictorRoutes from './src/routes/airPredictor.router.js'
 import adminRoutes from './src/routes/admin.router.js'
 import Admintest from './src/routes/admintest.router.js'
 import FullTestRoute from './src/routes/fulltestresult.route.js'
+import createtestRoute from './src/routes/createtest.route.js'
+
 const app = express();
 const port = config.get('port') || 3306;
 const corsOptions = {
@@ -32,6 +34,7 @@ app.use("/api", startrecotestRoute);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admintest", Admintest);
 app.use("/api/fulltest", FullTestRoute);
+app.use("/api/createtest", createtestRoute);
 
 // Start the server
 app.listen(port, () => {

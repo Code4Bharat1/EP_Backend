@@ -12,13 +12,15 @@ import adminRoutes from './src/routes/admin.router.js'
 import Admintest from './src/routes/admintest.router.js'
 import FullTestRoute from './src/routes/fulltestresult.route.js'
 import createtestRoute from './src/routes/createtest.route.js'
+import pasttestRoute from './src/routes/pasttest.route.js'
+import dashboardRoute from './src/routes/dashboard.route.js'
 
 const app = express();
 const port = config.get('port') || 3306;
 const corsOptions = {
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allow all methods
-  allowedHeaders: ['Content-Type', 'Authorization'], // Allow necessary headers
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
+  allowedHeaders: ['Content-Type', 'Authorization'], 
   credentials: true,
 };
 app.use(cors(corsOptions));
@@ -35,6 +37,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/admintest", Admintest);
 app.use("/api/fulltest", FullTestRoute);
 app.use("/api/createtest", createtestRoute);
+app.use("/api", pasttestRoute);
+app.use("/api/dashboard", dashboardRoute);
 
 // Start the server
 app.listen(port, () => {

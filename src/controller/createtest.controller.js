@@ -20,14 +20,11 @@ const fetchQuestions = async (req, res) => {
       const chapters = selectedChapters[subject];
       console.log(`Chapters for ${subject}:`, chapters);
       for (const chapter of chapters) {
-        // Use chapter.name as the chapter key (instead of the whole chapter object)
-        const chapterName = chapter.name.toLowerCase().trim(); // Clean and normalize the chapter name
+        const chapterName = chapter.name.toLowerCase().trim();
         subjectChapterPairs.push({ subject, chapter: chapterName });
       }
     }
     console.log("Subject-Chapter Pairs: ", subjectChapterPairs);
-
-    // Fetch all PDFs
     const allPdfs = await Pdf.findAll({
       attributes: ["id", "subject", "topic_tags"],
     });

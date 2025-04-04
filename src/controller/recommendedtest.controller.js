@@ -24,6 +24,7 @@ const getAllDataFromSchema = async (req, res) => {
       ],
       order: [["createdAt", "DESC"]],
     });
+    console.log(data);
     res.json(data);
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -238,17 +239,13 @@ const GetRecoTestByid = async (req, res) => {
         studentId: req.user.id, // The studentId to filter the tests
       },
     });
-
-    // console.log(recommendedTests);
-
+    console.log(recommendedTests);
     // Step 2: Check if no recommended tests are found
     if (!recommendedTests.length) {
       return res.status(404).json({
         message: "No recommended tests found for the specified student.",
       });
     }
-
-    // Step 3: Fetch associated units for each recommended test
     const testsWithUnits = [];
     for (const test of recommendedTests) {
       const units = await SubjectUnit.findAll({
@@ -256,13 +253,11 @@ const GetRecoTestByid = async (req, res) => {
           recommendedTestId: test.id, // Match the recommendedTestId with the current test's ID
         },
       });
-
       testsWithUnits.push({
         test,
         units,
       });
     }
-
     const formattedData = testsWithUnits.map(({ test, units }) => ({
       testId: test.id,
       studentId: test.studentId,

@@ -24,7 +24,6 @@ const getAllDataFromSchema = async (req, res) => {
       ],
       order: [["createdAt", "DESC"]],
     });
-    console.log(data);
     res.json(data);
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -222,7 +221,6 @@ const CreateEntry = async (req, res) => {
   }
 };
 
-// Get all recommended tests for a specific student along with their units
 const GetRecoTestByid = async (req, res) => {
   try {
     // Validate if req.user exists and holds an id
@@ -233,19 +231,21 @@ const GetRecoTestByid = async (req, res) => {
         requiredFields: ["studentId"],
       });
     }
+    
     // Step 1: Fetch the recommended tests for the given studentId
     const recommendedTests = await RecommendedTest.findAll({
       where: {
         studentId: req.user.id, // The studentId to filter the tests
       },
     });
-    console.log(recommendedTests);
+
     // Step 2: Check if no recommended tests are found
     if (!recommendedTests.length) {
       return res.status(404).json({
         message: "No recommended tests found for the specified student.",
       });
     }
+    
     const testsWithUnits = [];
     for (const test of recommendedTests) {
       const units = await SubjectUnit.findAll({
@@ -253,11 +253,14 @@ const GetRecoTestByid = async (req, res) => {
           recommendedTestId: test.id, // Match the recommendedTestId with the current test's ID
         },
       });
+      
+      // Push the test and its associated units to the array
       testsWithUnits.push({
         test,
         units,
       });
     }
+
     const formattedData = testsWithUnits.map(({ test, units }) => ({
       testId: test.id,
       studentId: test.studentId,
@@ -282,6 +285,15 @@ const GetRecoTestByid = async (req, res) => {
           focus_priority: unit.focusPriority,
           recommended_tests: unit.recommendedTests,
         });
+        
+        // Log the relevant data to the console
+        console.log("Unit Data:", {
+          unitName: unit.unitName,
+          expectedQuestions: unit.expectedQuestions,
+          timeToComplete: unit.timeToComplete,
+          recommendedTests: unit.recommendedTests,
+        });
+
         return acc;
       }, {}),
     }));

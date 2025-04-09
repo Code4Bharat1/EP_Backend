@@ -6,7 +6,7 @@ import {
   Diagram,
 } from "../models/everytestmode.refrence.js"; // Import models
 import { Op } from "sequelize";
-import levenshtein from "fast-levenshtein"; // Install using `npm install fast-`
+import levenshtein from "fast-levenshtein"; // Install using `npm install fast-levenshtein`
 
 const fetchQuestions = async (req, res) => {
   try {
@@ -96,6 +96,7 @@ const fetchQuestions = async (req, res) => {
         // Process the selected questions
         for (let question of selectedQuestions) {
           const options = question.options.map((opt) => opt.dataValues);
+          const correctOption = options.find(opt => opt.is_correct); // Find the correct option
           const diagramPath =
             question.Diagrams?.length > 0
               ? question.Diagrams[0].dataValues.diagram_path
@@ -108,6 +109,7 @@ const fetchQuestions = async (req, res) => {
               chapter, // Include chapter
             },
             options,
+            correctAnswer: correctOption, // Include the correct option
             diagram: diagramPath,
           });
         }

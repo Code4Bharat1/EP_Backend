@@ -168,7 +168,6 @@ const verifyOtp = async (req, res) => {
     // Remove OTP from the store
     delete otpStore[emailAddress];
 
-    // Generate a JWT token for the user after successful OTP verification
     const token = jwt.sign(
       { id: student.id, email: student.emailAddress },
       config.get("jwtSecret"),

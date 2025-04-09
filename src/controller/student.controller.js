@@ -82,6 +82,7 @@ const savePersonalData = async (req, res) => {
       city,
       fullAddress,
       language,
+      profileImage,
     } = req.body;
 
     const id = req.user.id;

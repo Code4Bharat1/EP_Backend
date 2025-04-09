@@ -230,11 +230,7 @@ const submitrecotest = async (req, res) => {
       }
     }
 
-    console.log("Correct answers:", correctanswers);
-    console.log("Wrong answers:", wronganswers);
-    console.log("Not attempted:", notattempted);
-    console.log("Total marks:", totalMarks);
-
+    
     const numberOfQuestions = data.length;
     const expectedTotalMarks = numberOfQuestions * 4;
     const passingMarks = expectedTotalMarks * 0.6;
@@ -245,9 +241,7 @@ const submitrecotest = async (req, res) => {
     if (totalMarks >= 0 && totalMarks < passingMarks) {
       updatedRecommendedTests = Math.max(0, unit.recommendedTests - 1);
       updateRecommendedTests = true;
-      console.log(
-        `Decreasing recommendedTests to ${updatedRecommendedTests} for failing marks`
-      );
+     
     }
     console.log("here's the recomemendet test =", updatedRecommendedTests);
     try {

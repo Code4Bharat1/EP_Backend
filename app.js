@@ -14,6 +14,7 @@ import FullTestRoute from './src/routes/fulltestresult.route.js'
 import createtestRoute from './src/routes/createtest.route.js'
 import pasttestRoute from './src/routes/pasttest.route.js'
 import dashboardRoute from './src/routes/dashboard.route.js'
+import studentviewRoute from './src/routes/viewstudent.route.js'
 
 const app = express();
 const port = config.get('port') || 3306;
@@ -39,6 +40,7 @@ app.use("/api/fulltest", FullTestRoute);
 app.use("/api/createtest", createtestRoute);
 app.use("/api", pasttestRoute);
 app.use("/api/dashboard", dashboardRoute);
+app.use('/api/studentdata', studentviewRoute);
 
 // Start the server
 app.listen(port, () => {

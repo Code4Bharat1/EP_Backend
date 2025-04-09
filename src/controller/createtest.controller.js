@@ -23,7 +23,10 @@ const fetchQuestions = async (req, res) => {
         subjectChapterPairs.push({ subject, chapter: chapterName });
       }
     }
+<<<<<<< HEAD
     console.log("Subject-Chapter Pairs: ", subjectChapterPairs);
+=======
+>>>>>>> 3e52af9b853518374ad469062b21aa4e4128c524
     const allPdfs = await Pdf.findAll({
       attributes: ["id", "subject", "topic_tags"],
     });
@@ -124,7 +127,6 @@ const fetchQuestions = async (req, res) => {
   }
 };
 
-
 const submitTest = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -159,6 +161,7 @@ const submitTest = async (req, res) => {
       testName = [],
       pdf_id = null,
       subjectWiseMarks,
+      totalTimePerSubject, // Get the total time per subject
     } = req.body;
 
     const totalQuestions =
@@ -220,6 +223,7 @@ const submitTest = async (req, res) => {
       overAllMarks: score,
       subjectWiseMarks,
       pdf_id,
+      totalTimePerSubject, // Save the total time spent per subject
     });
 
     res.status(201).json({

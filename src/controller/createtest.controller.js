@@ -4,7 +4,6 @@ import {
   Option,
   Diagram,
   Solution
-
 } from "../models/everytestmode.refrence.js";
 import levenshtein from "fast-levenshtein";
 import jwt from "jsonwebtoken";
@@ -24,6 +23,10 @@ const fetchQuestions = async (req, res) => {
         subjectChapterPairs.push({ subject, chapter: chapterName });
       }
     }
+<<<<<<< HEAD
+    console.log("Subject-Chapter Pairs: ", subjectChapterPairs);
+=======
+>>>>>>> 3e52af9b853518374ad469062b21aa4e4128c524
     const allPdfs = await Pdf.findAll({
       attributes: ["id", "subject", "topic_tags"],
     });

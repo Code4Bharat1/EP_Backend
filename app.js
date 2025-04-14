@@ -15,6 +15,15 @@ import createtestRoute from './src/routes/createtest.route.js'
 import pasttestRoute from './src/routes/pasttest.route.js'
 import dashboardRoute from './src/routes/dashboard.route.js'
 import studentviewRoute from './src/routes/viewstudent.route.js'
+import admingenerateRoute from './src/routes/admingenerate.route.js'
+import newAdminRoute from './src/routes/newadmin.router.js'
+import dsb from './src/routes/topperperformance.router.js'
+import studentslogged from './src/routes/studentlogout.router.js'
+import testresult from './src/routes/testresult.router.js';
+import spotlight from './src/routes/spotlight.router.js';
+import loginattendance from './src/routes/loginattendance.router.js'
+import practice from './src/routes/practice.router.js';
+
 
 const app = express();
 const port = config.get('port') || 3306;
@@ -41,6 +50,15 @@ app.use("/api/createtest", createtestRoute);
 app.use("/api", pasttestRoute);
 app.use("/api/dashboard", dashboardRoute);
 app.use('/api/studentdata', studentviewRoute);
+app.use("/api/admintest", admingenerateRoute);
+app.use("/api/newadmin", newAdminRoute);
+app.use("/api/dashboard", dsb);
+app.use("/api/logout", studentslogged)
+app.use("/api/testresult", testresult)
+app.use("/api/spotlight", spotlight)
+app.use("/api/loginattendance", loginattendance)
+app.use("/api/practicetest" ,practice)
+
 
 // Start the server
 app.listen(port, () => {

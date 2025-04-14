@@ -21,15 +21,15 @@ const Admintest = sequelizeCon.define("Admintest",
             allowNull: false,
           },
           subject: {
-            type: DataTypes.ENUM('Physics', 'Chemistry', 'Biology'),
+            type: DataTypes.STRING,
             allowNull: false,
           },
           marks: {
-            type: DataTypes.ENUM('180', '360', '720'),
+            type: DataTypes.STRING,
             allowNull: false,
           },
           positivemarks: {
-            type: DataTypes.ENUM('1', '2', '4','5','6','10'),
+            type: DataTypes.INTEGER,
             allowNull: false,
           },
           negativemarks: {
@@ -40,7 +40,7 @@ const Admintest = sequelizeCon.define("Admintest",
             type: DataTypes.JSON,
             allowNull: true,
           },
-          wronganswer: {
+          question_ids: {
             type: DataTypes.JSON,
             allowNull: true,
           },
@@ -49,7 +49,7 @@ const Admintest = sequelizeCon.define("Admintest",
             allowNull: false, 
           },
           topic_name: {
-            type: DataTypes.STRING(255),
+            type: DataTypes.JSON,
             allowNull: true,
           },
           no_of_questions: {

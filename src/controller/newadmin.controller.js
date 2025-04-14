@@ -1,0 +1,393 @@
+import bcrypt from 'bcrypt';
+import { Admin } from '../models/admin.model.js';
+import { Op } from 'sequelize';
+import jwt from 'jsonwebtoken';
+import config from 'config'; 
+import Student from "../models/student.model.js";
+import FullTestResults from '../models/fullTestResults.model.js';
+import Admintest from '../models/admintest.model.js';
+import { Question, Option } from '../models/everytestmode.refrence.js';
+
+
+// Controller to register a new admin
+const createAdmin = async (req, res) => {
+  const {
+    AdminId,
+    PassKey,
+    name,   
+    Course,
+    Email,
+    mobileNumber,
+    whatsappNumber,
+    StartDate,
+    ExpiryDate,
+    address,
+    HodName,
+    logo,
+  } = req.body;
+
+  try {
+    // Basic validation for required fields
+    if (!AdminId || !PassKey || !name || !Email || !mobileNumber) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    // Check if admin with the same AdminId or Email already exists
+    const existingAdmin = await Admin.findOne({
+      where: { [Op.or]: [{ AdminId }, { Email }] },
+    });
+
+    if (existingAdmin) {
+      return res.status(400).json({ message: "Admin with this ID or Email already exists." });
+    }
+
+    // Hash the password before saving to the database
+    const hashedPassKey = await bcrypt.hash(PassKey, 10);
+
+    // Create new admin in the database
+    const newAdmin = await Admin.create({
+      AdminId,
+      PassKey: hashedPassKey, // Store the hashed password
+      name,
+      Course,
+      Email,
+      mobileNumber,
+      whatsappNumber,
+      StartDate,
+      ExpiryDate,
+      address,
+      HodName,
+      logo,
+      credentials: "pending", // Default to "pending"
+    });
+
+    return res.status(201).json({
+      message: "Admin registered successfully",
+      admin: {
+        AdminId: newAdmin.AdminId,
+        name: newAdmin.name,
+        email: newAdmin.Email,
+      },
+    });
+  } catch (error) {
+    console.error("Error creating admin:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+const loginAdmin = async (req, res) => {
+  const { Email, PassKey } = req.body;
+
+  try {
+    if (!Email || !PassKey) {
+      return res.status(400).json({ message: "Email and PassKey are required." });
+    }
+
+    const admin = await Admin.findOne({ where: { Email } });
+
+    if (!admin) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    const isMatch = await bcrypt.compare(PassKey, admin.PassKey);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    const token = jwt.sign({ id: admin.id }, config.get("jwtSecret"), {
+      expiresIn: "30d",
+    });
+
+    return res.status(200).json({
+      message: "Login successful",
+      token,
+      admin: {
+        id: admin.id,
+        AdminId: admin.AdminId,
+        name: admin.name,
+        Email: admin.Email,
+        role: admin.credentials,
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
+
+
+// Controller to get selected fields of FullTestResults for all students
+export const getTestSummariesForAllStudents = async (req, res) => {
+  try {
+    // Step 1: Get all student IDs
+    const students = await Student.findAll({ attributes: ["id"] });
+    const studentIds = students.map((student) => student.id);
+
+    if (!studentIds.length) {
+      return res.status(404).json({ message: "No students found." });
+    }
+
+    // Step 2: Get only selected test result fields for matching student IDs
+    const testResults = await FullTestResults.findAll({
+      where: {
+        studentId: {
+          [Op.in]: studentIds,
+        },
+      },
+      attributes: ["testName", "marksObtained", "totalMarks", "subjectWisePerformance"],
+    });
+
+    return res.status(200).json({
+      message: "Test summaries fetched successfully",
+      count: testResults.length,
+      results: testResults,
+    });
+  } catch (error) {
+    console.error("Error fetching test summaries:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+
+export const createAdmintest = async (req, res) => {
+  try {
+    // Extract the data from req.body and keep things null if not provided
+    const {
+      addedByAdminId,
+      testname,
+      difficulty,
+      subject,
+      marks,
+      positivemarks,
+      negativemarks,
+      correctanswer,
+      question_ids,
+      unitName,
+      topic_name,
+      no_of_questions,
+      question_id,
+      duration,
+      exam_start_date,
+      exam_end_date,
+      instruction,
+      batch_name,
+      status,
+    } = req.body;
+
+    // Decode the JWT token to extract the admin ID
+    let decodedAdminId = null;
+    if (addedByAdminId) {
+      const decoded = jwt.decode(addedByAdminId); // Decode the token
+      if (decoded && decoded.id) {
+        decodedAdminId = decoded.id; // Extract the ID from the decoded token
+      }
+    }
+
+    // If the decoded ID is not found, set it to null (or handle error as needed)
+    const adminId = decodedAdminId || null;
+    console.log(adminId);
+
+    // If the subject is provided as an array, convert it to a comma-separated string
+    const subjectString = Array.isArray(subject) ? subject.join(", ") : subject || null;
+
+    // Prepare the test data with dynamic values from the request body (keep null if not provided)
+    const newTestData = {
+      addedByAdminId: adminId, // Null if not provided
+      testname: testname || null, // Null if not provided
+      difficulty: difficulty || null, // Null if not provided
+      subject: subjectString, // Store as a comma-separated string or null
+      marks: marks || null, // Null if not provided
+      positivemarks: positivemarks || null, // Null if not provided
+      negativemarks: negativemarks || null, // Null if not provided
+      correctanswer: correctanswer || null, // Null if not provided
+      question_ids: question_ids || null, // Null if not provided
+      unitName: unitName || null, // Null if not provided
+      topic_name: topic_name || null, // Null if not provided
+      no_of_questions: no_of_questions || null, // Null if not provided
+      question_id: question_id || null, // Null if not provided
+      duration: duration || null, // Null if not provided
+      exam_start_date: exam_start_date ? new Date(exam_start_date) : null, // Convert to Date if provided, else null
+      exam_end_date: exam_end_date ? new Date(exam_end_date) : null, // Convert to Date if provided, else null
+      instruction: instruction || null, // Null if not provided
+      batch_name: batch_name || null, // Null if not provided
+      status: status || null, // Null if not provided
+    };
+
+    // Log the data to be inserted
+    console.log("Test Data to be inserted:", newTestData);
+
+    // Create a new test entry in the database with the dynamic data from req.body
+    const newTest = await Admintest.create(newTestData);
+
+    return res.status(201).json({
+      message: "Test created successfully",
+      test: newTest,
+    });
+  } catch (error) {
+    console.error("Error creating test:", error);
+    return res.status(500).json({
+      message: "Failed to create test",
+      error: error.message,
+    });
+  }
+};
+
+// Controller to retrieve all test details from the Admintest table
+export const getAllTestDetails = async (req, res) => {
+  try {
+    // Retrieve all test details from the Admintest table without any attribute restriction
+    const allTestDetails = await Admintest.findAll();
+
+    // Check if any records exist
+    if (allTestDetails.length === 0) {
+      return res.status(404).json({
+        message: "No tests found",
+      });
+    }
+
+    // Send the retrieved test details as the response
+    return res.status(200).json({
+      message: "Test details fetched successfully",
+      tests: allTestDetails,
+    });
+  } catch (error) {
+    console.error("Error retrieving test details:", error);
+    return res.status(500).json({
+      message: "Failed to retrieve test details",
+      error: error.message,
+    });
+  }
+};
+
+
+export const getTestDetailsById = async (req, res) => {
+  try {
+    // Extract testid from req.body
+    const { testid } = req.body;
+
+    // Check if testid is provided
+    if (!testid) {
+      return res.status(400).json({
+        message: "testid is required",
+      });
+    }
+
+    // Fetch the test details from the Admintest table using the provided testid
+    const testDetails = await Admintest.findOne({
+      where: { id: testid },
+      attributes: [
+        'id', 'testname', 'difficulty', 'subject', 'marks', 'positivemarks', 
+        'negativemarks', 'correctanswer', 'question_ids', 'unitName', 'topic_name', 
+        'no_of_questions', 'question_id', 'duration', 'exam_start_date', 'exam_end_date',
+        'instruction', 'batch_name', 'status'
+      ], // Specify the columns you want to retrieve
+    });
+
+    // If no test details found for the given testid
+    if (!testDetails) {
+      return res.status(404).json({
+        message: "Test not found",
+      });
+    }
+
+    // Send the retrieved test details as the response
+    return res.status(200).json({
+      message: "Test details fetched successfully",
+      test: testDetails,
+    });
+  } catch (error) {
+    console.error("Error retrieving test details:", error);
+    return res.status(500).json({
+      message: "Failed to retrieve test details",
+      error: error.message,
+    });
+  }
+};
+
+export const getTestQuestionsWithAnswers = async (req, res) => {
+  try {
+    const { testid } = req.body;
+
+    if (!testid) {
+      return res.status(400).json({ message: "testid is required" });
+    }
+
+    // 1. Get the test and question_ids field
+    const test = await Admintest.findOne({
+      where: { id: testid },
+      attributes: ["question_ids"],
+    });
+
+    if (!test) {
+      return res.status(404).json({ message: "Test not found" });
+    }
+
+    let questionMapping = test.question_ids;
+
+    // 2. Parse if it's a JSON string
+    if (typeof questionMapping === "string") {
+      try {
+        questionMapping = JSON.parse(questionMapping);
+      } catch (err) {
+        return res.status(500).json({
+          message: "Failed to parse question_ids JSON",
+          error: err.message,
+        });
+      }
+    }
+
+    // 3. Validate format
+    if (!Array.isArray(questionMapping)) {
+      return res.status(500).json({ message: "Invalid question_ids format" });
+    }
+
+    const response = [];
+
+    // 4. Loop over subject → ids
+    for (const { subject, ids } of questionMapping) {
+      if (!Array.isArray(ids) || ids.length === 0) continue;
+
+      // ✅ Ensure we match IDs correctly
+      const questions = await Question.findAll({
+        where: { id: ids },
+        include: [{ model: Option, as: "options" }],
+      });
+
+      for (const question of questions) {
+        const options = question.options.map((opt) => opt.option_text);
+        const correctOption = question.options.find((opt) => opt.is_correct);
+
+        response.push({
+          subject,
+          question_text: question.question_text || question.question || "", // fallback just in case
+          options,
+          correctanswer: correctOption ? correctOption.option_text : null,
+        });
+      }
+    }
+
+    if (response.length === 0) {
+      return res.status(404).json({ message: "No questions found for given testid" });
+    }
+
+    return res.status(200).json({
+      message: "Questions fetched successfully",
+      data: response,
+    });
+  } catch (error) {
+    console.error("Error in getTestQuestionsWithAnswers:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+export { createAdmin, loginAdmin};

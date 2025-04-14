@@ -10,8 +10,6 @@ import {sendEmail} from "../service/nodeMailerConfig.js";
 import { Op } from "sequelize";
 
 
-
-
 const createAdmin = async (req, res) => {
   try {
       const { name, Email, mobileNumber, whatsappNumber, address, HodName } = req.body;

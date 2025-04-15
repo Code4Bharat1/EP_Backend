@@ -5,9 +5,10 @@ import jwt from 'jsonwebtoken';
 import config from 'config'; 
 import Student from "../models/student.model.js";
 import FullTestResults from '../models/fullTestResults.model.js';
+import MeTest from '../models/saved.js';
 import Admintest from '../models/admintest.model.js';
 import { Question, Option } from '../models/everytestmode.refrence.js';
-
+import generateTestResult from '../models/generateTestresult.model.js';
 
 // Controller to register a new admin
 const createAdmin = async (req, res) => {
@@ -390,4 +391,198 @@ export const getTestQuestionsWithAnswers = async (req, res) => {
   }
 };
 
-export { createAdmin, loginAdmin};
+//submit test of generatetestresult from student
+export const saveGenerateTestResult = async (req, res) => {
+  try {
+    const {
+      studentId,
+      testid,
+      testname,
+      selectedChapters,
+      answers,
+      score,
+      correctAnswers,
+      incorrectAnswers,
+      unattempted,
+      totalquestions,
+      overallmarks,
+      subjectWiseMarks,
+    } = req.body;
+
+    const newResult = await generateTestResult.create({
+      studentId,
+      testid,
+      testname,
+      selectedChapters,
+      answers,
+      score,
+      correctAnswers,
+      incorrectAnswers,
+      unattempted,
+      totalquestions,
+      overallmarks,
+      subjectWiseMarks,
+    });
+
+    res.status(201).json({
+      message: "Test result saved successfully.",
+      data: newResult,
+    });
+  } catch (error) {
+    console.error("Error saving test result:", error);
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+
+//updating the data from the req.boy
+const updateTest = async (req, res) => {
+  try {
+    const {
+      testid,
+      testname,
+      batch_name,
+      duration,
+      exam_start_date,
+      exam_end_date,
+      status,
+    } = req.body; // Extract the editable fields from the request body
+
+    // Ensure testid is provided in the request body
+    if (!testid) {
+      return res.status(400).json({ message: "Test ID is required" });
+    }
+
+    // Find the test by ID
+    const testToUpdate = await Admintest.findOne({ where: { id: Number(testid) } });
+
+    if (!testToUpdate) {
+      return res.status(404).json({ message: "Test not found" });
+    }
+
+    // Only update the provided fields, keep the rest as is
+    testToUpdate.testname = testname || testToUpdate.testname;
+    testToUpdate.batch_name = batch_name || testToUpdate.batch_name;
+    testToUpdate.duration = duration || testToUpdate.duration;
+    testToUpdate.exam_start_date = exam_start_date || testToUpdate.exam_start_date;
+    testToUpdate.exam_end_date = exam_end_date || testToUpdate.exam_end_date;
+    testToUpdate.status = status || testToUpdate.status;
+
+    // Save the changes to the database
+    await testToUpdate.save();
+
+    // Send success response
+    res.status(200).json({ message: "Test updated successfully", test: testToUpdate });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};  
+
+//dashboard data of student
+const dashboardStudentData = async (req, res) => {
+  try {
+    const { studentId } = req.body;
+
+    if (!studentId) {
+      return res.status(400).json({ message: "studentId is required" });
+    }
+
+    const student = await Student.findOne({
+      where: { id: studentId },
+      attributes: ['firstName', 'lastName', 'emailAddress', 'mobileNumber', 'profileImage'],
+    });
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    return res.status(200).json({
+      message: "Student data fetched successfully",
+      data: student,
+    });
+  } catch (error) {
+    console.error("Error fetching student data:", error);
+    return res.status(500).json({
+      message: "Error fetching student data",
+      error: error.message,
+    });
+  }
+};
+
+
+//admin student dashboard
+const getTestResults = async (req, res) => {
+  try {
+    const { studentId } = req.body; // Assuming studentId is sent in the request body
+
+    if (!studentId) {
+      return res.status(400).json({ message: "studentId is required" });
+    }
+
+    // Fetch the test result for the student from FullTestResults
+    const testResults = await FullTestResults.findAll({
+      where: { studentId },
+      attributes: ['testName', 'totalMarks', 'marksObtained'], // Only select the necessary fields
+    });
+
+    // Fetch the test result for the student from MeTest
+    const metestResults = await MeTest.findAll({
+      where: { studentId },
+      attributes: ['testName', 'totalQuestions', 'overAllMarks', 'subjectWiseMarks'],
+    });
+
+    // Calculate totalMarks for each test result in MeTest (totalQuestions * 4)
+    const resultsWithTotalMarks = metestResults.map((result) => {
+      const totalMarks = result.totalQuestions * 4;
+      return {
+        testName: result.testName,
+        marksObtained: result.overAllMarks,
+        totalMarks: totalMarks,
+        subjectWiseMarks: JSON.parse(result.subjectWiseMarks), // Parsing the JSON string into an object
+      };
+    });
+
+    // Initialize subject totals
+    const subjectTotals = { Physics: 0, Chemistry: 0, Biology: 0 };
+
+    // Iterate through each test result and accumulate subject marks
+    resultsWithTotalMarks.forEach((result) => {
+      const { subjectWiseMarks } = result;
+
+      // Add marks for each subject
+      subjectTotals.Physics += subjectWiseMarks.Physics || 0;
+      subjectTotals.Chemistry += subjectWiseMarks.Chemistry || 0;
+      subjectTotals.Biology += subjectWiseMarks.Biology || 0;
+    });
+
+    // Get the count of test results
+    const fullTestCount = testResults.length;
+    const meTestCount = metestResults.length;
+
+    // Return the test results along with counts and subject totals
+    return res.status(200).json({
+      message: "Test results fetched successfully",
+      data: {
+        fullTestCount,
+        meTestCount,
+        fullTestResults: testResults,
+        resultsWithTotalMarks,
+        subjectTotals,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching test results:", error);
+    return res.status(500).json({
+      message: "Error fetching test results",
+      error: error.message,
+    });
+  }
+};
+
+
+
+export { createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults};

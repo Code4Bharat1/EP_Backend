@@ -10,7 +10,7 @@ const generateTestResult = sequelizeCon.define("GenerateTestResult", {
     allowNull: false,
   },
   testname: {
-    type: DataTypes.JSON,
+    type: DataTypes.STRING,
     allowNull: false,
   },
   selectedChapters: {

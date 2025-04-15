@@ -1,5 +1,5 @@
 import express from 'express'
-import { createAdmin, createAdmintest, getAllTestDetails, getTestDetailsById, getTestQuestionsWithAnswers, getTestSummariesForAllStudents, loginAdmin } from '../controller/newadmin.controller.js';
+import { createAdmin, createAdmintest, getAllTestDetails, saveGenerateTestResult, getTestDetailsById, getTestQuestionsWithAnswers, getTestSummariesForAllStudents, loginAdmin, updateTest, dashboardStudentData, getTestResults } from '../controller/newadmin.controller.js';
 
 const router = express.Router();
 
@@ -9,6 +9,10 @@ router.get("/student", getTestSummariesForAllStudents);
 router.post("/admintest", createAdmintest);
 router.get("/test-data", getAllTestDetails);
 router.post("/test-data-by-id", getTestDetailsById);
-router.post("/get-questions", getTestQuestionsWithAnswers)
+router.post("/get-questions", getTestQuestionsWithAnswers);
+router.post("/save-test", saveGenerateTestResult);
+router.post("/update-test", updateTest);
+router.post("/student-data", dashboardStudentData);
+router.post("/test-result", getTestResults);
 
 export default router;

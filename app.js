@@ -23,7 +23,8 @@ import testresult from './src/routes/testresult.router.js';
 import spotlight from './src/routes/spotlight.router.js';
 import loginattendance from './src/routes/loginattendance.router.js'
 import practice from './src/routes/practice.router.js';
-
+import customize from './src/routes/customize.router.js'
+import userprofile from './src/routes/user.router.js'
 
 const app = express();
 const port = config.get('port') || 3306;
@@ -58,7 +59,8 @@ app.use("/api/testresult", testresult)
 app.use("/api/spotlight", spotlight)
 app.use("/api/loginattendance", loginattendance)
 app.use("/api/practicetest" ,practice)
-
+app.use("/api/generatetest", customize);
+app.use('/api/user', userprofile);
 
 // Start the server
 app.listen(port, () => {

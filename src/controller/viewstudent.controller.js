@@ -59,6 +59,12 @@ const saveBasicStudentData = async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
+    // Validate email format
+    const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
     // Check if the email already exists
     const existingStudent = await Student.findOne({ where: { emailAddress: email } });
     if (existingStudent) {
@@ -68,7 +74,7 @@ const saveBasicStudentData = async (req, res) => {
     // Hash the password before saving
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create a new student instance with the data, leaving other fields as null
+    // Create a new student instance with the data
     const newStudent = await Student.create({
       emailAddress: email,
       password: hashedPassword, // Save hashed password
@@ -83,7 +89,7 @@ const saveBasicStudentData = async (req, res) => {
       examType: null,
       studentClass: null,
       targetYear: null,
-      fullName: null,
+      fullName: `${firstName} ${""}`,  // Example of setting fullName based on firstName (you can improve this)
       fullAddress: null,
       domicileState: null,
       parentName: null,
@@ -117,11 +123,21 @@ const saveBasicStudentData = async (req, res) => {
       profileImage: null,
     });
 
+    // Return the created student data (you can exclude sensitive fields)
+    const studentResponse = {
+      id: newStudent.id,
+      emailAddress: newStudent.emailAddress,
+      firstName: newStudent.firstName,
+      dateOfBirth: newStudent.dateOfBirth,
+      mobileNumber: newStudent.mobileNumber,
+      gender: newStudent.gender,
+    };
+
     // Send a success response with the created student data
-    res.status(201).json({ message: "Student created successfully", student: newStudent });
+    return res.status(201).json({ message: "Student created successfully", student: studentResponse });
   } catch (error) {
     console.error("Error saving student data:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
@@ -207,8 +223,8 @@ const bulkSaveStudents = async (req, res) => {
     }
 
     if (studentData.length > 0) {
-      // Insert the valid students into the database
-      const savedStudents = await Student.insertMany(studentData);
+      // Use Sequelize's bulkCreate method to insert valid students into the database
+      const savedStudents = await Student.bulkCreate(studentData);
 
       // Check if there were any email conflicts
       if (existingEmails.length > 0) {
@@ -232,7 +248,6 @@ const bulkSaveStudents = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
-
 // controller to update batchId for multiple students based on emails
 const updateBatchIdForUsers = async (req, res) => {
   try {

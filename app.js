@@ -50,7 +50,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/admintest", Admintest);
 app.use("/api/fulltest", FullTestRoute);
 app.use("/api/createtest", createtestRoute);
-app.use("/api", pasttestRoute);
+app.use("/api/test", pasttestRoute);
 app.use("/api/dashboard", dashboardRoute);
 app.use('/api/studentdata', studentviewRoute);
 app.use("/api/admintest", admingenerateRoute);

@@ -45,7 +45,6 @@ const pastTest = async (req, res) => {
         'subjectWiseMarks',
         'difficultyLevel',
         'selectedChapters',
-        'questionTimeUsed',
         'correct',
         'incorrect',
         'unattempted',

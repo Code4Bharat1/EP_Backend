@@ -241,7 +241,9 @@ console.log("Login", emailAddress, password);
     console.log("Entered Password:", password); // Log entered password
     console.log("Stored Hashed Password:", student.password);
     // Compare the entered password with the hashed password
-    const isPasswordValid = await bcrypt.compare(password, student.password);
+    const isPasswordValid = await bcrypt.compare(password, student?.password);
+
+
     console.log("Password Validation Result:", isPasswordValid);
 
     if (!isPasswordValid) {

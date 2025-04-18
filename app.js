@@ -25,6 +25,8 @@ import loginattendance from './src/routes/loginattendance.router.js'
 import practice from './src/routes/practice.router.js';
 import customize from './src/routes/customize.router.js'
 import userprofile from './src/routes/user.router.js'
+import sendEmailrouter from './src/routes/resend.router.js'
+import superAdminRouter from './src/routes/superadmin.router.js'
 
 const app = express();
 const port = config.get('port') || 3306;
@@ -61,6 +63,8 @@ app.use("/api/loginattendance", loginattendance)
 app.use("/api/practicetest" ,practice)
 app.use("/api/generatetest", customize);
 app.use('/api/user', userprofile);
+app.use('/api', sendEmailrouter);
+app.use("/api/superadmin", superAdminRouter);
 
 // Start the server
 app.listen(port, () => {

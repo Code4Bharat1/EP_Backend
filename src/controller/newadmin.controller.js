@@ -80,28 +80,33 @@ const createAdmin = async (req, res) => {
 };
 
 const loginAdmin = async (req, res) => {
-  const { Email, PassKey } = req.body;
+  const { AdminId, PassKey } = req.body;
 
   try {
-    if (!Email || !PassKey) {
-      return res.status(400).json({ message: "Email and PassKey are required." });
+    // Validate if AdminId and PassKey are provided
+    if (!AdminId || !PassKey) {
+      return res.status(400).json({ message: "AdminId and PassKey are required." });
     }
 
-    const admin = await Admin.findOne({ where: { Email } });
+    // Find the admin using AdminId instead of Email
+    const admin = await Admin.findOne({ where: { AdminId } });
 
     if (!admin) {
-      return res.status(401).json({ message: "Invalid email or password." });
+      return res.status(401).json({ message: "Invalid AdminId or password." });
     }
 
+    // Check if the password matches
     const isMatch = await bcrypt.compare(PassKey, admin.PassKey);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid email or password." });
+      return res.status(401).json({ message: "Invalid AdminId or password." });
     }
 
+    // Generate a JWT token
     const token = jwt.sign({ id: admin.id }, config.get("jwtSecret"), {
-      expiresIn: "30d",
+      expiresIn: "30d", // Token expires in 30 days
     });
 
+    // Return success message along with the token and admin details
     return res.status(200).json({
       message: "Login successful",
       token,

@@ -6,9 +6,17 @@ import { Sequelize } from "sequelize";
 // Controller to fetch student information
 const getStudentInfo = async (req, res) => {
   try {
-    // Fetching specific fields from the Student table
+    // Extract the admin ID from the request body
+    const { addedByAdminId } = req.body;
+
+    if (!addedByAdminId) {
+      return res.status(400).json({ message: "Admin ID is required" });
+    }
+
+    // Fetching specific fields from the Student table where addedByAdminId matches
     const studentData = await Student.findAll({
       attributes: [
+        "id",
         "firstName", // Student's first name
         "lastName", // Student's last name
         "emailAddress", // Student's email address
@@ -16,27 +24,33 @@ const getStudentInfo = async (req, res) => {
         "gender", // Student's gender
         "dateOfBirth", // Student's date of birth
         "isVerified", // Whether the student is verified or not
+        "addedByAdminId" // Shows the adminid (2)
       ],
+      where: {
+        addedByAdminId: addedByAdminId, // Filter students by addedByAdminId
+      }
     });
 
-    // If no student found, return an error response
+    // If no students found, return an error response
     if (studentData.length === 0) {
-      return res.status(404).json({ message: "No student found" });
+      return res.status(404).json({ message: "No students found for the given admin" });
     }
 
     // Format the data to include full name and status (active/inactive)
     const studentInfo = studentData.map((student) => {
-        //getting the firstname and lastname inside fullname
+      // Getting the firstname and lastname inside fullname
       const fullName = `${student.firstName} ${student.lastName}`;
       const status = student.isVerified ? "Active" : "Inactive";
 
       return {
+        id: student.id,
         fullName,
         email: student.emailAddress,
         phoneNumber: student.mobileNumber,
         gender: student.gender,
         dateOfBirth: student.dateOfBirth,
         status,
+        addedByAdminId: student.addedByAdminId,
       };
     });
 
@@ -52,10 +66,10 @@ const getStudentInfo = async (req, res) => {
 const saveBasicStudentData = async (req, res) => {
   try {
     // Destructure the required data from the request body
-    const { email, password, firstName, dateOfBirth, phoneNumber, gender } = req.body;
+    const { email, password, firstName, dateOfBirth, phoneNumber, gender, addedByAdminId } = req.body;
 
     // Validate if all required fields are present
-    if (!email || !password || !firstName || !dateOfBirth || !phoneNumber || !gender) {
+    if (!email || !password || !firstName || !dateOfBirth || !phoneNumber || !gender || !addedByAdminId) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -66,24 +80,21 @@ const saveBasicStudentData = async (req, res) => {
     }
 
     // Check if the email already exists
-    const existingStudent = await Student.findOne({ where: { emailAddress: email } });
+    const existingStudent = await Student.findOne({ where: { emailAddress: email, addedByAdminId } });
     if (existingStudent) {
       return res.status(409).json({ message: "Email already exists" });
     }
 
-    // Hash the password before saving
-    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create a new student instance with the data
     const newStudent = await Student.create({
       emailAddress: email,
-      password: hashedPassword, // Save hashed password
+      password, 
       firstName: firstName,
       dateOfBirth: dateOfBirth,
       mobileNumber: phoneNumber,
       gender: gender,
-      // Set default null values for other fields
-      addedByAdminId: null,
+      addedByAdminId: addedByAdminId, // Save the addedByAdminId received in the request body
       batchId: null,
       lastName: null,
       examType: null,
@@ -141,47 +152,52 @@ const saveBasicStudentData = async (req, res) => {
   }
 };
 
+
 const bulkSaveStudents = async (req, res) => {
   try {
     // Destructure the student data array from the request body
     const { students } = req.body;
 
-    // Validate if student data exists
-    if (!students || students.length === 0) {
-      return res.status(400).json({ message: "No student data provided" });
-    }
-
+    // Arrays to hold valid student data and existing emails
     const studentData = [];
     const existingEmails = [];
 
     // Loop through each student and perform the necessary operations
     for (const student of students) {
-      const { email, password, firstName, dateOfBirth, phoneNumber, gender } = student;
+      const {
+        emailAddress,
+        password,
+        firstName,
+        dateOfBirth,
+        mobileNumber,
+        gender,
+        addedByAdminId,
+      } = student;
 
       // Validate if all required fields are present
-      if (!email || !password || !firstName || !dateOfBirth || !phoneNumber || !gender) {
+      if (!emailAddress || !password || !firstName || !dateOfBirth || !mobileNumber || !gender) {
         return res.status(400).json({ message: "All fields are required for all students" });
       }
 
       // Check if the email already exists
-      const existingStudent = await Student.findOne({ where: { emailAddress: email } });
+      const existingStudent = await Student.findOne({ where: { emailAddress } });
       if (existingStudent) {
-        existingEmails.push(email); // Collect existing emails to report later
-        continue; // Skip this student if email already exists
+        existingEmails.push(emailAddress); // Collect existing emails to report later
+        continue; // Skip adding this student to the database
       }
 
-      // Hash the password before saving
-      const hashedPassword = await bcrypt.hash(password, 10);
+      // Hash the password before saving (uncomment if using bcrypt)
+      // const hashedPassword = await bcrypt.hash(password, 10);
 
       // Create the student object for bulk insertion
       studentData.push({
-        emailAddress: email,
-        password: hashedPassword, // Save hashed password
-        firstName: firstName,
-        dateOfBirth: dateOfBirth,
-        mobileNumber: phoneNumber,
-        gender: gender,
-        addedByAdminId: null,
+        emailAddress,
+        password, // Save hashed password if needed
+        firstName,
+        dateOfBirth,
+        mobileNumber,
+        gender,
+        addedByAdminId,
         batchId: null,
         lastName: null,
         examType: null,
@@ -222,14 +238,15 @@ const bulkSaveStudents = async (req, res) => {
       });
     }
 
+    // If there are valid students, save them to the database
     if (studentData.length > 0) {
       // Use Sequelize's bulkCreate method to insert valid students into the database
       const savedStudents = await Student.bulkCreate(studentData);
 
-      // Check if there were any email conflicts
+      // If there were any email conflicts, return the existing emails along with saved students
       if (existingEmails.length > 0) {
         return res.status(409).json({
-          message: "Some students were not added due to existing emails",
+          message: "Emails already exist for some students.",
           existingEmails,
           savedStudents,
         });
@@ -248,6 +265,8 @@ const bulkSaveStudents = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
+
+
 // controller to update batchId for multiple students based on emails
 const updateBatchIdForUsers = async (req, res) => {
   try {

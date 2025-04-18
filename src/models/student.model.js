@@ -34,8 +34,8 @@ const Student=sequelizeCon.define("Student",
     },
     isVerified: {
       type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
+      allowNull: true,
+      defaultValue: true,
     },
 
     // Add missing fields for personal data

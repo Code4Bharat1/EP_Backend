@@ -5,7 +5,7 @@ import { deleteBatch } from "../controller/admin.controller.js";
 
 const router = express.Router();
 
-router.get("/info", getStudentInfo);
+router.post("/info", getStudentInfo);
 router.post("/save", saveBasicStudentData);
 router.post("/bulk-save", bulkSaveStudents);
 router.post("/update", updateBatchIdForUsers);

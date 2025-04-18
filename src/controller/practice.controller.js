@@ -23,6 +23,7 @@ export const getHighestTestResultsForAllStudents = async (req, res) => {
                 },
             },
             attributes: [
+                "id",
                 "studentId", // studentId to link the student
                 "testName",  // Name of the test
                 "marksObtained", // Total marks obtained in the test
@@ -38,6 +39,7 @@ export const getHighestTestResultsForAllStudents = async (req, res) => {
                 },
             },
             attributes: [
+                "id",
                 "studentId", // studentId to link the student
                 "testName",  // Name of the test
                 "score", // Obtained score in the test
@@ -85,7 +87,7 @@ export const getHighestTestResultsForAllStudents = async (req, res) => {
             if (highestFullTestResult.marksObtained > 0) {
                 results.push({
                     fullName: `${student.firstName} ${student.lastName}`,
-                    studentId: student.id,
+                    studentId: student.id, // Include studentId
                     testName: highestFullTestResult.testName,
                     subject: subjectNames.join(", "),
                     marksObtained: highestFullTestResult.marksObtained,
@@ -97,7 +99,7 @@ export const getHighestTestResultsForAllStudents = async (req, res) => {
             if (highestMeTestResult.score > 0) {
                 results.push({
                     fullName: `${student.firstName} ${student.lastName}`,
-                    studentId: student.id,
+                    studentId: student.id, // Include studentId
                     testName: highestMeTestResult.testName,
                     subject: subjectNames.join(", "),
                     marksObtained: highestMeTestResult.score,

@@ -254,5 +254,64 @@ const getVerifiedUser = async (req, res) => {
 };
 
 
+const getSubjectWiseAverageMarks = async (req, res) => {
+  try {
+    // Extract token from the Authorization header
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized: No token provided" });
+    }
 
-export { getStudentName, getTestStatistics,getSubjectWiseMarks, getpendingTest, getVerifiedUser};
+    const secret = config.get("jwtSecret");
+    let decoded;
+
+    try {
+      decoded = jwt.verify(token, secret); // Verify the JWT token
+    } catch (err) {
+      return res.status(403).json({ error: "Unauthorized: Invalid or expired token" });
+    }
+
+    const userId = decoded.id;
+
+    // Fetch data from MeTest
+    const meTestData = await MeTest.findAll({
+      where: { studentId: userId },
+      attributes: ["subjectWiseMarks", "updatedAt"],
+    });
+
+    // Process the data and log the result
+    const result = meTestData.map((test) => {
+      let subjectMarks;
+      try {
+        // Parse the JSON string from the database
+        subjectMarks = typeof test.subjectWiseMarks === "string" 
+          ? JSON.parse(test.subjectWiseMarks) 
+          : test.subjectWiseMarks;
+      } catch (error) {
+        console.error("Error parsing subjectWiseMarks:", error);
+        subjectMarks = { Physics: 0, Chemistry: 0, Biology: 0 };
+      }
+
+      const formattedResult = {
+        Physics: subjectMarks.Physics || 0,
+        Chemistry: subjectMarks.Chemistry || 0,
+        Biology: subjectMarks.Biology || 0,
+        updatedAt: test.updatedAt,
+      };
+
+      // Log in the desired format
+
+      return formattedResult;
+    });
+
+    // Send the data as JSON response
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error fetching subject-wise marks:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+
+
+export { getStudentName, getTestStatistics,getSubjectWiseMarks, getpendingTest, getVerifiedUser, getSubjectWiseAverageMarks};

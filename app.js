@@ -29,7 +29,7 @@ import sendEmailrouter from './src/routes/resend.router.js'
 import superAdminRouter from './src/routes/superadmin.router.js'
 
 const app = express();
-const port = config.get('port') || 3306;
+const port = 3085;
 const corsOptions = {
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 

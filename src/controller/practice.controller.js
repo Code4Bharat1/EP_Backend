@@ -23,11 +23,11 @@ export const getHighestTestResultsForAllStudents = async (req, res) => {
                 },
             },
             attributes: [
-                "id",
                 "studentId", // studentId to link the student
                 "testName",  // Name of the test
                 "marksObtained", // Total marks obtained in the test
                 "totalMarks",  // Total possible marks in the test
+                "totalQuestions", // Number of questions in the test (for dynamic totalMarks calculation)
             ],
         });
 
@@ -39,7 +39,6 @@ export const getHighestTestResultsForAllStudents = async (req, res) => {
                 },
             },
             attributes: [
-                "id",
                 "studentId", // studentId to link the student
                 "testName",  // Name of the test
                 "score", // Obtained score in the test
@@ -77,21 +76,24 @@ export const getHighestTestResultsForAllStudents = async (req, res) => {
             // Step 7: Calculate the total marks for MeTest (totalQuestions * 4)
             const totalMarksMeTest = highestMeTestResult.totalQuestions * 4;
 
-            // Step 8: Constant subjects
+            // Step 8: Calculate the total marks for FullTest (totalQuestions * 4)
+            const totalMarksFullTest = highestFullTestResult.totalQuestions * 4;
+
+            // Step 9: Constant subjects
             const subjectNames = ["Physics", "Chemistry", "Biology"];
 
-            // Step 9: Prepare the result with both FullTest and MeTest entries for the student
+            // Step 10: Prepare the result with both FullTest and MeTest entries for the student
             const results = [];
 
             // Only include results if the student has FullTest data
             if (highestFullTestResult.marksObtained > 0) {
                 results.push({
                     fullName: `${student.firstName} ${student.lastName}`,
-                    studentId: student.id, // Include studentId
+                    studentId: student.id,
                     testName: highestFullTestResult.testName,
                     subject: subjectNames.join(", "),
                     marksObtained: highestFullTestResult.marksObtained,
-                    totalMarks: highestFullTestResult.totalMarks,
+                    totalMarks: totalMarksFullTest,  // Calculate total marks dynamically
                 });
             }
 
@@ -99,11 +101,11 @@ export const getHighestTestResultsForAllStudents = async (req, res) => {
             if (highestMeTestResult.score > 0) {
                 results.push({
                     fullName: `${student.firstName} ${student.lastName}`,
-                    studentId: student.id, // Include studentId
+                    studentId: student.id,
                     testName: highestMeTestResult.testName,
                     subject: subjectNames.join(", "),
                     marksObtained: highestMeTestResult.score,
-                    totalMarks: totalMarksMeTest,
+                    totalMarks: totalMarksMeTest,  // Calculate total marks dynamically
                 });
             }
 
@@ -113,7 +115,7 @@ export const getHighestTestResultsForAllStudents = async (req, res) => {
         // Flatten the array and return the results in the final response
         const flattenedResults = resultWithFullName.flat();
 
-        // Step 10: Return the final response with the adjusted output format
+        // Step 11: Return the final response with the adjusted output format
         return res.status(200).json({
             message: "Highest Test Results fetched successfully",
             count: flattenedResults.length,

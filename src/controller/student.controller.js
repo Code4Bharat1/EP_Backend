@@ -27,7 +27,7 @@ const register = async (req, res) => {
     if (password !== confirmPassword) {
       return res.status(400).json({ message: "Passwords do not match" });
     }
-
+    
     // Check if user already exists
     const existingStudent = await Student.findOne({ where: { emailAddress } });
     if (existingStudent) {

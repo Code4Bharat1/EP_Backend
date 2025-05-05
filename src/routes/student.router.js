@@ -8,6 +8,7 @@ import {
   resetPassword,
   savePersonalData,
   getPersonalData,
+  newSavePersonalData,
 } from "../controller/student.controller.js";
 import { studentAuth } from "../middleware/studentAuth.js"; // Authentication middleware
 import { otpRateLimiter } from "../middleware/rateLimiter.js";
@@ -44,6 +45,8 @@ router.post(
   ]),
   savePersonalData
 );
+
+router.post("/newdata", newSavePersonalData)
 
 router.get("/getdata", studentAuth, getPersonalData);
 

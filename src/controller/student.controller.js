@@ -27,7 +27,7 @@ const register = async (req, res) => {
     if (password !== confirmPassword) {
       return res.status(400).json({ message: "Passwords do not match" });
     }
-    
+
     // Check if user already exists
     const existingStudent = await Student.findOne({ where: { emailAddress } });
     if (existingStudent) {
@@ -71,47 +71,70 @@ const register = async (req, res) => {
 
 const savePersonalData = async (req, res) => {
   try {
-    console.log(req.body);
+    console.log('Received body:', req.body);
+    console.log('Received file:', req.file);
+
     const {
-      emailAddress,
       firstName,
-      lastName,
+      lastName, 
       examType,
       dateOfBirth,
-      state,
-      city,
-      fullAddress,
-      language,
-      profileImage,
+      domicileState,       
+      targetYear,      
+      mobileNumber,         
+      gender,     
+      emailAddress,        
+      fullAddress
     } = req.body;
 
+    console.log(firstName, lastName, examType, dateOfBirth, state, country, language, email, fullAddress);
+
+    // Validate required fields
+    if (!firstName || !lastName || !emailAddress) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
     const id = req.user.id;
+    console.log(id);
     const student = await Student.findOne({ where: { id } });
 
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
-    let updatedProfileImage = student.profileImage; // Keep existing image
-    // If a new profile image is uploaded, update it
-    if (req.files && req.files.profileImage) {
-      const uploadedProfileImage = await uploadOnCloudinary(
-        req.files.profileImage[0].path
-      );
-      updatedProfileImage = uploadedProfileImage.url;
+
+    let updatedProfileImage = student.profileImage;
+    
+    if (req.file) {
+      try {
+        const uploadedProfileImage = await uploadOnCloudinary(req.file.path);
+        updatedProfileImage = uploadedProfileImage.url;
+      } catch (uploadError) {
+        console.error("Error uploading image:", uploadError);
+        return res.status(500).json({ message: "Error uploading profile image" });
+      }
     }
 
-    // Update the student's personal data
-    await student.update({
+    // Convert targetYear to number if needed
+    const targetYearValue = country ? parseInt(country) : null;
+
+    // Update with proper field mappings
+    const updateData = {
       firstName,
       lastName,
-      examType,
-      dateOfBirth,
-      state,
-      city,
-      fullAddress,
-      language: JSON.parse(language),
-      profileImage: updatedProfileImage,
-    });
+      examType: examType || null,
+      dateOfBirth: dateOfBirth || null,
+      domicileState: domicileState || null,
+      targetYear: targetYearValue,
+      mobileNumber: mobileNumber || null,
+      gender: gender || null,
+      emailAddress: emailAddress,
+      fullAddress: fullAddress || null,
+      profileImage: updatedProfileImage
+    };
+
+    console.log('Updating with:', updateData);
+
+    await student.update(updateData);
 
     return res.status(200).json({
       message: "Personal data updated successfully",
@@ -120,7 +143,65 @@ const savePersonalData = async (req, res) => {
 
   } catch (error) {
     console.error("Error saving personal data:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ 
+      message: "Internal server error",
+      error: error.message 
+    });
+  }
+};
+
+
+const newSavePersonalData = async (req, res) => {
+  try {
+    const {
+      id,
+      updatedImageUrl,
+      firstName,
+      lastName,
+      examType,
+      dateOfBirth,
+      domicileState,
+      targetYear,
+      mobileNumber,
+      gender,
+      emailAddress,
+      fullAddress,
+    } = req.body;
+
+    
+    const student = await Student.findOne({ where: { id } });
+    
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    const updateData = {
+      firstName: firstName || student.firstName,
+      lastName: lastName || student.lastName,
+      examType: examType || student.examType,
+      dateOfBirth: dateOfBirth || student.dateOfBirth,
+      domicileState: domicileState || student.domicileState,
+      targetYear: targetYear || student.targetYear,
+      mobileNumber : mobileNumber || student.mobileNumber,
+      gender: gender || student.gender,
+      emailAddress: emailAddress || student.emailAddress,
+      fullAddress: fullAddress || student.fullAddress,
+      profileImage: updatedImageUrl || student.profileImage, // Fixed variable name
+    };
+
+    await student.update(updateData);
+
+    return res.status(200).json({
+      message: "Personal Data Updated Successfully",
+      student,
+    });
+
+  } catch (error) {
+    console.error("Error saving personal Data: ", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message
+    });
   }
 };
 
@@ -432,4 +513,5 @@ export {
   resetPassword,
   savePersonalData,
   getPersonalData,
+  newSavePersonalData,
 };

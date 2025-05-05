@@ -30,8 +30,8 @@ const fetchPdfIdsBySubjects = async (req, res) => {
       chapter_name: pdf.topic_tags, // This is the chapter name
     }));
 
-    // Log the IDs and chapter names to the console
-    console.log("Selected PDFs with Chapter Names:", pdfData);
+    // // Log the IDs and chapter names to the console
+    // console.log("Selected PDFs with Chapter Names:", pdfData);
 
     // Step 2: Use the pdf_ids to fetch corresponding questions from the Question table
     const questions = await Question.findAll({
@@ -89,8 +89,8 @@ const fetchPdfIdsBySubjectsForChemistry = async (req, res) => {
       chapter_name: pdf.topic_tags, // This is the chapter name
     }));
 
-    // Log the IDs and chapter names to the console
-    console.log("Selected PDFs with Chapter Names for Chemistry:", pdfData);
+    // // Log the IDs and chapter names to the console
+    // console.log("Selected PDFs with Chapter Names for Chemistry:", pdfData);
 
     // Step 2: Use the pdf_ids to fetch corresponding questions from the Question table
     const questions = await Question.findAll({

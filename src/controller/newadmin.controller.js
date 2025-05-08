@@ -490,6 +490,34 @@ const updateTest = async (req, res) => {
   }
 };  
 
+const getTestData = async (req, res) => {
+  try {
+
+
+    const tests = await Admintest.findAll({
+      where: {
+        addedByAdminId: req.adminId, // Use the adminId from the decoded token
+      },
+      order: [['createdAt', 'DESC']] // Optional: latest first
+    });
+
+    if (!tests || tests.length === 0) {
+      return res.status(404).json({ message: "No test data found" });
+    }
+
+    return res.status(200).json({
+      message: "Test data fetched successfully",
+      data: tests
+    });
+  } catch (error) {
+    console.error("Error fetching test data:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
 //dashboard data of student
 const dashboardStudentData = async (req, res) => {
   try {
@@ -593,13 +621,7 @@ const getTestResults = async (req, res) => {
 
 const getProfile = async (req, res) => {
   try {
-    // const { adminId } = req.body;
-
-    // if (!adminId) {
-    //   return res.status(400).json({ message: "Admin ID is required" });
-    // }
-
-    // ✅ Fixed typo: 'amin_id' → 'admin_id'
+    // Decode the JWT token to get the admin ID
     const admin = await Admin.findOne({ where: { id:  req.adminId } });
 
     if (!admin) {
@@ -632,13 +654,8 @@ const getProfile = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { adminId } = req.body;
-
-    if (!adminId) {
-      return res.status(400).json({ message: "Admin ID is required" });
-    }
-
-    const admin = await Admin.findOne({ where: { id: adminId } });
+    // Decode the JWT token to get the admin ID
+    const admin = await Admin.findOne({ where: { id: req.adminId } });
 
     if (!admin) {
       return res.status(404).json({ message: "Admin not found" });
@@ -690,5 +707,5 @@ const updateProfile = async (req, res) => {
 
 
 export { createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults, getProfile,updateProfile
-
+, getTestData,
 };

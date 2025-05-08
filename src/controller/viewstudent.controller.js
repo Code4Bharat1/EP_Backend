@@ -351,9 +351,17 @@ const createBatch = async (req, res) => {
 
 const getBatchInfo = async (req, res) => {
   try {
+    const adminId = 1; // Assuming adminId is sent in the request body
+    if (!adminId) {
+      return res.status(400).json({ message: "Admin ID is required" });
+    }
+
     // Fetching batch information from the Batches table
     const batchData = await Batch.findAll({
-      attributes: ['batchId', 'batchName', 'no_of_students'], // Specify the columns to retrieve
+      attributes: ['batchId', 'batchName', 'no_of_students'],
+      where: {
+        admin_id: adminId // Corrected to use the variable 'adminId'
+      },
     });
 
     // If no batch data found, return an error response
@@ -368,6 +376,7 @@ const getBatchInfo = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 //controller to delete the batches from the batches table
 const deleteBatch = async (req, res) => {

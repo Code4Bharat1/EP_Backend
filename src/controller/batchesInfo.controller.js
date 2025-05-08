@@ -7,8 +7,7 @@ const batchesInfo = async (
   res
 ) => {
   try {
-    const batchId =
-      req.query.batchId || 101;
+    const batchId = req.query.batchId;
 
     if (!batchId) {
       return res.status(400).json({
@@ -60,7 +59,9 @@ const batchesInfo = async (
           "exam_end_date",
           "subject",
         ],
-        where: { batch_name: batchName }, // assuming admintest has batchName column
+        where: {
+          batch_name: batchName,
+        }, // assuming admintest has batchName column
       });
 
     return res.status(200).json({

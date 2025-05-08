@@ -9,6 +9,7 @@ import MeTest from '../models/saved.js';
 import Admintest from '../models/admintest.model.js';
 import { Question, Option } from '../models/everytestmode.refrence.js';
 import generateTestResult from '../models/generateTestresult.model.js';
+import c from 'config';
 
 // Controller to register a new admin
 const createAdmin = async (req, res) => {
@@ -590,6 +591,104 @@ const getTestResults = async (req, res) => {
   }
 };
 
+const getProfile = async (req, res) => {
+  try {
+    // const { adminId } = req.body;
+
+    // if (!adminId) {
+    //   return res.status(400).json({ message: "Admin ID is required" });
+    // }
+
+    // ✅ Fixed typo: 'amin_id' → 'admin_id'
+    const admin = await Admin.findOne({ where: { id:  req.adminId } });
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+    console.log(admin);
+    return res.status(200).json({
+      message: "Admin profile fetched successfully",
+      data: {
+        id: admin.id,
+        adminId: admin.AdminId,
+        name: admin.name,
+        email: admin.Email, // ✅ fixed casing: Email → email
+        mobileNumber: admin.mobileNumber,
+        whatsappNumber: admin.whatsappNumber,
+        startDate: admin.StartDate, // ✅ fixed casing: StartDate → startDate
+        expiryDate: admin.ExpiryDate,
+        address: admin.address,
+        hodName: admin.HodName,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching admin profile:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+const updateProfile = async (req, res) => {
+  try {
+    const { adminId } = req.body;
+
+    if (!adminId) {
+      return res.status(400).json({ message: "Admin ID is required" });
+    }
+
+    const admin = await Admin.findOne({ where: { id: adminId } });
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    // Allowed fields to update (excluding id, adminId, StartDate, ExpiryDate)
+    const {
+      name,
+      Email,
+      mobileNumber,
+      whatsappNumber,
+      address,
+      HodName,
+    } = req.body;
+
+    // Update only allowed fields
+    if (name) admin.name = name;
+    if (Email) admin.Email = Email;
+    if (mobileNumber) admin.mobileNumber = mobileNumber;
+    if (whatsappNumber) admin.whatsappNumber = whatsappNumber;
+    if (address) admin.address = address;
+    if (HodName) admin.HodName = HodName;
+
+    await admin.save();
+
+    return res.status(200).json({
+      message: "Admin profile updated successfully",
+      data: {
+        id: admin.id,
+        adminId: admin.AdminId,
+        name: admin.name,
+        email: admin.Email,
+        mobileNumber: admin.mobileNumber,
+        whatsappNumber: admin.whatsappNumber,
+        startDate: admin.StartDate,       // returned but not updated
+        expiryDate: admin.ExpiryDate,     // returned but not updated
+        address: admin.address,
+        hodName: admin.HodName,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating admin profile:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
 
 
-export { createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults};
+export { createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults, getProfile,updateProfile
+
+};

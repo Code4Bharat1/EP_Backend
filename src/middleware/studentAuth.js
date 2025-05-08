@@ -32,4 +32,5 @@ const studentAuth = (req, res, next) => {
   });
 };
 
+
 export { studentAuth };

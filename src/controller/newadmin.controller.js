@@ -9,7 +9,7 @@ import MeTest from '../models/saved.js';
 import Admintest from '../models/admintest.model.js';
 import { Question, Option } from '../models/everytestmode.refrence.js';
 import generateTestResult from '../models/generateTestresult.model.js';
-import c from 'config';
+import { Batch } from '../models/admin.model.js';
 
 // Controller to register a new admin
 const createAdmin = async (req, res) => {
@@ -248,23 +248,66 @@ export const createAdmintest = async (req, res) => {
   }
 };
 
-// Controller to retrieve all test details from the Admintest table
-export const getAllTestDetails = async (req, res) => {
+// Controller to retrieve test details based on student's batch
+export const getStudentTestDetails = async (req, res) => {
   try {
-    // Retrieve all test details from the Admintest table without any attribute restriction
-    const allTestDetails = await Admintest.findAll();
+    // Get student ID from request (could be from params, body, or auth token)
+    const { studentId } = req.body;
+    
+    if (!studentId) {
+      return res.status(400).json({
+        message: "Student ID is required",
+      });
+    }
 
-    // Check if any records exist
-    if (allTestDetails.length === 0) {
+    // Find the student to get their batchId
+    const student = await Student.findOne({
+      where: { id: studentId },
+      attributes: ['batchId'],
+      raw: true
+    });
+
+    if (!student) {
       return res.status(404).json({
-        message: "No tests found",
+        message: "Student not found",
+      });
+    }
+
+    if (!student.batchId) {
+      return res.status(404).json({
+        message: "Student is not assigned to any batch",
+      });
+    }
+
+    // Find the batch to get batchName
+    const batch = await Batch.findOne({
+      where: { batchId: student.batchId },
+      attributes: ['batchName'],
+      raw: true
+    });
+
+    if (!batch) {
+      return res.status(404).json({
+        message: "Batch not found",
+      });
+    }
+
+    // Retrieve tests that match the student's batch name
+    const studentTests = await Admintest.findAll({
+      where: { batch_name: batch.batchName }
+    });
+
+    // Check if any tests exist for this batch
+    if (studentTests.length === 0) {
+      return res.status(404).json({
+        message: "No tests found for your batch",
       });
     }
 
     // Send the retrieved test details as the response
     return res.status(200).json({
       message: "Test details fetched successfully",
-      tests: allTestDetails,
+      tests: studentTests,
     });
   } catch (error) {
     console.error("Error retrieving test details:", error);
@@ -274,7 +317,6 @@ export const getAllTestDetails = async (req, res) => {
     });
   }
 };
-
 
 export const getTestDetailsById = async (req, res) => {
   try {
@@ -490,34 +532,6 @@ const updateTest = async (req, res) => {
   }
 };  
 
-const getTestData = async (req, res) => {
-  try {
-
-
-    const tests = await Admintest.findAll({
-      where: {
-        addedByAdminId: req.adminId, // Use the adminId from the decoded token
-      },
-      order: [['createdAt', 'DESC']] // Optional: latest first
-    });
-
-    if (!tests || tests.length === 0) {
-      return res.status(404).json({ message: "No test data found" });
-    }
-
-    return res.status(200).json({
-      message: "Test data fetched successfully",
-      data: tests
-    });
-  } catch (error) {
-    console.error("Error fetching test data:", error);
-    return res.status(500).json({
-      message: "Internal server error",
-      error: error.message
-    });
-  }
-};
-
 //dashboard data of student
 const dashboardStudentData = async (req, res) => {
   try {
@@ -619,6 +633,7 @@ const getTestResults = async (req, res) => {
   }
 };
 
+
 const getProfile = async (req, res) => {
   try {
     // Decode the JWT token to get the admin ID
@@ -705,7 +720,34 @@ const updateProfile = async (req, res) => {
   }
 };
 
+const getTestData = async (req, res) => {
+  try {
 
-export { createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults, getProfile,updateProfile
-, getTestData,
+
+    const tests = await Admintest.findAll({
+      where: {
+        addedByAdminId: req.adminId, // Use the adminId from the decoded token
+      },
+      order: [['createdAt', 'DESC']] // Optional: latest first
+    });
+
+    if (!tests || tests.length === 0) {
+      return res.status(404).json({ message: "No test data found" });
+    }
+
+    return res.status(200).json({
+      message: "Test data fetched successfully",
+      data: tests
+    });
+  } catch (error) {
+    console.error("Error fetching test data:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message
+    });
+  }
 };
+
+
+export { createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults, getProfile,updateProfile , getTestData,
+  };

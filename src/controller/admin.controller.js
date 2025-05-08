@@ -81,11 +81,11 @@ const login = async (req, res) => {
     }
 
     // // Generate JWT Token
-    // const token = jwt.sign(
-    //   { id: admin.id, AdminId: admin.AdminId },
-    //   process.env.JWT_SECRET || "your_secret_key",
-    //   { expiresIn: "1h" } 
-    // );
+    const token = jwt.sign(
+      { id: admin.id, AdminId: admin.AdminId },
+      process.env.JWT_SECRET || "your_secret_key",
+      { expiresIn: "1h" } 
+    );
 
     return res.status(200).json({
       message: "Login successful",

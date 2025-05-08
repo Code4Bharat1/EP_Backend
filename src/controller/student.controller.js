@@ -304,6 +304,7 @@ const resendOtp = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { emailAddress, password } = req.body;
+    
 console.log("Login", emailAddress, password);
 
     // Basic validation

@@ -67,6 +67,7 @@ const saveBasicStudentData = async (req, res) => {
   try {
     // Destructure the required data from the request body
     const { email, password, firstName, dateOfBirth, phoneNumber, gender, addedByAdminId } = req.body;
+    console.log(email, password, firstName, dateOfBirth, phoneNumber, gender, addedByAdminId);
 
     // Validate if all required fields are present
     if (!email || !password || !firstName || !dateOfBirth || !phoneNumber || !gender || !addedByAdminId) {

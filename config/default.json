@@ -2,9 +2,9 @@
   "port": 3306,
   "mysql": {
     "host": "auth-db982.hstgr.io",
-    "username": "u273147311_admin",
-    "password": "Code4bharat@123",
-    "database": "u273147311_examportal",
+    "username": "u273147311_student",
+    "password": "shabenoorA1!@",
+    "database": "u273147311_EP_database",
     "dialect": "mysql",
     "logging": false
   },

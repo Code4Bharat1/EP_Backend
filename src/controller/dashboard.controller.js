@@ -191,6 +191,8 @@ const getpendingTest = async (req, res) => {
       order: [['updatedAt', 'DESC']], // Optional: to order by latest updatedAt
     });
 
+    
+
     if (!recommendedTests || recommendedTests.length === 0) {
       return res.status(404).json({ message: "No recommended tests found for this user" });
     }

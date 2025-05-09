@@ -564,6 +564,38 @@ const createBatch = async (
   }
 };
 
+//get batch names
+const getBatchNames = async (req, res) => {
+  try {
+    const { adminId } = req.body;
+
+    if (!adminId) {
+      return res.status(400).json({ message: "Admin ID is required." });
+    }
+
+    const batchData = await Batch.findAll({
+      where: { admin_id: adminId },
+      attributes: ['batchName'],
+    });
+
+    if (batchData.length === 0) {
+      return res.status(404).json({
+        message: "No batches found.",
+      });
+    }
+
+    return res.status(200).json({ batchData });
+
+  } catch (error) {
+    console.error("Error fetching batch names:", error);
+    return res.status(500).json({
+      message: "Error finding batches",
+      error: error.message
+    });
+  }
+};
+
+
 const getBatchInfo = async (
   req,
   res
@@ -665,4 +697,5 @@ export {
   updateBatchIdForUsers,
   createBatch,
   getBatchInfo,
+  getBatchNames
 };

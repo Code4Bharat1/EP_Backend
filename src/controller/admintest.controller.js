@@ -184,4 +184,34 @@ const createdTests = async (req, res)=> {
 };
  
 
-export {createTest,getChapters,getQuestionsByTopic, getTestDetails,createdTests};
+
+
+const getTestCountByAdmin = async (req, res) => {
+  try {
+    const adminId = req.adminId;
+
+    if (!adminId) {
+      return res.status(400).json({ success: false, message: "Admin ID is required" });
+    }
+
+    const currentDate = new Date(); // or use moment().toDate()
+
+    // Count active (non-expired) tests
+    const testCount = await Admintest.count({
+      where: {
+        addedByAdminId: adminId,
+        exam_end_date: {
+          [Op.gte]: currentDate
+        }
+      }
+    });
+
+    res.status(200).json({ success: true, testCount });
+  } catch (error) {
+    console.error("Error fetching test count:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+export {createTest,getChapters,getQuestionsByTopic, getTestDetails,createdTests, getTestCountByAdmin};

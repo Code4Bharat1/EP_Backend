@@ -636,8 +636,13 @@ const getTestResults = async (req, res) => {
 
 const getProfile = async (req, res) => {
   try {
-    // Decode the JWT token to get the admin ID
-    const admin = await Admin.findOne({ where: { id:  req.adminId } });
+    const  adminId  = req.adminId;// Decode the JWT token to get the admin ID
+
+    if (!adminId) {
+      return res.status(400).json({ success: false, message: "Admin ID is required" });
+    }
+    
+    const admin = await Admin.findOne({ where: { id:  adminId } });
 
     if (!admin) {
       return res.status(404).json({ message: "Admin not found" });
@@ -669,8 +674,13 @@ const getProfile = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
+    const  adminId  = req.adminId;
+
+    if (!adminId) {
+      return res.status(400).json({ success: false, message: "Admin ID is required" });
+    }
     // Decode the JWT token to get the admin ID
-    const admin = await Admin.findOne({ where: { id: req.adminId } });
+    const admin = await Admin.findOne({ where: { id: adminId } });
 
     if (!admin) {
       return res.status(404).json({ message: "Admin not found" });
@@ -722,11 +732,16 @@ const updateProfile = async (req, res) => {
 
 const getTestData = async (req, res) => {
   try {
+    const  adminId  = req.adminId;
+
+    if (!adminId) {
+      return res.status(400).json({ success: false, message: "Admin ID is required" });
+    }
 
 
     const tests = await Admintest.findAll({
       where: {
-        addedByAdminId: req.adminId, // Use the adminId from the decoded token
+        addedByAdminId: adminId, // Use the adminId from the decoded token
       },
       order: [['createdAt', 'DESC']] // Optional: latest first
     });

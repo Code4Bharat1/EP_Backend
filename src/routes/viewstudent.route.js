@@ -10,7 +10,7 @@ router.post("/info", getStudentInfo);
 router.post("/save", saveBasicStudentData);
 router.post("/bulk-save", bulkSaveStudents);
 router.post("/update", updateBatchIdForUsers);
-router.post("/batch", createBatch);
+router.post("/batch",verifyToken, createBatch);
 router.get("/getbatch",verifyToken, getBatchInfo);
 router.get("/batches/:batchId", deleteBatch);
 

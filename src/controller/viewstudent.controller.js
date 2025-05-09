@@ -503,6 +503,15 @@ const createBatch = async (
       no_of_students,
     } = req.body;
 
+    const adminId = req.adminId; 
+    if (!adminId) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Admin ID is required",
+        });
+    }
     // Validate if all required fields are present
     if (
       !batchId ||
@@ -537,7 +546,7 @@ const createBatch = async (
         batchId, // Unique batch ID
         batchName, // Batch name
         no_of_students, // Number of students in the batch
-        admin_id: null, // Keeping admin_id as null for now
+        admin_id: adminId, // Keeping admin_id as null for now
       }
     );
 
@@ -586,6 +595,7 @@ const getBatchInfo = async (
           "batchId",
           "batchName",
           "no_of_students",
+
         ],
         where: {
           admin_id: req.adminId,

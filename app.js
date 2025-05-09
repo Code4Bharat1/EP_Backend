@@ -40,6 +40,20 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(logger);
+
+app.get('/', (req, res) => {
+  res.status(200).json({
+    message: "👁️ Hello, developer. You've reached the API. It’s been waiting.",
+    status: "online-ish",
+    warnings: [
+      "Do not feed the endpoints after midnight.",
+      "Avoid /deleteAll unless you're feeling brave.",
+      "Some routes are... haunted."
+    ],
+    tip: "The real bug was inside you all along."
+  });
+});
+
 app.use('/api/students', studentRoutes);
 app.use("/api/question", questionRout);
 app.use("/api/metest", meTest);

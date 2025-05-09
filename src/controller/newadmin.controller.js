@@ -11,6 +11,7 @@ import { Question, Option } from '../models/everytestmode.refrence.js';
 import generateTestResult from '../models/generateTestresult.model.js';
 import { Batch } from '../models/admin.model.js';
 
+
 // Controller to register a new admin
 const createAdmin = async (req, res) => {
   const {
@@ -247,6 +248,43 @@ export const createAdmintest = async (req, res) => {
     });
   }
 };
+
+//getting the testid according to the admin id
+
+const getTestbyAdminId = async (req, res) => {
+  try {
+    const {adminId} = req.body;
+
+    if(!adminId) {
+      return res.status(400).json({
+        message : "student id is required"
+      })
+    }
+
+    const studentTests = await Admintest.findAll({
+      where : {addedByAdminId : adminId}
+    });
+
+    if(studentTests.length === 0) {
+      return res.status(404).json({
+        message : "No test found for your admin"
+      })
+    }
+
+    return res.status(200).json({
+      message : "Test details fetched successfully",
+      tests : studentTests
+    })
+
+  }catch(error) {
+    console.error("Error Fetching Test");
+    return res.status(500).json({
+      message : "Failed to retrieve test details",
+      error : error.message
+    })
+  }
+}
+
 
 // Controller to retrieve test details based on student's batch
 export const getStudentTestDetails = async (req, res) => {
@@ -532,6 +570,53 @@ const updateTest = async (req, res) => {
   }
 };  
 
+
+//getting students, batches, and tests created by user
+
+const dashboardDetails = async (req, res) => {
+  try {
+    const { adminId } = req.body;
+
+    if (!adminId) {
+      return res.status(400).json({ message: "Admin ID is required" });
+    }
+
+    // Count students added by admin
+    const studentCount = await Student.count({
+      where: { addedByAdminId: adminId },
+    });
+
+    // Count batches created by admin
+    const batchCount = await Batch.count({
+      where: { admin_id: adminId },
+    });
+
+    // Count tests created by admin
+    const testCount = await Admintest.count({
+      where: { addedByAdminId: adminId },
+    });
+
+    return res.status(200).json({
+      message: "Dashboard data fetched successfully",
+      data: {
+        totalStudents: studentCount,
+        totalBatches: batchCount,
+        totalTests: testCount,
+      },
+    });
+
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    return res.status(500).json({
+      message: "Error fetching dashboard data",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
 //dashboard data of student
 const dashboardStudentData = async (req, res) => {
   try {
@@ -764,5 +849,5 @@ const getTestData = async (req, res) => {
 };
 
 
-export { createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults, getProfile,updateProfile , getTestData,
+export {dashboardDetails, getTestbyAdminId, createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults, getProfile,updateProfile , getTestData,
   };

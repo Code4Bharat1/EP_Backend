@@ -1,6 +1,6 @@
 export const dataofquestions = {
     Physics: {
-      "Unit I: Physics and Measurement": {
+      "Unit I: Physical World and Measurement": {
         weightage: 2,
         expected_questions: 5,
         difficulty: "Medium",

@@ -1,17 +1,18 @@
 import jwt from "jsonwebtoken";
 import config from "config";
 import FullTestResults from "../models/fullTestResults.model.js";
-import MeTest from '../models/saved.js'; // Adjust the import according to your project structure
+import MeTest from "../models/saved.js";
 
 const pastTest = async (req, res) => {
   try {
-    // Decode the token to get user information (same logic as before)
-    const token = req.headers.authorization.split(" ")[1];
-    if (!token) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ error: "Unauthorized: No token provided" });
     }
 
+    const token = authHeader.split(" ")[1];
     const secret = config.get("jwtSecret");
+
     let decoded;
     try {
       decoded = jwt.verify(token, secret);
@@ -21,125 +22,118 @@ const pastTest = async (req, res) => {
 
     const userId = decoded.id;
 
-    // Fetch data from FullTestResults model
     const fullTestData = await FullTestResults.findAll({
       where: { studentId: userId },
       attributes: [
-        'testName',
-        'difficultyLevel',
-        'correctAnswers',
-        'wrongAnswers',
-        'notAttempted',
-        'correctAnswersCount',
-        'wrongAnswersCount',
-        'notAttemptedCount',
-        'subjectWisePerformance',
+        'id', 'testName', 'difficultyLevel', 'correctAnswers', 'wrongAnswers',
+        'notAttempted', 'correctAnswersCount', 'wrongAnswersCount',
+        'notAttemptedCount', 'subjectWisePerformance',
       ],
     });
 
-    // Fetch data from MeTest model
     const meTestData = await MeTest.findAll({
       where: { studentId: userId },
       attributes: [
-        'testName',
-        'subjectWiseMarks',
-        'difficultyLevel',
-        'selectedChapters',
-        'correct',
-        'incorrect',
-        'unattempted',
+        'id', 'testName', 'subjectWiseMarks', 'difficultyLevel',
+        'selectedChapters', 'correct', 'incorrect', 'unattempted',
       ],
     });
 
-    // Initialize arrays to hold the analytics
     const testAnalytics = [];
 
-    // Process FullTestResults data
-    const fullTestAnalytics = fullTestData.map((test) => {
+    const fullTestAnalytics = fullTestData.map(test => {
+      let {
+        correctAnswers,
+        wrongAnswers,
+        notAttempted,
+        subjectWisePerformance
+      } = test;
+      const subjects = [];
+
       try {
-        let correctAnswers = test.correctAnswers;
-        let wrongAnswers = test.wrongAnswers;
-        let notAttempted = test.notAttempted;
+        if (typeof correctAnswers === 'string') correctAnswers = JSON.parse(correctAnswers);
+        if (typeof wrongAnswers === 'string') wrongAnswers = JSON.parse(wrongAnswers);
+        if (typeof notAttempted === 'string') notAttempted = JSON.parse(notAttempted);
 
-        // Log the raw data of correctAnswers for debugging
-
-        // If correctAnswers is a string (JSON format), parse it
-        if (typeof correctAnswers === 'string') {
+        // Handle double-encoded subjectWisePerformance
+        if (typeof subjectWisePerformance === 'string') {
           try {
-            // Parse the string into an array
-            correctAnswers = JSON.parse(correctAnswers);
-          } catch (parseError) {
-            console.error(`Failed to parse correctAnswers for test ${test.testName}:`, parseError);
-            correctAnswers = []; // Fallback to an empty array if parsing fails
+            subjectWisePerformance = JSON.parse(JSON.parse(subjectWisePerformance));
+          } catch (err) {
+            console.error(`Double parsing failed for test ${test.id}`, err);
+            subjectWisePerformance = [];
           }
         }
 
-        // Extract only the subjects from the correctAnswers (1st index of each array in correctAnswers)
-        const subjects = correctAnswers.map(item => item[1]); // Extract subject (1st index)
-
-        // Prepare the full test analytics data
-        return {
-          testName: test.testName,
-          difficultyLevel: test.difficultyLevel,
-          subjects,
-          correctAnswers,
-          wrongAnswers,
-          notAttempted,
-          correctAnswersCount: test.correctAnswersCount,
-          wrongAnswersCount: test.wrongAnswersCount,
-          notAttemptedCount: test.notAttemptedCount,
-        };
-      } catch (parseError) {
-        // Handle case if parsing fails
-        console.error(`Failed to parse correctAnswers for full test ${test.testName}:`, parseError);
-        return null;
+        if (Array.isArray(subjectWisePerformance)) {
+          subjectWisePerformance.forEach(perf => {
+            if (Array.isArray(perf) && typeof perf[0] === 'string') {
+              subjects.push(perf[0]);
+            }
+          });
+        }
+      } catch (err) {
+        console.error(`Error parsing data in test ${test.id}:`, err);
       }
-    }).filter(test => test !== null);
 
-    // Process MeTest data
-    const meTestAnalytics = meTestData.map((test) => {
+      // Fallback: Extract from correct/wrong answers
+      const allAnswers = [...(correctAnswers || []), ...(wrongAnswers || [])];
+      allAnswers.forEach(answer => {
+        if (Array.isArray(answer) && typeof answer[1] === 'string' && !subjects.includes(answer[1])) {
+          subjects.push(answer[1]);
+        }
+      });
+
+      const uniqueSubjects = [...new Set(subjects)];
+
+      return {
+        testId: test.id,
+        testName: test.testName,
+        difficultyLevel: test.difficultyLevel,
+        subjects: uniqueSubjects,
+        correctAnswers,
+        wrongAnswers,
+        notAttempted,
+        correctAnswersCount: test.correctAnswersCount,
+        wrongAnswersCount: test.wrongAnswersCount,
+        notAttemptedCount: test.notAttemptedCount,
+      };
+    }).filter(Boolean);
+
+    const meTestAnalytics = meTestData.map(test => {
+      let subjectWiseMarks = test.subjectWiseMarks;
+      const subjects = [];
+
       try {
-        let subjectWiseMarks = test.subjectWiseMarks;
-        let questionTimeUsed = test.questionTimeUsed;
-
-        // If subjectWiseMarks is a string (JSON format), parse it
         if (typeof subjectWiseMarks === 'string') {
           subjectWiseMarks = JSON.parse(subjectWiseMarks);
         }
-
-        // Extract only the subjects (keys of the subjectWiseMarks object)
-        const subjects = Object.keys(subjectWiseMarks);
-
-        if (!questionTimeUsed) {
-          questionTimeUsed = null;
+        if (subjectWiseMarks && typeof subjectWiseMarks === 'object') {
+          Object.keys(subjectWiseMarks).forEach(key => subjects.push(key));
         }
-
-        // Prepare the MeTest analytics data
-        return {
-          testName: test.testName,
-          subjects,
-          difficultyLevel: test.difficultyLevel,
-          questionTimeUsed,
-          correct: test.correct,
-          incorrect: test.incorrect,
-          unattempted: test.unattempted,
-        };
-      } catch (parseError) {
-        // Handle case if JSON parsing fails
-        console.error(`Failed to parse subjectWiseMarks for MeTest ${test.testName}:`, parseError);
+      } catch (err) {
+        console.error(`Parsing error in MeTest ${test.testName}:`, err);
         return null;
       }
-    }).filter(test => test !== null);
 
-    // Combine both FullTestResults and MeTest analytics
+      return {
+        testId: test.id,
+        testName: test.testName,
+        subjects,
+        difficultyLevel: test.difficultyLevel,
+        correct: test.correct,
+        incorrect: test.incorrect,
+        unattempted: test.unattempted,
+      };
+    }).filter(Boolean);
+
     testAnalytics.push(...fullTestAnalytics, ...meTestAnalytics);
 
     if (testAnalytics.length === 0) {
       return res.status(404).json({ error: "No valid test data found for this user" });
     }
 
-    // Return the combined test analytics
-    res.status(200).json({ testAnalytics });
+    return res.status(200).json({ testAnalytics });
   } catch (error) {
     console.error("Error fetching test data:", error);
     res.status(500).json({ error: "Internal Server Error" });

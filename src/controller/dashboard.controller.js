@@ -168,21 +168,21 @@ const getSubjectWiseMarks = async (req, res) => {
 const getpendingTest = async (req, res) => {
   try {
     // Extract the token from the Authorization header
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ error: "Unauthorized: No token provided" });
-    }
+    // const token = req.headers.authorization?.split(" ")[1];
+    // if (!token) {
+    //   return res.status(401).json({ error: "Unauthorized: No token provided" });
+    // }
 
-    const secret = config.get("jwtSecret");
-    let decoded;
+    // const secret = config.get("jwtSecret");
+    // let decoded;
 
-    try {
-      decoded = jwt.verify(token, secret); // Verify the JWT token
-    } catch (err) {
-      return res.status(403).json({ error: "Unauthorized: Invalid or expired token" });
-    }
+    // try {
+    //   decoded = jwt.verify(token, secret); // Verify the JWT token
+    // } catch (err) {
+    //   return res.status(403).json({ error: "Unauthorized: Invalid or expired token" });
+    // }
 
-    const userId = decoded.id; // Extract userId from the decoded token
+    const userId = req.adminId; // Extract userId from the decoded token
 
     // Fetch the recommended tests data based on userId
     const recommendedTests = await RecommendedTest.findAll({

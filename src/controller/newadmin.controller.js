@@ -848,6 +848,73 @@ const getTestData = async (req, res) => {
   }
 };
 
+ const getUpcomingTestByBatch = async (req, res) => {
+  try {
+    // Get student ID from request (could be from params, body, or auth token)
+    const  studentId  = req.adminId;
+    
+    if (!studentId) {
+      return res.status(400).json({
+        message: "Student ID is required",
+      });
+    }
 
-export {dashboardDetails, getTestbyAdminId, createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults, getProfile,updateProfile , getTestData,
-  };
+    // Find the student to get their batchId
+    const student = await Student.findOne({
+      where: { id: studentId },
+      attributes: ['batchId'],
+      raw: true
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+      });
+    }
+
+    if (!student.batchId) {
+      return res.status(404).json({
+        message: "Student is not assigned to any batch",
+      });
+    }
+
+    // Find the batch to get batchName
+    const batch = await Batch.findOne({
+      where: { batchId: student.batchId },
+      attributes: ['batchName'],
+      raw: true
+    });
+
+    if (!batch) {
+      return res.status(404).json({
+        message: "Batch not found",
+      });
+    }
+
+    // Retrieve tests that match the student's batch name
+    const studentTests = await Admintest.findAll({
+      where: { batch_name: batch.batchName }
+    });
+
+    // Check if any tests exist for this batch
+    if (studentTests.length === 0) {
+      return res.status(404).json({
+        message: "No tests found for your batch",
+      });
+    }
+
+    // Send the retrieved test details as the response
+    return res.status(200).json({
+      message: "Test details fetched successfully",
+      tests: studentTests,
+    });
+  } catch (error) {
+    console.error("Error retrieving test details:", error);
+    return res.status(500).json({
+      message: "Failed to retrieve test details",
+      error: error.message,
+    });
+  }
+};
+
+export {dashboardDetails, getTestbyAdminId, createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults, getProfile,updateProfile , getTestData, getUpcomingTestByBatch};

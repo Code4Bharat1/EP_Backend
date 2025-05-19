@@ -491,85 +491,65 @@ const updateBatchIdForUsers = async (
 };
 
 // Controller to save new batch information
-const createBatch = async (
-  req,
-  res
-) => {
+const createBatch = async (req, res) => {
   try {
-    // Destructure batch details from the request body
-    const {
+    const { batchId, batchName, no_of_students } = req.body;
+    const adminId = req.adminId;
+
+    if (!adminId) {
+      return res.status(400).json({
+        message: "Admin ID is required",
+      });
+    }
+
+    // Validate if all required fields are present
+    if (!batchId || !batchName || !no_of_students) {
+      return res.status(400).json({
+        message: "Batch ID, Batch Name, and Number of Students are required.",
+      });
+    }
+
+    // Check if batchId already exists (globally unique)
+    const existingBatchById = await Batch.findOne({
+      where: { batchId },
+    });
+    if (existingBatchById) {
+      return res.status(409).json({
+        message: "Batch ID already exists",
+      });
+    }
+
+    // Check if same admin already has a batch with the same name
+    const existingBatchByNameForAdmin = await Batch.findOne({
+      where: {
+        batchName,
+        admin_id: adminId,
+      },
+    });
+    if (existingBatchByNameForAdmin) {
+      return res.status(409).json({
+        message: "You already have a batch with this name",
+      });
+    }
+
+    // Create the new batch
+    const newBatch = await Batch.create({
       batchId,
       batchName,
       no_of_students,
-    } = req.body;
+      admin_id: adminId,
+    });
 
-    const adminId = req.adminId; 
-    if (!adminId) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Admin ID is required",
-        });
-    }
-    // Validate if all required fields are present
-    if (
-      !batchId ||
-      !batchName ||
-      !no_of_students
-    ) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Batch ID, Batch Name, and Number of Students are required.",
-        });
-    }
-
-    // Check if batchId already exists in the Batches table
-    const existingBatch =
-      await Batch.findOne({
-        where: { batchId },
-      });
-    if (existingBatch) {
-      return res
-        .status(409)
-        .json({
-          message:
-            "Batch ID already exists",
-        });
-    }
-
-    // Create a new batch entry in the database
-    const newBatch = await Batch.create(
-      {
-        batchId, // Unique batch ID
-        batchName, // Batch name
-        no_of_students, // Number of students in the batch
-        admin_id: adminId, // Keeping admin_id as null for now
-      }
-    );
-
-    // Return the created batch details in the response
-    res
-      .status(201)
-      .json({
-        message:
-          "Batch created successfully",
-        batch: newBatch,
-      });
+    res.status(201).json({
+      message: "Batch created successfully",
+      batch: newBatch,
+    });
   } catch (error) {
-    console.error(
-      "Error creating batch:",
-      error
-    );
-    res
-      .status(500)
-      .json({
-        message:
-          "Internal Server Error",
-        error: error.message,
-      });
+    console.error("Error creating batch:", error);
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 };
 

@@ -28,6 +28,7 @@ import userprofile from './src/routes/user.router.js'
 import sendEmailrouter from './src/routes/resend.router.js'
 import superAdminRouter from './src/routes/superadmin.router.js'
 import batchRouter from './src/routes/batches.routes.js'
+import reviewQuestion from './src/routes/reviewquestion.route.js'
 const app = express();
 const port = 3085;
 const corsOptions = {
@@ -80,6 +81,8 @@ app.use('/api/user', userprofile);
 app.use('/api', sendEmailrouter);
 app.use("/api/superadmin", superAdminRouter);
 app.use("/api/batches", batchRouter)
+
+app.use("/api/review", reviewQuestion);
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

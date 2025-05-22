@@ -260,19 +260,9 @@ const Student=sequelizeCon.define("Student",
       allowNull: true,
       defaultValue: 0,
     },
-    mockTestConfidence: {
-      type: DataTypes.STRING,
+    Credits: {
+      type: DataTypes.INTEGER,
       allowNull: true,
-      validate: {
-        isIn: [
-          [
-            "Not Confident",
-            "Somewhat Confident",
-            "Confident",
-            "Very Confident",
-          ],
-        ],
-      },
     },
     subjectNeedsMostAttention: {
       type: DataTypes.STRING,

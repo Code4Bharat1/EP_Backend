@@ -478,7 +478,7 @@ const getPersonalData = async (req, res) => {
         "dailyStudyHours",
         "takesPracticeTestsRegularly",
         "completedMockTests",
-        "MocktestConfidence",
+        "Credits",
         "subjectNeedsMostAttention",
         "chapterWiseTests",
         "topicWiseTests",

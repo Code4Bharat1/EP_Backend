@@ -1,7 +1,7 @@
 
 
 import express from 'express'
-import { createAdmin, getUpcomingTestByBatch, createAdmintest,getTestbyAdminId, getStudentTestDetails, getProfile, updateProfile, getTestData, saveGenerateTestResult, getTestDetailsById, getTestQuestionsWithAnswers, getTestSummariesForAllStudents, loginAdmin, updateTest, dashboardStudentData, getTestResults, dashboardDetails } from '../controller/newadmin.controller.js';
+import { createAdmin, getUpcomingTestByBatch, createAdmintest,getTestbyAdminId, getStudentTestDetails, getProfile, updateProfile, getTestData, saveGenerateTestResult, getTestDetailsById, getTestQuestionsWithAnswers, getTestSummariesForAllStudents, loginAdmin, updateTest, dashboardStudentData, getTestResults, dashboardDetails, getAdminColors,getAdminColorsByStudentId } from '../controller/newadmin.controller.js';
 import { verifyToken } from '../middleware/jwtDecoder.middleware.js';
 const router = express.Router();
 
@@ -22,5 +22,7 @@ router.put("/updateProfile",verifyToken, updateProfile);
 router.get("/getTestData",verifyToken, getTestData);
 router.post("/dashboard-details", dashboardDetails);
 router.get("/upcomingtest-data", verifyToken, getUpcomingTestByBatch);
+router.post("/colors", getAdminColors);
+router.post("/studentcolors", getAdminColorsByStudentId);
 
 export default router;

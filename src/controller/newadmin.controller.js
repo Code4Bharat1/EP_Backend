@@ -17,7 +17,7 @@ const createAdmin = async (req, res) => {
   const {
     AdminId,
     PassKey,
-    name,   
+    name,
     Course,
     Email,
     mobileNumber,
@@ -27,30 +27,51 @@ const createAdmin = async (req, res) => {
     address,
     HodName,
     logo,
+    navbarColor,
+    sidebarColor,
+    otherColor,
   } = req.body;
 
-  try {
-    // Basic validation for required fields
+  console.log(AdminId,PassKey,
+    name,
+    Course,
+    Email,
+    mobileNumber,
+    whatsappNumber,
+    StartDate,
+    ExpiryDate,
+    address,
+    HodName,
+    logo,
+    navbarColor,
+    sidebarColor,
+    otherColor,)
+
+  try { 
+    // Basic required field validation
     if (!AdminId || !PassKey || !name || !Email || !mobileNumber) {
-      return res.status(400).json({ message: "All fields are required." });
+      return res.status(400).json({ message: "Missing required fields." });
+      console.log(AdminId, PassKey, name, Email, mobileNumber);
     }
 
-    // Check if admin with the same AdminId or Email already exists
+    // Check for existing AdminId or Email
     const existingAdmin = await Admin.findOne({
-      where: { [Op.or]: [{ AdminId }, { Email }] },
+      where: {
+        [Op.or]: [{ AdminId }, { Email }]
+      }
     });
 
     if (existingAdmin) {
       return res.status(400).json({ message: "Admin with this ID or Email already exists." });
     }
 
-    // Hash the password before saving to the database
+    // Hash the password
     const hashedPassKey = await bcrypt.hash(PassKey, 10);
 
-    // Create new admin in the database
+    // Create new admin
     const newAdmin = await Admin.create({
-      AdminId,
-      PassKey: hashedPassKey, // Store the hashed password
+      AdminId,  
+      PassKey: hashedPassKey,
       name,
       Course,
       Email,
@@ -61,7 +82,10 @@ const createAdmin = async (req, res) => {
       address,
       HodName,
       logo,
-      credentials: "pending", // Default to "pending"
+      navbarColor,
+      sidebarColor,
+      otherColor,
+      credentials: "pending",
     });
 
     return res.status(201).json({
@@ -916,5 +940,113 @@ const getTestData = async (req, res) => {
     });
   }
 };
+
+export const getAdminColors = async (req, res) => {
+  try {
+    const { id } = req.body; 
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Admin ID is required",
+      });
+    }
+
+    // Find admin by AdminId
+    const admin = await Admin.findOne({
+      where: { id },
+      attributes: ['navbarColor', 'sidebarColor', 'otherColor'], // Only fetch these fields
+    });
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      colors: {
+        navbarColor: admin.navbarColor || '#ffffff', // Default to white if null
+        sidebarColor: admin.sidebarColor || '#ffffff', // Default to white if null
+        textColor: admin.otherColor || '#000000', // Default to black if null
+      },
+    });
+
+  } catch (error) {
+    console.error("Error fetching admin colors:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch admin color settings",
+      error: error.message,
+    });
+  }
+};
+
+export const getAdminColorsByStudentId = async (req, res) => {
+  try {
+    const { studentId } = req.body;
+
+    if (!studentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Student ID is required",
+      });
+    }
+
+    // Find the student by id and get addedByAdminId
+    const student = await Student.findOne({
+      where: { id: studentId },
+      attributes: ['addedByAdminId'],
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found",
+      });
+    }
+
+    const adminId = student.addedByAdminId;
+    if (!adminId) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin ID for the student not found",
+      });
+    }
+
+    // Fetch the admin colors
+    const admin = await Admin.findOne({
+      where: { id: adminId },
+      attributes: ['navbarColor', 'sidebarColor', 'otherColor'],
+    });
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      colors: {
+        navbarColor: admin.navbarColor || '#ffffff',
+        sidebarColor: admin.sidebarColor || '#ffffff',
+        textColor: admin.otherColor || '#000000',
+      },
+    });
+
+  } catch (error) {
+    console.error("Error fetching admin colors by student ID:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch admin color settings",
+      error: error.message,
+    });
+  }
+};
+
 
 export {dashboardDetails, getTestbyAdminId, createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults, getProfile,updateProfile , getTestData, getUpcomingTestByBatch};

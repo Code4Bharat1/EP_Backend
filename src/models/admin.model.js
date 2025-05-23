@@ -17,7 +17,6 @@ const Admin = sequelizeCon.define(
         PassKey:{
             type: DataTypes.STRING,
             allowNull: true,
-
      },
       name: {
         type: DataTypes.STRING,
@@ -73,6 +72,18 @@ const Admin = sequelizeCon.define(
             type: DataTypes.STRING,
             allowNull: true,
           },
+          navbarColor: {
+            type: DataTypes.STRING,
+            allowNull: true,
+          },
+          sidebarColor : {
+            type : DataTypes.STRING,
+            allowNull: false,
+          },
+          otherColor : {
+            type : DataTypes.STRING,
+            allowNull: true,
+          },
           credentials: {
             type: DataTypes.STRING,
             allowNull: false,
@@ -83,10 +94,9 @@ const Admin = sequelizeCon.define(
           tableName: "Admins",
           timestamps: true, 
           underscored: true,
-          
-          
-
 });
+
+
 
 
 

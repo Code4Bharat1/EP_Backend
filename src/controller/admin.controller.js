@@ -576,9 +576,6 @@ try {
 
 
 
-
-
-
 const viewBatch = async(req, res)=> {
   const { batchId } = req.params;
   if (!batchId || isNaN(batchId)) {
@@ -706,5 +703,41 @@ const deleteBatch = async (req, res) => {
 };
 
 
+const getBatchNames = async(req, res) => {
+  try{
 
-export {createAdmin,getBatchListbyId, login,getApprovedList,generateCredential,getList ,studentsList,addStudent,viewStudent, deleteStudents,bulkStudentUpload,addBatch,viewBatch, editBatch, getAllBatch ,deleteBatch };
+    const {admin_id} = req.body;
+
+    if(!admin_id) {
+      return res.status(400).json({
+        message : 'admin id is not provided.'
+      })
+    }
+
+      const batches = await Batch.findAll({
+        where : {admin_id},
+        attributes : ['batchName']
+      })
+      
+
+      if(batches.length === 0) {
+        return res.status(404).json({
+          message : 'No batches for this admin'
+        })
+      }
+
+      const batchesName = batches.map((batch)=> batch.batchName);
+      console.log(batchesName);
+      
+      return res.status(200).json({batchesName})
+    
+  }catch(error){
+    console.error("Error getting the batch names", error);
+    return res.status(500).json({
+      message : "Internal Server Error"
+    })
+  }
+}
+
+
+export {createAdmin, getBatchNames, getBatchListbyId, login,getApprovedList,generateCredential,getList ,studentsList,addStudent,viewStudent, deleteStudents,bulkStudentUpload,addBatch,viewBatch, editBatch, getAllBatch ,deleteBatch };

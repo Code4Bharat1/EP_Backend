@@ -1,7 +1,7 @@
 import express from "express";
 
 
-import {createAdmin,login,viewBatch,getBatchListbyId, generateCredential,getApprovedList,getList,addStudent,studentsList,viewStudent,deleteStudents,bulkStudentUpload ,editBatch ,addBatch,getAllBatch,deleteBatch} from  '../controller/admin.controller.js';
+import {createAdmin,login,viewBatch,getBatchListbyId, generateCredential,getApprovedList,getList,addStudent,studentsList,viewStudent,deleteStudents,bulkStudentUpload ,editBatch ,addBatch,getAllBatch,deleteBatch, getBatchNames} from  '../controller/admin.controller.js';
 
 
 const router = express.Router();
@@ -54,6 +54,7 @@ router.delete("/deletebatch/:batchId",deleteBatch);
 
 router.get("/getBatchListbyId",getBatchListbyId);
 
+router.post('/batchesInfobyId', getBatchNames);
 
 
 

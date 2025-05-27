@@ -30,6 +30,8 @@ import superAdminRouter from './src/routes/superadmin.router.js'
 import batchRouter from './src/routes/batches.routes.js'
 import reviewQuestion from './src/routes/reviewquestion.route.js'
 import fastquizquestion from './src/routes/fastquiz.router.js'
+import noticeRouter from './src/routes/notice.router.js'
+
 const app = express();
 const port = 3085;
 const corsOptions = {
@@ -83,6 +85,7 @@ app.use('/api', sendEmailrouter);
 app.use("/api/superadmin", superAdminRouter);
 app.use("/api/batches", batchRouter)
 app.use("/api", fastquizquestion);
+app.use("/api", noticeRouter);
 
 app.use("/api/review", reviewQuestion);
 // Start the server

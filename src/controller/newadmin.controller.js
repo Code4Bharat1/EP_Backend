@@ -917,7 +917,8 @@ const getTestData = async (req, res) => {
 
     // Retrieve tests that match the student's batch name
     const studentTests = await Admintest.findAll({
-      where: { batch_name: batch.batchName }
+      where: { batch_name: batch.batchName },
+      attributes : ["id", "testname", "subject", "exam_start_date"]
     });
 
     // Check if any tests exist for this batch

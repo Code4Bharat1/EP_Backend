@@ -8,6 +8,8 @@ const generateTestResult = sequelizeCon.define("GenerateTestResult", {
   testid: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    autoIncrement: true,
+    primaryKey: true,
   },
   testname: {
     type: DataTypes.STRING,

@@ -126,10 +126,16 @@ const Question = sequelizeCon.define("Question", {
       key: "id",
     },  
   },
+  difficulty_level: {
+    type: DataTypes.ENUM('simple', 'medium', 'hard'),
+    allowNull: true, // Change to false if required
+    defaultValue: 'medium', // Optional: set default
+  },
 }, {
   tableName: "questions",
   timestamps: false,
 });
+
 
 // Option Model
 const Option = sequelizeCon.define("Option", {

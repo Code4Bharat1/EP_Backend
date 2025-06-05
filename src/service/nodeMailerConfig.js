@@ -13,6 +13,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+
 // Reusable function for sending emails
 export const sendEmail = async (req, res) => {
   const { to, subject, text } = req.body;

@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import NoticeSection from "../models/notice.model.js";
 import Student from "../models/student.model.js";
 
@@ -132,7 +133,12 @@ export const getStudentNotices = async (req, res) => {
     }
 
     const notices = await NoticeSection.findAll({
-      where: { adminId },
+      where: {
+        adminId,
+        noticeEndDate: {
+          [Op.gt]: new Date(), // ✅ Filter only future (non-expired) notices
+        },
+      },
       order: [['createdAt', 'DESC']],
     });
 

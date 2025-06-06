@@ -34,6 +34,7 @@ import noticeRouter from './src/routes/notice.router.js'
 import omrRouter from './src/routes/omr.router.js'
 import questionInsertionRouter from './src/routes/questionInsertion.route.js'
 import uploadImageRouter from './src/routes/ImageUpload.router.js'
+import PreviousYearQuestionRouter from './src/routes/pyq.router.js'
 
 const app = express();
 const port = 3085;
@@ -92,6 +93,7 @@ app.use("/api", noticeRouter);
 app.use("/api", omrRouter);
 app.use('/api', questionInsertionRouter);
 app.use('/api', uploadImageRouter);
+app.use("/api", PreviousYearQuestionRouter);
 
 app.use("/api/review", reviewQuestion);
 // Start the server

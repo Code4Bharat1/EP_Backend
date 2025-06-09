@@ -35,6 +35,7 @@ import omrRouter from './src/routes/omr.router.js'
 import questionInsertionRouter from './src/routes/questionInsertion.route.js'
 import uploadImageRouter from './src/routes/ImageUpload.router.js'
 import PreviousYearQuestionRouter from './src/routes/pyq.router.js'
+import qrTestRouter from './src/routes/qrcode.router.js'
 
 const app = express();
 const port = 3085;
@@ -62,6 +63,8 @@ app.get('/', (req, res) => {
   });
 });
 
+
+app.use('/api/qr', qrTestRouter);
 app.use('/api/students', studentRoutes);
 app.use("/api/question", questionRout);
 app.use("/api/metest", meTest);

@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import config from "config";
 import FullTestResults from "../models/fullTestResults.model.js";
 import MeTest from "../models/saved.js";
+import generateTestResult from "../models/generateTestresult.model.js";
 
 const pastTest = async (req, res) => {
   try {
@@ -22,32 +23,33 @@ const pastTest = async (req, res) => {
 
     const userId = decoded.id;
 
-    const fullTestData = await FullTestResults.findAll({
-      where: { studentId: userId },
-      attributes: [
-        'id', 'testName', 'difficultyLevel', 'correctAnswers', 'wrongAnswers',
-        'notAttempted', 'correctAnswersCount', 'wrongAnswersCount',
-        'notAttemptedCount', 'subjectWisePerformance',
-      ],
-    });
-
-    const meTestData = await MeTest.findAll({
-      where: { studentId: userId },
-      attributes: [
-        'id', 'testName', 'subjectWiseMarks', 'difficultyLevel',
-        'selectedChapters', 'correct', 'incorrect', 'unattempted',
-      ],
-    });
-
-    const testAnalytics = [];
+    const [fullTestData, meTestData, generatetestData] = await Promise.all([
+      FullTestResults.findAll({
+        where: { studentId: userId },
+        attributes: [
+          'id', 'testName', 'difficultyLevel', 'correctAnswers', 'wrongAnswers',
+          'notAttempted', 'correctAnswersCount', 'wrongAnswersCount',
+          'notAttemptedCount', 'subjectWisePerformance', 'createdAt'
+        ]
+      }),
+      MeTest.findAll({
+        where: { studentId: userId },
+        attributes: [
+          'id', 'testName', 'subjectWiseMarks', 'difficultyLevel',
+          'selectedChapters', 'correct', 'incorrect', 'unattempted', 'createdAt'
+        ]
+      }),
+      generateTestResult.findAll({
+        where: { studentId: userId },
+        attributes: [
+          'id', 'testname', 'subjectWiseMarks', 'selectedChapters',
+          'correctAnswers', 'incorrectAnswers', 'unattempted', 'createdAt'
+        ]
+      })
+    ]);
 
     const fullTestAnalytics = fullTestData.map(test => {
-      let {
-        correctAnswers,
-        wrongAnswers,
-        notAttempted,
-        subjectWisePerformance
-      } = test;
+      let { correctAnswers, wrongAnswers, notAttempted, subjectWisePerformance } = test;
       const subjects = [];
 
       try {
@@ -55,12 +57,10 @@ const pastTest = async (req, res) => {
         if (typeof wrongAnswers === 'string') wrongAnswers = JSON.parse(wrongAnswers);
         if (typeof notAttempted === 'string') notAttempted = JSON.parse(notAttempted);
 
-        // Handle double-encoded subjectWisePerformance
         if (typeof subjectWisePerformance === 'string') {
           try {
             subjectWisePerformance = JSON.parse(JSON.parse(subjectWisePerformance));
           } catch (err) {
-            console.error(`Double parsing failed for test ${test.id}`, err);
             subjectWisePerformance = [];
           }
         }
@@ -73,10 +73,9 @@ const pastTest = async (req, res) => {
           });
         }
       } catch (err) {
-        console.error(`Error parsing data in test ${test.id}:`, err);
+        console.error(`Parsing error in fullTest ${test.testName}:`, err);
       }
 
-      // Fallback: Extract from correct/wrong answers
       const allAnswers = [...(correctAnswers || []), ...(wrongAnswers || [])];
       allAnswers.forEach(answer => {
         if (Array.isArray(answer) && typeof answer[1] === 'string' && !subjects.includes(answer[1])) {
@@ -97,8 +96,9 @@ const pastTest = async (req, res) => {
         correctAnswersCount: test.correctAnswersCount,
         wrongAnswersCount: test.wrongAnswersCount,
         notAttemptedCount: test.notAttemptedCount,
+        createdAt: test.createdAt
       };
-    }).filter(Boolean);
+    });
 
     const meTestAnalytics = meTestData.map(test => {
       let subjectWiseMarks = test.subjectWiseMarks;
@@ -124,19 +124,54 @@ const pastTest = async (req, res) => {
         correct: test.correct,
         incorrect: test.incorrect,
         unattempted: test.unattempted,
+        createdAt: test.createdAt
       };
     }).filter(Boolean);
 
-    testAnalytics.push(...fullTestAnalytics, ...meTestAnalytics);
+    const generateTestAnalytics = generatetestData.map(test => {
+      let subjectWiseMarks = test.subjectWiseMarks;
+      const subjects = [];
 
-    if (testAnalytics.length === 0) {
+      try {
+        if (typeof subjectWiseMarks === 'string') {
+          subjectWiseMarks = JSON.parse(subjectWiseMarks);
+        }
+        if (subjectWiseMarks && typeof subjectWiseMarks === 'object') {
+          Object.keys(subjectWiseMarks).forEach(key => subjects.push(key));
+        }
+      } catch (err) {
+        console.error(`Parsing error in generateTest ${test.testName}:`, err);
+        return null;
+      }
+
+      return {
+        testId: test.id,
+        testName: test.testname,
+        subjects,
+        correct: test.correctAnswers,
+        incorrect: test.incorrectAnswers,
+        unattempted: test.unattempted,
+        createdAt: test.createdAt
+      };
+    }).filter(Boolean);
+
+    const responsePayload = {
+      fullTests: fullTestAnalytics,
+      meTests: meTestAnalytics,
+      generatedTests: generateTestAnalytics
+    };
+
+    const totalTestsCount = fullTestAnalytics.length + meTestAnalytics.length + generateTestAnalytics.length;
+
+    if (totalTestsCount === 0) {
       return res.status(404).json({ error: "No valid test data found for this user" });
     }
 
-    return res.status(200).json({ testAnalytics });
+    return res.status(200).json(responsePayload);
+
   } catch (error) {
     console.error("Error fetching test data:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 

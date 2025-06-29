@@ -37,6 +37,7 @@ import uploadImageRouter from './src/routes/ImageUpload.router.js'
 import PreviousYearQuestionRouter from './src/routes/pyq.router.js'
 import qrTestRouter from './src/routes/qrcode.router.js'
 import verifySubjectRouter from './src/routes/verifyrough.router.js'
+import topicWiseRouter from './src/routes/topicwise.router.js'
 
 const app = express();
 const port = 3085;
@@ -99,6 +100,7 @@ app.use('/api', questionInsertionRouter);
 app.use('/api', uploadImageRouter);
 app.use("/api", PreviousYearQuestionRouter);
 app.use("/api/verify", verifySubjectRouter);
+app.use("/api/topic-wise", topicWiseRouter);
 
 app.use("/api/review", reviewQuestion);
 // Start the server

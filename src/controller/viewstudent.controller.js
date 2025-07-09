@@ -490,6 +490,26 @@ const updateBatchIdForUsers = async (
   }
 };
 
+//deleting students from the students table
+const deleteStudent = async (student) => {
+  try {
+    const response = await axios.delete(`${process.env.NEXT_PUBLIC_API_BASE_URL}/studentdata/delete`, {
+      data: { id: student.id }
+    });
+    if (response.status === 200) {
+      setStudents((prevStudents) => prevStudents.filter((s) => s.id !== student.id));
+      toast.success("Student deleted successfully", {
+        duration: 5000
+      });
+    }
+  } catch (error) {
+    console.error("Error deleting student:", error);
+    toast.error("Error deleting student", {
+      duration: 5000
+    });
+  }
+};
+
 // Controller to save new batch information
 const createBatch = async (req, res) => {
   try {
@@ -687,5 +707,6 @@ export {
   updateBatchIdForUsers,
   createBatch,
   getBatchInfo,
+  deleteStudent,
   getBatchNames
 };

@@ -1,6 +1,17 @@
 import { Pdf } from "../models/everytestmode.refrence.js"; // Adjust path as needed
 import { Question } from "../models/everytestmode.refrence.js";
-
+import fs from 'fs';
+import path from 'path';
+function loadJsonData() {
+  try {
+    const filePath = path.join(process.cwd(), 'public', 'neet_topics.json'); // adjust path as needed
+    const jsonData = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(jsonData);
+  } catch (error) {
+    console.error("Error loading JSON file:", error.message);
+    return null;
+  }
+}
 //Create different controller for different subject as it was unable to fetch the chapter names and question efficiently...
 
 const fetchPdfIdsBySubjects = async (req, res) => {
@@ -21,7 +32,7 @@ const fetchPdfIdsBySubjects = async (req, res) => {
 
     // Extract Physics chapters from JSON data
     const physicsChapters = jsonData.Physics ? Object.keys(jsonData.Physics) : [];
-    //console.log("Chapter Names:", physicsChapters);
+    console.log("Chapter Names:", physicsChapters);
 
     if (physicsChapters.length === 0) {
       return res.status(404).json({ error: "No Physics chapters found in JSON data." });
@@ -30,8 +41,8 @@ const fetchPdfIdsBySubjects = async (req, res) => {
     const firstChapterName = physicsChapters[0];
     const firstChapterTopics = jsonData.Physics[firstChapterName];
 
-    //console.log("First Chapter Name:", firstChapterName);
-    //console.log("First Chapter Topics:", firstChapterTopics);
+    console.log("First Chapter Name:", firstChapterName);
+    console.log("First Chapter Topics:", firstChapterTopics);
 
     // Extract all topics from all chapters with their details
     const allTopics = [];
@@ -58,7 +69,7 @@ const fetchPdfIdsBySubjects = async (req, res) => {
     const topicIds = allTopics.map(topic => topic.topic_id).filter(Boolean);
 
     // Log the topics with their details
-    //console.log("Physics Topics:", allTopics);
+    console.log("Physics Topics:", allTopics);
 
     // Fetch corresponding questions from the Question table
     const questions = await Question.findAll({
@@ -92,6 +103,7 @@ const fetchPdfIdsBySubjects = async (req, res) => {
     console.error("Error fetching PDFs and questions for Physics:", error.message, error.stack);
     res.status(500).json({ error: "Internal Server Error" });
   }
+
 };
 
 //Questions to fetch from chemistry section
@@ -113,7 +125,7 @@ const fetchPdfIdsBySubjectsForChemistry = async (req, res) => {
 
     // Extract Chemistry chapters from JSON data
     const chemistryChapters = jsonData.Chemistry ? Object.keys(jsonData.Chemistry) : [];
-    //console.log("chapter name : ", chemistryChapters)
+    console.log("chapter name : ", chemistryChapters)
     if (chemistryChapters.length === 0) {
       return res.status(404).json({ error: "No Chemistry chapters found in JSON data." });
     }
@@ -121,8 +133,8 @@ const fetchPdfIdsBySubjectsForChemistry = async (req, res) => {
     const firstChapterName = chemistryChapters[0];
     const firstChapterTopics = jsonData.Chemistry[firstChapterName];
 
-    //console.log("First Chapter Name:", firstChapterName);
-    //console.log("First Chapter Topics:", firstChapterTopics);
+    console.log("First Chapter Name:", firstChapterName);
+    console.log("First Chapter Topics:", firstChapterTopics);
 
     // Extract all topics from all chapters with their details
     const allTopics = [];
@@ -152,7 +164,7 @@ const fetchPdfIdsBySubjectsForChemistry = async (req, res) => {
     const topicTags = allTopics.map(topic => topic.topic_id).filter(Boolean);
 
     // Log the topics with their details
-    //console.log("Chemistry Topics:", allTopics);
+    console.log("Chemistry Topics:", allTopics);
 
     // Step 2: Use the topic_tags to fetch corresponding questions from the Question table
     const questions = await Question.findAll({
@@ -183,7 +195,6 @@ const fetchPdfIdsBySubjectsForChemistry = async (req, res) => {
       total_topics_length: allTopics.length,
       total_questions: questions.length
     });
-    console.log(chaptersList)
   } catch (error) {
     console.error("Error fetching PDFs and questions for Chemistry:", error.message, error.stack);
     res.status(500).json({ error: "Internal Server Error" });
@@ -200,7 +211,7 @@ const fetchPdfIdsBySubjectsForBiology = async (req, res) => {
     }
 
     // Set subject to "Biology"
-    const selectedSubjects = ["Biology"]; 
+    const selectedSubjects = ["Biology"];
 
     if (!selectedSubjects || selectedSubjects.length === 0) {
       return res.status(400).json({ error: "Please provide subject names." });
@@ -208,7 +219,7 @@ const fetchPdfIdsBySubjectsForBiology = async (req, res) => {
 
     // Extract Biology chapters from JSON data
     const biologyChapters = jsonData.Biology ? Object.keys(jsonData.Biology) : [];
-    //console.log("Chapter Names:", biologyChapters);
+    console.log("Chapter Names:", biologyChapters);
 
     if (biologyChapters.length === 0) {
       return res.status(404).json({ error: "No Biology chapters found in JSON data." });
@@ -217,8 +228,8 @@ const fetchPdfIdsBySubjectsForBiology = async (req, res) => {
     const firstChapterName = biologyChapters[0];
     const firstChapterTopics = jsonData.Biology[firstChapterName];
 
-    //console.log("First Chapter Name:", firstChapterName);
-    //console.log("First Chapter Topics:", firstChapterTopics);
+    console.log("First Chapter Name:", firstChapterName);
+    console.log("First Chapter Topics:", firstChapterTopics);
 
     // Extract all topics from all chapters with their details
     const allTopics = [];
@@ -245,7 +256,7 @@ const fetchPdfIdsBySubjectsForBiology = async (req, res) => {
     const topicIds = allTopics.map(topic => topic.topic_id).filter(Boolean);
 
     // Log the topics with their details
-    //console.log("Biology Topics:", allTopics);
+    console.log("Biology Topics:", allTopics);
 
     // Fetch corresponding questions from the Question table
     const questions = await Question.findAll({
@@ -277,10 +288,9 @@ const fetchPdfIdsBySubjectsForBiology = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching PDFs and questions for Biology:", error.message, error.stack);
-    console.error("Error fetching PDFs and questions for Biology:", error.message, error.stack);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
 
-export { fetchPdfIdsBySubjects , fetchPdfIdsBySubjectsForChemistry, fetchPdfIdsBySubjectsForBiology};
+export { fetchPdfIdsBySubjects, fetchPdfIdsBySubjectsForChemistry, fetchPdfIdsBySubjectsForBiology };

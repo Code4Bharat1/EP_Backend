@@ -5,7 +5,7 @@ import MeTest from "../models/saved.js";
 import FullTestResults from "../models/fullTestResults.model.js";
 import { RecommendedTest } from "../models/recommendedtest.model.js";
 
-const getStudentName = async (req, res) => {
+const  getStudentName = async (req, res) => {
   try {
     // Extract token from the Authorization header
     const token = req.headers.authorization?.split(" ")[1]; // Optional chaining to handle missing token

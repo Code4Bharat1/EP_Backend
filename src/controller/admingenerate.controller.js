@@ -1,22 +1,6 @@
 import { Pdf } from "../models/everytestmode.refrence.js"; // Adjust path as needed
 import { Question } from "../models/everytestmode.refrence.js";
-import { readFileSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const loadJsonData = () => {
-  try {
-    const jsonFilePath = join(__dirname, "../../public/neet_topics.json"); // Adjust path as needed
-    const jsonData = JSON.parse(readFileSync(jsonFilePath, "utf8"));
-    return jsonData;
-  } catch (error) {
-    console.error("Error loading JSON data:", error);
-    return null;
-  }
-};
 //Create different controller for different subject as it was unable to fetch the chapter names and question efficiently...
 
 const fetchPdfIdsBySubjects = async (req, res) => {
@@ -199,6 +183,7 @@ const fetchPdfIdsBySubjectsForChemistry = async (req, res) => {
       total_topics_length: allTopics.length,
       total_questions: questions.length
     });
+    console.log(chaptersList)
   } catch (error) {
     console.error("Error fetching PDFs and questions for Chemistry:", error.message, error.stack);
     res.status(500).json({ error: "Internal Server Error" });
@@ -215,7 +200,7 @@ const fetchPdfIdsBySubjectsForBiology = async (req, res) => {
     }
 
     // Set subject to "Biology"
-    const selectedSubjects = ["Biology"];
+    const selectedSubjects = ["Biology"]; 
 
     if (!selectedSubjects || selectedSubjects.length === 0) {
       return res.status(400).json({ error: "Please provide subject names." });
@@ -292,12 +277,10 @@ const fetchPdfIdsBySubjectsForBiology = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching PDFs and questions for Biology:", error.message, error.stack);
+    console.error("Error fetching PDFs and questions for Biology:", error.message, error.stack);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-export {
-  fetchPdfIdsBySubjects,
-  fetchPdfIdsBySubjectsForChemistry,
-  fetchPdfIdsBySubjectsForBiology,
-};
+
+export { fetchPdfIdsBySubjects , fetchPdfIdsBySubjectsForChemistry, fetchPdfIdsBySubjectsForBiology};

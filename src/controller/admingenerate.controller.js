@@ -5,58 +5,91 @@ import { Question } from "../models/everytestmode.refrence.js";
 
 const fetchPdfIdsBySubjects = async (req, res) => {
   try {
-    // Set subject to "Physics" for now
-    const selectedSubjects = ["Physics"]; 
+    // Load JSON data instead of querying PDF table
+    const jsonData = loadJsonData();
+
+    if (!jsonData) {
+      return res.status(500).json({ error: "Failed to load JSON data." });
+    }
+
+    // Set subject to "Physics"
+    const selectedSubjects = ["Physics"];
 
     if (!selectedSubjects || selectedSubjects.length === 0) {
       return res.status(400).json({ error: "Please provide subject names." });
     }
 
-    // Query the Pdf table to fetch the IDs and chapter names (topic_tags) for the selected subjects
-    const pdfRecords = await Pdf.findAll({
-      where: {
-        subject: selectedSubjects, // Match subjects in the array
-      },
-      attributes: ['id', 'topic_tags'], // Fetch both 'id' and 'topic_tags' (chapter names)
-    });
+    // Extract Physics chapters from JSON data
+    const physicsChapters = jsonData.Physics ? Object.keys(jsonData.Physics) : [];
+    //console.log("Chapter Names:", physicsChapters);
 
-    if (pdfRecords.length === 0) {
-      return res.status(404).json({ error: "No PDFs found for the selected subjects." });
+    if (physicsChapters.length === 0) {
+      return res.status(404).json({ error: "No Physics chapters found in JSON data." });
     }
 
-    // Extract IDs and chapter names from the fetched pdfRecords
-    const pdfData = pdfRecords.map((pdf) => ({
-      pdf_id: pdf.id,
-      chapter_name: pdf.topic_tags, // This is the chapter name
-    }));
+    const firstChapterName = physicsChapters[0];
+    const firstChapterTopics = jsonData.Physics[firstChapterName];
 
-    // // Log the IDs and chapter names to the console
-    // console.log("Selected PDFs with Chapter Names:", pdfData);
+    //console.log("First Chapter Name:", firstChapterName);
+    //console.log("First Chapter Topics:", firstChapterTopics);
 
-    // Step 2: Use the pdf_ids to fetch corresponding questions from the Question table
+    // Extract all topics from all chapters with their details
+    const allTopics = [];
+
+    physicsChapters.forEach(chapterName => {
+      const topicsArray = jsonData.Physics[chapterName]; // This is the array of topics
+
+      if (Array.isArray(topicsArray)) {
+        topicsArray.forEach(topic => {
+          allTopics.push({
+            chapter_name: chapterName,   // ✅ Use current chapter name
+            topic_name: topic.name,
+            topic_id: topic.topic_id
+          });
+        });
+      }
+    });
+
+    if (allTopics.length === 0) {
+      return res.status(404).json({ error: "No topics found in Physics chapters." });
+    }
+
+    // Extract topic_ids for querying questions
+    const topicIds = allTopics.map(topic => topic.topic_id).filter(Boolean);
+
+    // Log the topics with their details
+    //console.log("Physics Topics:", allTopics);
+
+    // Fetch corresponding questions from the Question table
     const questions = await Question.findAll({
       where: {
-        pdf_id: pdfData.map(pdf => pdf.pdf_id), // Match pdf_id in the Question table
+        pdf_id: topicIds,
       },
-      attributes: ['id', 'question_text', 'pdf_id'], // Fetch question id, text, and associated pdf_id
+      attributes: ['id', 'pdf_id', 'question_text'],
     });
 
     if (questions.length === 0) {
-      return res.status(404).json({ error: "No questions found for the selected PDFs." });
+      return res.status(404).json({ error: "No questions found for the selected topics." });
     }
 
-    // Return the questions along with the pdf and chapter information in the response
-    const questionsWithChapterNames = questions.map((question) => {
-      const pdfInfo = pdfData.find((pdf) => pdf.pdf_id === question.pdf_id);
+    // Return the questions along with chapter and topic information
+    const questionsWithTopicDetails = questions.map((question) => {
+      const topicInfo = allTopics.find((topic) => topic.topic_id === question.pdf_id);
       return {
         ...question.dataValues,
-        chapter_name: pdfInfo ? pdfInfo.chapter_name : null, // Add chapter name from pdfData
+        chapter_name: topicInfo ? topicInfo.chapter_name : null,
+        topic_name: topicInfo ? topicInfo.topic_name : null
       };
     });
 
-    res.status(200).json({ questions: questionsWithChapterNames });
+    res.status(200).json({
+      questions: questionsWithTopicDetails,
+      total_topics: allTopics,
+      total_topics_length: allTopics.length,
+      total_questions: questions.length
+    });
   } catch (error) {
-    console.error("Error fetching PDFs and questions:", error.message, error.stack);
+    console.error("Error fetching PDFs and questions for Physics:", error.message, error.stack);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
@@ -64,65 +97,108 @@ const fetchPdfIdsBySubjects = async (req, res) => {
 //Questions to fetch from chemistry section
 const fetchPdfIdsBySubjectsForChemistry = async (req, res) => {
   try {
-    const selectedSubject = "Chemistry";
+    // Load JSON data instead of querying PDF table
+    const jsonData = loadJsonData();
 
-    // Step 1: Fetch Chemistry PDFs
-    const pdfRecords = await Pdf.findAll({
-      where: { subject: selectedSubject },
-      attributes: ['id', 'filename', 'topic_tags'],
-    });
-
-    if (!pdfRecords.length) {
-      return res.status(404).json({ error: "No Chemistry PDFs found." });
+    if (!jsonData) {
+      return res.status(500).json({ error: "Failed to load JSON data." });
     }
 
-    // Step 2: Prepare PDF ID map and chapter list
-    const pdfMap = {};
-    const pdfIds = [];
-    const chaptersList = [];
+    // Set subject to "Chemistry" for now
+    const selectedSubjects = ["Chemistry"];
 
-    pdfRecords.forEach((pdf) => {
-      const chapterName = pdf.topic_tags || pdf.filename || "Unknown Chapter";
-      pdfIds.push(pdf.id);
-      pdfMap[pdf.id] = { chapter_name: chapterName };
-      chaptersList.push({
-        id: pdf.id,
-        chapter_name: chapterName,
-      });
+    if (!selectedSubjects || selectedSubjects.length === 0) {
+      return res.status(400).json({ error: "Please provide subject names." });
+    }
+
+    // Extract Chemistry chapters from JSON data
+    const chemistryChapters = jsonData.Chemistry ? Object.keys(jsonData.Chemistry) : [];
+    //console.log("chapter name : ", chemistryChapters)
+    if (chemistryChapters.length === 0) {
+      return res.status(404).json({ error: "No Chemistry chapters found in JSON data." });
+    }
+
+    const firstChapterName = chemistryChapters[0];
+    const firstChapterTopics = jsonData.Chemistry[firstChapterName];
+
+    //console.log("First Chapter Name:", firstChapterName);
+    //console.log("First Chapter Topics:", firstChapterTopics);
+
+    // Extract all topics from all chapters with their details
+    const allTopics = [];
+
+    chemistryChapters.forEach(chapterName => {
+      const topicsArray = jsonData.Chemistry[chapterName]; // This is the array of topics
+
+      if (Array.isArray(topicsArray)) {
+        topicsArray.forEach(topic => {
+          allTopics.push({
+            chapter_name: chapterName,   // ✅ Use current chapter name
+            topic_name: topic.name,
+            topic_id: topic.topic_id
+          });
+        });
+      }
+
     });
 
-    // Step 3: Fetch Questions by PDF ID
+
+
+    if (allTopics.length === 0) {
+      return res.status(404).json({ error: "No topics found in Chemistry chapters." });
+    }
+
+    // Extract topic tags for querying questions
+    const topicTags = allTopics.map(topic => topic.topic_id).filter(Boolean);
+
+    // Log the topics with their details
+    //console.log("Chemistry Topics:", allTopics);
+
+    // Step 2: Use the topic_tags to fetch corresponding questions from the Question table
     const questions = await Question.findAll({
-      where: { pdf_id: pdfIds },
-      attributes: ['id', 'question_text', 'pdf_id'],
+      where: {
+        pdf_id: topicTags, // Match topic_tag in the Question table
+      },
+      attributes: ['id', 'pdf_id', 'question_text'], // Fetch question id, text, and associated topic_tag
     });
 
-    if (!questions.length) {
-      return res.status(404).json({ error: "No questions found for Chemistry." });
+    if (questions.length === 0) {
+      return res.status(404).json({ error: "No questions found for the selected topics." });
     }
 
-    // Step 4: Attach chapter name to each question
-    const questionsWithChapterNames = questions.map((q) => ({
-      ...q.dataValues,
-      chapter_name: pdfMap[q.pdf_id]?.chapter_name || null,
-    }));
+    // Return the questions along with the chapter and topic information
+    const questionsWithTopicDetails = questions.map((question) => {
+      const topicInfo = allTopics.find((topic) => topic.topic_id === question.pdf_id);
+      return {
+        ...question.dataValues,
+        chapter_name: topicInfo ? topicInfo.chapter_name : null,
+        topic_name: topicInfo ? topicInfo.topic_name : null
+      };
+    });
 
-    // Step 5: Send both questions and chapters
     res.status(200).json({
-      questions: questionsWithChapterNames,
-      chapters: chaptersList,
+
+      questions: questionsWithTopicDetails,
+      total_topics: allTopics,
+      total_topics_length: allTopics.length,
+      total_questions: questions.length
     });
     console.log(chaptersList)
   } catch (error) {
-    console.error("Error fetching Chemistry questions and chapters:", error);
+    console.error("Error fetching PDFs and questions for Chemistry:", error.message, error.stack);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-
-
 const fetchPdfIdsBySubjectsForBiology = async (req, res) => {
   try {
+    // Load JSON data instead of querying PDF table
+    const jsonData = loadJsonData();
+
+    if (!jsonData) {
+      return res.status(500).json({ error: "Failed to load JSON data." });
+    }
+
     // Set subject to "Biology"
     const selectedSubjects = ["Biology"]; 
 
@@ -130,50 +206,77 @@ const fetchPdfIdsBySubjectsForBiology = async (req, res) => {
       return res.status(400).json({ error: "Please provide subject names." });
     }
 
-    // Query the Pdf table to fetch the IDs and chapter names (topic_tags) for the selected subjects
-    const pdfRecords = await Pdf.findAll({
-      where: {
-        subject: selectedSubjects, // Match subjects in the array
-      },
-      attributes: ['id', 'topic_tags'], // Fetch both 'id' and 'topic_tags' (chapter names)
-    });
+    // Extract Biology chapters from JSON data
+    const biologyChapters = jsonData.Biology ? Object.keys(jsonData.Biology) : [];
+    //console.log("Chapter Names:", biologyChapters);
 
-    if (pdfRecords.length === 0) {
-      return res.status(404).json({ error: "No PDFs found for the selected subjects." });
+    if (biologyChapters.length === 0) {
+      return res.status(404).json({ error: "No Biology chapters found in JSON data." });
     }
 
-    // Extract IDs and chapter names from the fetched pdfRecords
-    const pdfData = pdfRecords.map((pdf) => ({
-      pdf_id: pdf.id,
-      chapter_name: pdf.topic_tags, // This is the chapter name
-    }));
+    const firstChapterName = biologyChapters[0];
+    const firstChapterTopics = jsonData.Biology[firstChapterName];
 
-    // Log the IDs and chapter names to the console
-    console.log("Selected PDFs with Chapter Names for Biology:", pdfData);
+    //console.log("First Chapter Name:", firstChapterName);
+    //console.log("First Chapter Topics:", firstChapterTopics);
 
-    // Step 2: Use the pdf_ids to fetch corresponding questions from the Question table
+    // Extract all topics from all chapters with their details
+    const allTopics = [];
+
+    biologyChapters.forEach(chapterName => {
+      const topicsArray = jsonData.Biology[chapterName]; // This is the array of topics
+
+      if (Array.isArray(topicsArray)) {
+        topicsArray.forEach(topic => {
+          allTopics.push({
+            chapter_name: chapterName,   // ✅ Use current chapter name
+            topic_name: topic.name,
+            topic_id: topic.topic_id
+          });
+        });
+      }
+    });
+
+    if (allTopics.length === 0) {
+      return res.status(404).json({ error: "No topics found in Biology chapters." });
+    }
+
+    // Extract topic_ids for querying questions
+    const topicIds = allTopics.map(topic => topic.topic_id).filter(Boolean);
+
+    // Log the topics with their details
+    //console.log("Biology Topics:", allTopics);
+
+    // Fetch corresponding questions from the Question table
     const questions = await Question.findAll({
       where: {
-        pdf_id: pdfData.map(pdf => pdf.pdf_id), // Match pdf_id in the Question table
+        pdf_id: topicIds,
       },
-      attributes: ['id', 'question_text', 'pdf_id'], // Fetch question id, text, and associated pdf_id
+      attributes: ['id', 'pdf_id', 'question_text'],
     });
 
     if (questions.length === 0) {
-      return res.status(404).json({ error: "No questions found for the selected PDFs." });
+      return res.status(404).json({ error: "No questions found for the selected topics." });
     }
 
-    // Return the questions along with the pdf and chapter information in the response
-    const questionsWithChapterNames = questions.map((question) => {
-      const pdfInfo = pdfData.find((pdf) => pdf.pdf_id === question.pdf_id);
+    // Return the questions along with chapter and topic information
+    const questionsWithTopicDetails = questions.map((question) => {
+      const topicInfo = allTopics.find((topic) => topic.topic_id === question.pdf_id);
       return {
         ...question.dataValues,
-        chapter_name: pdfInfo ? pdfInfo.chapter_name : null, // Add chapter name from pdfData
+        chapter_name: topicInfo ? topicInfo.chapter_name : null,
+        topic_name: topicInfo ? topicInfo.topic_name : null
       };
     });
 
-    res.status(200).json({ questions: questionsWithChapterNames });
+    res.status(200).json({
+      questions: questionsWithTopicDetails,
+      total_topics: allTopics,
+      total_topics_length: allTopics.length,
+      total_questions: questions.length
+    });
   } catch (error) {
+    console.error("Error fetching PDFs and questions for Biology:", error.message, error.stack);
     console.error("Error fetching PDFs and questions for Biology:", error.message, error.stack);
     res.status(500).json({ error: "Internal Server Error" });
   }

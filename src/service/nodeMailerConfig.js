@@ -4,6 +4,8 @@ import config from 'config';
 // Retrieve mail credentials from config
 const mailAuth = config.get('mailAuth');
 
+
+
 // Create transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail', // or "hotmail", "yahoo", etc., depending on your provider

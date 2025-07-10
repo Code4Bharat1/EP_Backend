@@ -11,7 +11,7 @@ const getRandomQuestions = async (req, res) => {
 
     const usedIds = new Set(excludeIds);
     const baseFilter = {};
-    if (difficulty) baseFilter.difficulty = difficulty.toLowerCase();
+    if (difficulty) baseFilter.difficulty_level = difficulty.toLowerCase();
     if (excludeIds.length) baseFilter.id = { [Op.notIn]: excludeIds };
 
     // First: get filtered (e.g., hard) questions

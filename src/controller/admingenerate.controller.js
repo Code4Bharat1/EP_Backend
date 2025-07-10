@@ -32,7 +32,7 @@ const fetchPdfIdsBySubjects = async (req, res) => {
 
     // Extract Physics chapters from JSON data
     const physicsChapters = jsonData.Physics ? Object.keys(jsonData.Physics) : [];
-    console.log("Chapter Names:", physicsChapters);
+    //console.log("Chapter Names:", physicsChapters);
 
     if (physicsChapters.length === 0) {
       return res.status(404).json({ error: "No Physics chapters found in JSON data." });
@@ -41,8 +41,8 @@ const fetchPdfIdsBySubjects = async (req, res) => {
     const firstChapterName = physicsChapters[0];
     const firstChapterTopics = jsonData.Physics[firstChapterName];
 
-    console.log("First Chapter Name:", firstChapterName);
-    console.log("First Chapter Topics:", firstChapterTopics);
+    //console.log("First Chapter Name:", firstChapterName);
+    //console.log("First Chapter Topics:", firstChapterTopics);
 
     // Extract all topics from all chapters with their details
     const allTopics = [];
@@ -92,7 +92,7 @@ const fetchPdfIdsBySubjects = async (req, res) => {
         topic_name: topicInfo ? topicInfo.topic_name : null
       };
     });
-    console.log("Questions with Topic Details:", questionsWithTopicDetails);
+    //console.log("Questions with Topic Details:", questionsWithTopicDetails);
 
     res.status(200).json({
       questions: questionsWithTopicDetails,
@@ -126,7 +126,7 @@ const fetchPdfIdsBySubjectsForChemistry = async (req, res) => {
 
     // Extract Chemistry chapters from JSON data
     const chemistryChapters = jsonData.Chemistry ? Object.keys(jsonData.Chemistry) : [];
-    console.log("chapter name : ", chemistryChapters)
+    //console.log("chapter name : ", chemistryChapters)
     if (chemistryChapters.length === 0) {
       return res.status(404).json({ error: "No Chemistry chapters found in JSON data." });
     }
@@ -134,8 +134,8 @@ const fetchPdfIdsBySubjectsForChemistry = async (req, res) => {
     const firstChapterName = chemistryChapters[0];
     const firstChapterTopics = jsonData.Chemistry[firstChapterName];
 
-    console.log("First Chapter Name:", firstChapterName);
-    console.log("First Chapter Topics:", firstChapterTopics);
+    //console.log("First Chapter Name:", firstChapterName);
+    //console.log("First Chapter Topics:", firstChapterTopics);
 
     // Extract all topics from all chapters with their details
     const allTopics = [];
@@ -165,7 +165,7 @@ const fetchPdfIdsBySubjectsForChemistry = async (req, res) => {
     const topicTags = allTopics.map(topic => topic.topic_id).filter(Boolean);
 
     // Log the topics with their details
-    console.log("Chemistry Topics:", allTopics);
+    //console.log("Chemistry Topics:", allTopics);
 
     // Step 2: Use the topic_tags to fetch corresponding questions from the Question table
     const questions = await Question.findAll({
@@ -220,7 +220,7 @@ const fetchPdfIdsBySubjectsForBiology = async (req, res) => {
 
     // Extract Biology chapters from JSON data
     const biologyChapters = jsonData.Biology ? Object.keys(jsonData.Biology) : [];
-    console.log("Chapter Names:", biologyChapters);
+    //console.log("Chapter Names:", biologyChapters);
 
     if (biologyChapters.length === 0) {
       return res.status(404).json({ error: "No Biology chapters found in JSON data." });
@@ -229,8 +229,8 @@ const fetchPdfIdsBySubjectsForBiology = async (req, res) => {
     const firstChapterName = biologyChapters[0];
     const firstChapterTopics = jsonData.Biology[firstChapterName];
 
-    console.log("First Chapter Name:", firstChapterName);
-    console.log("First Chapter Topics:", firstChapterTopics);
+    //console.log("First Chapter Name:", firstChapterName);
+    //console.log("First Chapter Topics:", firstChapterTopics);
 
     // Extract all topics from all chapters with their details
     const allTopics = [];
@@ -257,7 +257,7 @@ const fetchPdfIdsBySubjectsForBiology = async (req, res) => {
     const topicIds = allTopics.map(topic => topic.topic_id).filter(Boolean);
 
     // Log the topics with their details
-    console.log("Biology Topics:", allTopics);
+    //console.log("Biology Topics:", allTopics);
 
     // Fetch corresponding questions from the Question table
     const questions = await Question.findAll({

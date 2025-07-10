@@ -69,7 +69,7 @@ const fetchPdfIdsBySubjects = async (req, res) => {
     const topicIds = allTopics.map(topic => topic.topic_id).filter(Boolean);
 
     // Log the topics with their details
-    console.log("Physics Topics:", allTopics);
+    // console.log("Physics Topics:", allTopics);
 
     // Fetch corresponding questions from the Question table
     const questions = await Question.findAll({
@@ -92,6 +92,7 @@ const fetchPdfIdsBySubjects = async (req, res) => {
         topic_name: topicInfo ? topicInfo.topic_name : null
       };
     });
+    console.log("Questions with Topic Details:", questionsWithTopicDetails);
 
     res.status(200).json({
       questions: questionsWithTopicDetails,

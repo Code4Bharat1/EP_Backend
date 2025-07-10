@@ -76,7 +76,7 @@ app.use("/api", startrecotestRoute);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admintest", Admintest);
 app.use("/api/fulltest", FullTestRoute);
-app.use("/api/createtest", createtestRoute);
+app.use("/api/createtest", createtestRoute); // test
 app.use("/api/test", pasttestRoute);
 app.use("/api/dashboard", dashboardRoute);
 app.use('/api/studentdata', studentviewRoute);

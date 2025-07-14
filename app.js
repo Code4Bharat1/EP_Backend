@@ -66,7 +66,7 @@ app.get('/', (req, res) => {
 });
 
 
-app.use('/api/qr', qrTestRouter);
+app.use('/api/qr', qrTestRouter); // get student ids and verify them
 app.use('/api/students', studentRoutes);
 app.use("/api/question", questionRout);
 app.use("/api/metest", meTest);

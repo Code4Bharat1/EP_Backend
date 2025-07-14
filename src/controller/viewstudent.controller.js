@@ -254,6 +254,51 @@ const saveBasicStudentData = async (
   }
 };
 
+const deleteStudentById = async (req, res) => {
+  try {
+    /*-----------------------------------------------------------
+      1.  Get the student-ID
+          – prefer URL param  /students/:id
+          – fallback to body - so your existing front-end call
+            (axios .delete … { data:{ id } }) still works
+    -----------------------------------------------------------*/
+    const studentId = req.params.id || req.body.id;
+
+    if (!studentId) {
+      return res.status(400).json({
+        message: "Student ID is required",
+      });
+    }
+
+    /*-----------------------------------------------------------
+      2.  Find the student
+    -----------------------------------------------------------*/
+    const student = await Student.findByPk(studentId);
+
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+      });
+    }
+
+    /*-----------------------------------------------------------
+      3.  Delete and confirm
+    -----------------------------------------------------------*/
+    await student.destroy();          // or  Student.destroy({ where:{ id:studentId } })
+
+    return res.status(200).json({
+      message: "Student deleted successfully",
+      deletedStudentId: studentId,
+    });
+  } catch (error) {
+    console.error("Error deleting student:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
 const bulkSaveStudents = async (
   req,
   res
@@ -491,24 +536,24 @@ const updateBatchIdForUsers = async (
 };
 
 //deleting students from the students table
-const deleteStudent = async (student) => {
-  try {
-    const response = await axios.delete(`${process.env.NEXT_PUBLIC_API_BASE_URL}/studentdata/delete`, {
-      data: { id: student.id }
-    });
-    if (response.status === 200) {
-      setStudents((prevStudents) => prevStudents.filter((s) => s.id !== student.id));
-      toast.success("Student deleted successfully", {
-        duration: 5000
-      });
-    }
-  } catch (error) {
-    console.error("Error deleting student:", error);
-    toast.error("Error deleting student", {
-      duration: 5000
-    });
-  }
-};
+// const deleteStudent = async (student) => {
+//   try {
+//     const response = await axios.delete(`${process.env.NEXT_PUBLIC_API_BASE_URL}/studentdata/delete`, {
+//       data: { id: student.id }
+//     });
+//     if (response.status === 200) {
+//       setStudents((prevStudents) => prevStudents.filter((s) => s.id !== student.id));
+//       toast.success("Student deleted successfully", {
+//         duration: 5000
+//       });
+//     }
+//   } catch (error) {
+//     console.error("Error deleting student:", error);
+//     toast.error("Error deleting student", {
+//       duration: 5000
+//     });
+//   }
+// };
 
 // Controller to save new batch information
 const createBatch = async (req, res) => {
@@ -707,6 +752,6 @@ export {
   updateBatchIdForUsers,
   createBatch,
   getBatchInfo,
-  deleteStudent,
+  deleteStudentById,
   getBatchNames
 };

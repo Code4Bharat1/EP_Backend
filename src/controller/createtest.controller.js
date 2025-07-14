@@ -9,13 +9,33 @@ import levenshtein from "fast-levenshtein";
 import jwt from "jsonwebtoken";
 import MeTest from '../models/saved.js';
 import config from "config";
+import fs from 'fs';
+import path from 'path';
+function loadJsonData() {
+  try {
+    const filePath = path.join(process.cwd(), 'public', 'neet_topics.json'); // adjust if needed
+    const jsonData = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(jsonData);
+  } catch (error) {
+    console.error("Error loading JSON file:", error.message);
+    return null;
+  }
+}
 
 const fetchQuestions = async (req, res) => {
   try {
     const { selectedSubjects, selectedChapters, numQuestions } = req.body;
+    console.log("Requested number of questions:", numQuestions);
+
+    const jsonData = loadJsonData();
+    if (!jsonData) {
+      return res.status(500).json({ error: "Failed to load JSON data." });
+    }
+
     const distribution = {};
     const subjectChapterPairs = [];
 
+    // Build Subject-Chapter Pairs
     for (const subject of selectedSubjects) {
       const chapters = selectedChapters[subject];
       for (const chapter of chapters) {
@@ -23,73 +43,78 @@ const fetchQuestions = async (req, res) => {
         subjectChapterPairs.push({ subject, chapter: chapterName });
       }
     }
-    console.log("Subject-Chapter Pairs: ", subjectChapterPairs);
-    const allPdfs = await Pdf.findAll({
-      attributes: ["id", "subject", "topic_tags"],
-    });
+    console.log("Subject-Chapter Pairs:", subjectChapterPairs);
 
-    const pdfMap = {};
-    for (const pdf of allPdfs) {
-      const dbChapter = pdf.topic_tags.toLowerCase().trim();
-      const key = `${pdf.subject.toLowerCase()}||${dbChapter}`;
-      if (!pdfMap[key]) pdfMap[key] = [];
-      pdfMap[key].push(pdf.id);
+    // Build JSON-based chapter-topicId map
+    const jsonPdfMap = {}; // key: subject||chapter => [topic_id, ...]
+    for (const subject of selectedSubjects) {
+      const subjectData = jsonData[subject];
+      if (!subjectData) continue;
+
+      for (const [chapterName, topicsArray] of Object.entries(subjectData)) {
+        if (Array.isArray(topicsArray)) {
+          const key = `${subject.toLowerCase()}||${chapterName.toLowerCase().trim()}`;
+          const topicIds = topicsArray.map(topic => topic.topic_id);
+          jsonPdfMap[key] = topicIds;
+        }
+      }
     }
 
+    // Fuzzy match chapter names with JSON keys
     const findClosestMatch = (subject, chapter) => {
       let closestMatch = null;
       let closestDistance = Infinity;
-      for (const pdf of allPdfs) {
-        if (pdf.subject.toLowerCase() !== subject.toLowerCase()) continue;
-        const dbChapter = pdf.topic_tags.toLowerCase().trim();
-        const distance = levenshtein.get(chapter, dbChapter);
+      const subjectData = jsonData[subject];
+      if (!subjectData) return null;
+
+      for (const dbChapter of Object.keys(subjectData)) {
+        const dbChapterTrimmed = dbChapter.toLowerCase().trim();
+        const distance = levenshtein.get(chapter, dbChapterTrimmed);
         if (distance < closestDistance) {
           closestDistance = distance;
-          closestMatch = dbChapter;
+          closestMatch = dbChapterTrimmed;
         }
       }
       return closestMatch;
     };
 
-    for (const { subject, chapter, chapterId } of subjectChapterPairs) {
+    for (const { subject, chapter } of subjectChapterPairs) {
       const closestMatch = findClosestMatch(subject, chapter);
       const key = `${subject.toLowerCase()}||${closestMatch || chapter}`;
-      const pdf_ids = pdfMap[key] || [];
+      const pdf_ids = jsonPdfMap[key] || [];
 
       if (!distribution[subject]) distribution[subject] = {};
-
-      distribution[subject][chapter] = { pdf_id: pdf_ids, chapterId }; // Store chapterId with the pdf_id
+      distribution[subject][chapter] = { pdf_ids };
     }
 
     const questionsWithOptions = [];
 
+    // Fetch questions based on ALL topic_ids under the chapter
     for (const [subject, chapters] of Object.entries(distribution)) {
       for (const [chapter, details] of Object.entries(chapters)) {
-        const { pdf_id, chapterId } = details;
+        const { pdf_ids } = details;
+        if (pdf_ids.length === 0) continue;
 
-        if (pdf_id.length === 0) continue;
-
-        const randomPdfId = pdf_id[Math.floor(Math.random() * pdf_id.length)];
-
+        // Fetch ALL questions from all topic_ids under this chapter
         const fetchedQuestions = await Question.findAll({
-          where: { pdf_id: randomPdfId },
+          where: { pdf_id: pdf_ids },
           include: [
             { model: Option, as: "options" },
             { model: Diagram, required: false },
           ],
         });
 
+        // Shuffle and select exactly `numQuestions` per chapter
         const shuffled = fetchedQuestions.sort(() => 0.5 - Math.random());
         const selectedQuestions = shuffled.slice(0, numQuestions);
 
-        // Collect question IDs for logging
-        const questionIds = selectedQuestions.map((question) => question.id);
-
-        // Log chapter name, chapter ID, and question IDs
+        // Log if insufficient questions for monitoring
+        if (selectedQuestions.length < numQuestions) {
+          console.warn(`Only ${selectedQuestions.length} questions found for ${subject} - ${chapter}. Requested: ${numQuestions}`);
+        }
 
         for (let question of selectedQuestions) {
-          // Fetch options and find correct one
-          const options = question.options.map((opt) => opt.dataValues);
+          const options = question.options.map(opt => opt.dataValues);
           const correctOption = options.find(opt => opt.is_correct);
 
           const diagramPath =
@@ -104,7 +129,7 @@ const fetchQuestions = async (req, res) => {
               chapter,
             },
             options,
-            correctAnswer: correctOption, // Include the correct option
+            correctAnswer: correctOption,
             diagram: diagramPath,
           });
         }
@@ -117,7 +142,7 @@ const fetchQuestions = async (req, res) => {
       });
     }
 
-    res.status(200).json({ questions: questionsWithOptions });
+    return res.status(200).json({ questions: questionsWithOptions });
   } catch (error) {
     console.error("Error fetching questions:", error.message, error.stack);
     res.status(500).json({ error: "Internal Server Error" });

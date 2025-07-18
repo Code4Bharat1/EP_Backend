@@ -4,12 +4,16 @@ import { sequelizeCon, DataTypes, Model } from "../init/dbConnection.js";
 import bcrypt from "bcrypt";
 
 
-const Student=sequelizeCon.define("Student",
+const Student = sequelizeCon.define("Student",
   {
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
+    },
+    demoExpiry: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
     // Core fields
     emailAddress: {
@@ -122,7 +126,7 @@ const Student=sequelizeCon.define("Student",
         isIn: [["CBSE", "ICSE", "State Board", "Other"]], // Board validation
       },
     },
-    
+
     tenthYearOfPassing: {
       type: DataTypes.INTEGER,
       allowNull: true,

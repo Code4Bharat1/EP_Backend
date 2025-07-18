@@ -323,6 +323,7 @@ console.log("Login", emailAddress, password);
     // console.log("Entered Password:", password); // Log entered password
     // console.log("Stored Hashed Password:", student.password);
     // Compare the entered password with the hashed password
+    console.log("Comparing passwords... :", password , student.password, student);
     const isPasswordValid = await bcrypt.compare(password, student?.password);
 
 

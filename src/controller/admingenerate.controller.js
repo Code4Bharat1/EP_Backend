@@ -38,7 +38,7 @@ const getAllTopicsForSubject = (jsonData, subject) => {
 };
 
 // Generic function to fetch questions with pagination
-const fetchQuestionsWithPagination = async (req, res, subject) => {
+const fetchAllQuestions = async (req, res, subject) => {
   try {
     const jsonData = loadJsonData();
 
@@ -48,20 +48,9 @@ const fetchQuestionsWithPagination = async (req, res, subject) => {
 
     // Extract query parameters
     const {
-      page = 1,
-      limit = 10,
       chapter_name = null,
-      topic_ids = null,
-      question_count = null
+      topic_ids = null
     } = req.query;
-
-    // Convert to numbers
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
-    const questionCountNum = question_count ? parseInt(question_count) : null;
-
-    // Calculate offset for pagination
-    const offset = (pageNum - 1) * limitNum;
 
     // Get all topics for the subject
     const allTopics = getAllTopicsForSubject(jsonData, subject);
@@ -73,12 +62,10 @@ const fetchQuestionsWithPagination = async (req, res, subject) => {
     // Filter topics based on query parameters
     let filteredTopics = allTopics;
 
-    // Filter by chapter if provided
     if (chapter_name) {
       filteredTopics = allTopics.filter(topic => topic.chapter_name === chapter_name);
     }
 
-    // Filter by specific topic IDs if provided
     if (topic_ids) {
       const topicIdArray = topic_ids.split(',').map(id => parseInt(id.trim()));
       filteredTopics = allTopics.filter(topic => topicIdArray.includes(topic.topic_id));
@@ -91,25 +78,16 @@ const fetchQuestionsWithPagination = async (req, res, subject) => {
     // Extract topic_ids for querying questions
     const topicIds = filteredTopics.map(topic => topic.topic_id).filter(Boolean);
 
-    // Build query options
+    // Build query options (no limit, no offset)
     const queryOptions = {
       where: {
         pdf_id: topicIds,
       },
       attributes: ['id', 'pdf_id', 'question_text'],
-      offset: offset,
-      limit: questionCountNum || limitNum, // Use question_count if provided, otherwise use limit
-      order: [['id', 'ASC']] // Consistent ordering
+      order: [['id', 'ASC']]
     };
 
-    // Get total count for pagination info
-    const totalCount = await Question.count({
-      where: {
-        pdf_id: topicIds,
-      }
-    });
-
-    // Fetch questions with pagination
+    // Fetch **all** questions
     const questions = await Question.findAll(queryOptions);
 
     if (questions.length === 0) {
@@ -126,23 +104,9 @@ const fetchQuestionsWithPagination = async (req, res, subject) => {
       };
     });
 
-    // Calculate pagination info
-    const totalPages = Math.ceil(totalCount / (questionCountNum || limitNum));
-    const hasNextPage = pageNum < totalPages;
-    const hasPrevPage = pageNum > 1;
-
     res.status(200).json({
       questions: questionsWithTopicDetails,
-      pagination: {
-        current_page: pageNum,
-        total_pages: totalPages,
-        total_questions: totalCount,
-        questions_per_page: questionCountNum || limitNum,
-        has_next_page: hasNextPage,
-        has_prev_page: hasPrevPage,
-        next_page: hasNextPage ? pageNum + 1 : null,
-        prev_page: hasPrevPage ? pageNum - 1 : null
-      },
+      total_questions: questionsWithTopicDetails.length,
       filter_info: {
         subject: subject,
         chapter_name: chapter_name,
@@ -159,17 +123,17 @@ const fetchQuestionsWithPagination = async (req, res, subject) => {
 
 // Physics questions with pagination
 const fetchPhysicsQuestions = async (req, res) => {
-  return fetchQuestionsWithPagination(req, res, 'Physics');
+  return fetchAllQuestions(req, res, 'Physics');
 };
 
 // Chemistry questions with pagination
 const fetchChemistryQuestions = async (req, res) => {
-  return fetchQuestionsWithPagination(req, res, 'Chemistry');
+  return fetchAllQuestions(req, res, 'Chemistry');
 };
 
 // Biology questions with pagination
 const fetchBiologyQuestions = async (req, res) => {
-  return fetchQuestionsWithPagination(req, res, 'Biology');
+  return fetchAllQuestions(req, res, 'Biology');
 };
 
 // Get chapters and topics metadata (lightweight endpoint)

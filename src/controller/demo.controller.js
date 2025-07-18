@@ -94,10 +94,7 @@ const demoSignup = async (req, res) => {
       return res.status(400).json({ message: "First name, email, and password are required." });
     }
 
-    const existingStudent = await Student.findOne({
-      where: { emailAddress }
-    });
-
+    const existingStudent = await Student.findOne({ where: { emailAddress } });
     if (existingStudent) {
       return res.status(409).json({ message: "A student with this email already exists." });
     }
@@ -107,10 +104,9 @@ const demoSignup = async (req, res) => {
 
     if (isDemo === true || isDemo === "true") {
       isDemoUser = true;
-      demoExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      demoExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     }
 
-    // Hash the password before storing
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newStudent = await Student.create({
@@ -118,18 +114,24 @@ const demoSignup = async (req, res) => {
       lastName,
       fullName: fullName || `${firstName} ${lastName || ""}`.trim(),
       emailAddress,
-      password: hashedPassword,   // Store the hashed password
-      isVerified: false,
-      demoExpiry,
+      password: hashedPassword,
+      isVerified: isDemoUser ? true : false,   // Demo users are verified by default
+      demoExpiry: demoExpiry ? new Date(demoExpiry) : null,
       isDemo: isDemoUser
     });
-    await Student.sync({ alter: true });
 
-    const token = jwt.sign(
-      { userId: newStudent.id, emailAddress: newStudent.emailAddress },
-      process.env.JWT_SECRET || "your-secret-key",
-      { expiresIn: "1h" }
-    );
+    // --- JWT Payload with Demo Info ---
+    const JWT_SECRET = process.env.JWT_SECRET || config.get("jwtSecret") || "your-secret-key";
+    const tokenPayload = {
+      id: newStudent.id,
+      email: newStudent.emailAddress,
+      isDemo: isDemoUser,
+    };
+    if (isDemoUser && demoExpiry) {
+      tokenPayload.demoExpiry = demoExpiry;
+    }
+
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "30d" });
 
     const cleanStudent = { ...newStudent.get() };
     delete cleanStudent.password;
@@ -147,5 +149,6 @@ const demoSignup = async (req, res) => {
     return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
+
 
 export { demoSignup, sendOtp, verifyOtp };

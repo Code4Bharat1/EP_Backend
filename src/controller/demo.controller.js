@@ -2,7 +2,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { Op } from "sequelize";
 import Student from "../models/student.model.js";
-
+import Otp from "../models/otp.model.js";
 
 const otpStore = {};
 
@@ -84,6 +84,7 @@ const demoSignup = async (req, res) => {
 
 const sendOtp = async (req, res) => {
   try {
+    Otp.sync({ alter: true }).then(() => console.log('Otp table synced.'));
     const { mobileNumber } = req.body;
     if (!mobileNumber || mobileNumber.length !== 10) {
       return res.status(400).json({ message: "Valid mobile number is required." });
@@ -94,15 +95,19 @@ const sendOtp = async (req, res) => {
       return res.status(409).json({ message: "Mobile number already registered." });
     }
 
-    // Generate 6-digit OTP
+    // Generate and set OTP expiry (e.g. 5 min)
     const otp = crypto.randomInt(100000, 999999).toString();
-    otpStore[mobileNumber] = otp;
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    // Send via SMS provider here (replace this line)
+    // Upsert: If OTP exists for this mobile, update it
+    await Otp.upsert({ mobileNumber, otp, expiresAt });
+
+    // Send OTP (integrate SMS API here)
     console.log(`(Demo) Sending OTP ${otp} to ${mobileNumber}`);
 
     return res.status(200).json({ message: "OTP sent successfully." });
   } catch (e) {
+    console.error("Error in sendOtp:", e);
     return res.status(500).json({ message: "Internal server error." });
   }
 };
@@ -113,17 +118,22 @@ const verifyOtp = async (req, res) => {
     if (!mobileNumber || !otp) {
       return res.status(400).json({ message: "Mobile number and OTP are required." });
     }
-    if (otpStore[mobileNumber] !== otp) {
+
+    const record = await Otp.findOne({ where: { mobileNumber, otp } });
+    if (!record) {
       return res.status(400).json({ message: "Invalid OTP." });
     }
-    // Optionally, set a verified flag in your DB or allow the user to continue registration
-    delete otpStore[mobileNumber];
+    if (new Date() > new Date(record.expiresAt)) {
+      return res.status(400).json({ message: "OTP expired." });
+    }
+
+    await Otp.destroy({ where: { mobileNumber } }); // Remove after use (optional, but good practice)
     return res.status(200).json({ message: "OTP verified. You may now sign up." });
   } catch (e) {
+    console.error("Error in verifyOtp:", e);
     return res.status(500).json({ message: "Internal server error." });
   }
 };
-
 
 
 export { demoSignup, sendOtp , verifyOtp};

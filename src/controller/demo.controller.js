@@ -5,6 +5,8 @@ import Student from "../models/student.model.js";
 import Otp from "../models/otp.model.js";
 import nodemailer from "nodemailer";
 import config from "config";
+import bcrypt from "bcrypt";
+
 
 // --- Nodemailer setup ---
 const mailAuth = config.get('mailAuth');
@@ -79,7 +81,6 @@ const verifyOtp = async (req, res) => {
 
 const demoSignup = async (req, res) => {
   try {
-    
     const {
       firstName,
       lastName,
@@ -109,12 +110,15 @@ const demoSignup = async (req, res) => {
       demoExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     }
 
+    // Hash the password before storing
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     const newStudent = await Student.create({
       firstName,
       lastName,
       fullName: fullName || `${firstName} ${lastName || ""}`.trim(),
       emailAddress,
-      password,
+      password: hashedPassword,   // Store the hashed password
       isVerified: false,
       demoExpiry,
       isDemo: isDemoUser
@@ -143,4 +147,5 @@ const demoSignup = async (req, res) => {
     return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
+
 export { demoSignup, sendOtp, verifyOtp };

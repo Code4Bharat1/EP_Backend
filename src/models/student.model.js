@@ -316,6 +316,7 @@ Student.beforeCreate(async (student, options) => {
   student.password = hashedPassword;
 });
 
+
 // Student.sync({ alter: true })
 //   .then(() => console.log("Student table synced successfully"))
 //   .catch((err) => console.error("Error syncing Student table:", err));

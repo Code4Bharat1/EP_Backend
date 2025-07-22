@@ -80,7 +80,7 @@ app.use("/api/fulltest", FullTestRoute);
 app.use("/api/createtest", createtestRoute); // test
 app.use("/api/test", pasttestRoute);
 app.use("/api/dashboard", dashboardRoute);
-app.use('/api/studentdata', studentviewRoute);
+app.use('/api/studentdata', studentviewRoute); // handle student and batch data
 app.use("/api/admintest", admingenerateRoute); // test
 app.use("/api/newadmin", newAdminRoute);
 app.use("/api/dashboard", dsb);

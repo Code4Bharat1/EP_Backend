@@ -1,106 +1,135 @@
 import Student from "../models/student.model.js";
 import bcrypt from "bcrypt";
 import { Batch } from "../models/admin.model.js";
-
-import { Sequelize } from "sequelize";
+import {
+  Student as StudentModel,
+  Batch as BatchModel,
+  StudentBatch,
+} from "../models/ModelManager.js";
+import { nanoid } from "nanoid";
 
 // Controller to fetch student information
-const getStudentInfo = async (
-  req,
-  res
-) => {
+const getStudentInfo = async (req, res) => {
   try {
     // Extract the admin ID from the request body
     const { addedByAdminId } = req.body;
 
     if (!addedByAdminId) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Admin ID is required",
-        });
+      return res.status(400).json({
+        message: "Admin ID is required",
+      });
     }
 
     // Fetching specific fields from the Student table where addedByAdminId matches
-    const studentData =
-      await Student.findAll({
-        attributes: [
-          "id",
-          "firstName", // Student's first name
-          "lastName", // Student's last name
-          "emailAddress", // Student's email address
-          "mobileNumber", // Student's phone number
-          "gender", // Student's gender
-          "dateOfBirth", // Student's date of birth
-          "isVerified", // Whether the student is verified or not
-          "addedByAdminId", // Shows the adminid (2)
-        ],
-        where: {
-          addedByAdminId:
-            addedByAdminId, // Filter students by addedByAdminId
-        },
-      });
+    const studentData = await Student.findAll({
+      attributes: [
+        "id",
+        "firstName", // Student's first name
+        "lastName", // Student's last name
+        "emailAddress", // Student's email address
+        "mobileNumber", // Student's phone number
+        "gender", // Student's gender
+        "dateOfBirth", // Student's date of birth
+        "isVerified", // Whether the student is verified or not
+        "addedByAdminId", // Shows the adminid (2)
+      ],
+      where: {
+        addedByAdminId: addedByAdminId, // Filter students by addedByAdminId
+      },
+    });
 
     // If no students found, return an error response
     if (studentData.length === 0) {
-      return res
-        .status(404)
-        .json({
-          message:
-            "No students found for the given admin",
-        });
+      return res.status(404).json({
+        message: "No students found for the given admin",
+      });
     }
 
     // Format the data to include full name and status (active/inactive)
-    const studentInfo = studentData.map(
-      (student) => {
-        // Getting the firstname and lastname inside fullname
-        const fullName = `${student.firstName} ${student.lastName}`;
-        const status =
-          student.isVerified
-            ? "Active"
-            : "Inactive";
+    const studentInfo = studentData.map((student) => {
+      // Getting the firstname and lastname inside fullname
+      const fullName = `${student.firstName} ${student.lastName}`;
+      const status = student.isVerified ? "Active" : "Inactive";
 
-        return {
-          id: student.id,
-          fullName,
-          email: student.emailAddress,
-          phoneNumber:
-            student.mobileNumber,
-          gender: student.gender,
-          dateOfBirth:
-            student.dateOfBirth,
-          status,
-          addedByAdminId:
-            student.addedByAdminId,
-        };
-      }
-    );
+      return {
+        id: student.id,
+        fullName,
+        email: student.emailAddress,
+        phoneNumber: student.mobileNumber,
+        gender: student.gender,
+        dateOfBirth: student.dateOfBirth,
+        status,
+        addedByAdminId: student.addedByAdminId,
+      };
+    });
 
     // Send response with formatted student info
-    res
-      .status(200)
-      .json({ studentInfo });
+    res.status(200).json({ studentInfo });
   } catch (error) {
-    console.error(
-      "Error fetching student data:",
-      error
-    );
-    res
-      .status(500)
-      .json({
-        message:
-          "Internal Server Error",
+    console.error("Error fetching student data:", error);
+    res.status(500).json({
+      message: "Internal Server Error",
+    });
+  }
+};
+const getStudentInfoByBatch = async (req, res) => {
+  try {
+    const { addedByAdminId, batchId } = req.body;
+
+    if (!addedByAdminId || !batchId) {
+      return res.status(400).json({
+        message: "Both Admin ID and Batch ID are required",
       });
+    }
+
+    // Fetch students associated with the batch and added by the admin
+    const batch = await Batch.findOne({
+      where: { batchId },
+      include: {
+        model: Student,
+        where: { addedByAdminId },
+        attributes: [
+          "id",
+          "firstName",
+          "lastName",
+          "emailAddress",
+          "mobileNumber",
+          "gender",
+          "dateOfBirth",
+          "isVerified",
+          "addedByAdminId",
+        ],
+        through: { attributes: [] }, // exclude BatchStudents join table data
+      },
+    });
+
+    if (!batch || batch.Students.length === 0) {
+      return res.status(404).json({
+        message: "No students found for the given admin and batch",
+      });
+    }
+
+    // Format data
+    const studentInfo = batch.Students.map((student) => ({
+      id: student.id,
+      fullName: `${student.firstName} ${student.lastName}`,
+      email: student.emailAddress,
+      phoneNumber: student.mobileNumber,
+      gender: student.gender,
+      dateOfBirth: student.dateOfBirth,
+      status: student.isVerified ? "Active" : "Inactive",
+      addedByAdminId: student.addedByAdminId,
+    }));
+
+    res.status(200).json({ studentInfo });
+  } catch (error) {
+    console.error("Error fetching student data:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
 // Controller to save student information with specific fields
-const saveBasicStudentData = async (
-  req,
-  res
-) => {
+const saveBasicStudentData = async (req, res) => {
   try {
     // Destructure the required data from the request body
     const {
@@ -132,125 +161,100 @@ const saveBasicStudentData = async (
       !gender ||
       !addedByAdminId
     ) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "All fields are required",
-        });
+      return res.status(400).json({
+        message: "All fields are required",
+      });
     }
 
     // Validate email format
-    const emailRegex =
-      /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
+    const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
     if (!emailRegex.test(email)) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Invalid email format",
-        });
+      return res.status(400).json({
+        message: "Invalid email format",
+      });
     }
 
     // Check if the email already exists
-    const existingStudent =
-      await Student.findOne({
-        where: {
-          emailAddress: email,
-          addedByAdminId,
-        },
-      });
+    const existingStudent = await Student.findOne({
+      where: {
+        emailAddress: email,
+        addedByAdminId,
+      },
+    });
     if (existingStudent) {
-      return res
-        .status(409)
-        .json({
-          message:
-            "Email already exists",
-        });
+      return res.status(409).json({
+        message: "Email already exists",
+      });
     }
 
     // Create a new student instance with the data
-    const newStudent =
-      await Student.create({
-        emailAddress: email,
-        password,
-        firstName: firstName,
-        dateOfBirth: dateOfBirth,
-        mobileNumber: phoneNumber,
-        gender: gender,
-        addedByAdminId: addedByAdminId, // Save the addedByAdminId received in the request body
-        batchId: null,
-        lastName: null,
-        examType: null,
-        studentClass: null,
-        targetYear: null,
-        fullName: `${firstName} ${""}`, // Example of setting fullName based on firstName (you can improve this)
-        fullAddress: null,
-        domicileState: null,
-        parentName: null,
-        parentContactNumber: null,
-        relationToStudent: null,
-        tenthBoard: null,
-        tenthYearOfPassing: null,
-        tenthPercentage: null,
-        eleventhYearOfCompletion: null,
-        eleventhPercentage: null,
-        twelfthBoard: null,
-        twelfthYearOfPassing: null,
-        twelfthPercentage: null,
-        hasAppearedForNEET: null,
-        neetAttempts: [],
-        targetMarks: null,
-        hasTargetFlexibility: null,
-        deferredColleges: null,
-        preferredCourses: null,
-        enrolledInCoachingInstitute:
-          null,
-        coachingInstituteName: null,
-        studyMode: null,
-        dailyStudyHours: null,
-        takesPracticeTestsRegularly: false,
-        completedMockTests: 0,
-        Credits: 0,
-        subjectNeedsMostAttention: null,
-        chapterWiseTests: null,
-        topicWiseTests: null,
-        weakAreas: null,
-        profileImage: null,
-      });
+    const newStudent = await Student.create({
+      emailAddress: email,
+      password,
+      firstName: firstName,
+      dateOfBirth: dateOfBirth,
+      mobileNumber: phoneNumber,
+      gender: gender,
+      addedByAdminId: addedByAdminId, // Save the addedByAdminId received in the request body
+      batchId: null,
+      lastName: null,
+      examType: null,
+      studentClass: null,
+      targetYear: null,
+      fullName: `${firstName} ${""}`, // Example of setting fullName based on firstName (you can improve this)
+      fullAddress: null,
+      domicileState: null,
+      parentName: null,
+      parentContactNumber: null,
+      relationToStudent: null,
+      tenthBoard: null,
+      tenthYearOfPassing: null,
+      tenthPercentage: null,
+      eleventhYearOfCompletion: null,
+      eleventhPercentage: null,
+      twelfthBoard: null,
+      twelfthYearOfPassing: null,
+      twelfthPercentage: null,
+      hasAppearedForNEET: null,
+      neetAttempts: [],
+      targetMarks: null,
+      hasTargetFlexibility: null,
+      deferredColleges: null,
+      preferredCourses: null,
+      enrolledInCoachingInstitute: null,
+      coachingInstituteName: null,
+      studyMode: null,
+      dailyStudyHours: null,
+      takesPracticeTestsRegularly: false,
+      completedMockTests: 0,
+      Credits: 0,
+      subjectNeedsMostAttention: null,
+      chapterWiseTests: null,
+      topicWiseTests: null,
+      weakAreas: null,
+      profileImage: null,
+    });
 
     // Return the created student data (you can exclude sensitive fields)
     const studentResponse = {
       id: newStudent.id,
-      emailAddress:
-        newStudent.emailAddress,
+      emailAddress: newStudent.emailAddress,
       firstName: newStudent.firstName,
-      dateOfBirth:
-        newStudent.dateOfBirth,
-      mobileNumber:
-        newStudent.mobileNumber,
+      dateOfBirth: newStudent.dateOfBirth,
+      mobileNumber: newStudent.mobileNumber,
       gender: newStudent.gender,
     };
 
     // Send a success response with the created student data
-    return res
-      .status(201)
-      .json({
-        message:
-          "Student created successfully",
-        student: studentResponse,
-      });
+    return res.status(201).json({
+      message: "Student created successfully",
+      student: studentResponse,
+    });
   } catch (error) {
-    console.error(
-      "Error saving student data:",
-      error
-    );
-    return res
-      .status(500)
-      .json({
-        message:
-          "Internal Server Error",
-      });
+    console.error("Error saving student data:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+    });
   }
 };
 
@@ -284,7 +288,7 @@ const deleteStudentById = async (req, res) => {
     /*-----------------------------------------------------------
       3.  Delete and confirm
     -----------------------------------------------------------*/
-    await student.destroy();          // or  Student.destroy({ where:{ id:studentId } })
+    await student.destroy(); // or  Student.destroy({ where:{ id:studentId } })
 
     return res.status(200).json({
       message: "Student deleted successfully",
@@ -299,10 +303,7 @@ const deleteStudentById = async (req, res) => {
   }
 };
 
-const bulkSaveStudents = async (
-  req,
-  res
-) => {
+const bulkSaveStudents = async (req, res) => {
   try {
     // Destructure the student data array from the request body
     const { students } = req.body;
@@ -332,23 +333,17 @@ const bulkSaveStudents = async (
         !mobileNumber ||
         !gender
       ) {
-        return res
-          .status(400)
-          .json({
-            message:
-              "All fields are required for all students",
-          });
+        return res.status(400).json({
+          message: "All fields are required for all students",
+        });
       }
 
       // Check if the email already exists
-      const existingStudent =
-        await Student.findOne({
-          where: { emailAddress },
-        });
+      const existingStudent = await Student.findOne({
+        where: { emailAddress },
+      });
       if (existingStudent) {
-        existingEmails.push(
-          emailAddress
-        ); // Collect existing emails to report later
+        existingEmails.push(emailAddress); // Collect existing emails to report later
         continue; // Skip adding this student to the database
       }
 
@@ -389,8 +384,7 @@ const bulkSaveStudents = async (
         hasTargetFlexibility: null,
         deferredColleges: null,
         preferredCourses: null,
-        enrolledInCoachingInstitute:
-          null,
+        enrolledInCoachingInstitute: null,
         coachingInstituteName: null,
         studyMode: null,
         dailyStudyHours: null,
@@ -408,16 +402,12 @@ const bulkSaveStudents = async (
     // If there are valid students, save them to the database
     if (studentData.length > 0) {
       // Use Sequelize's bulkCreate method to insert valid students into the database
-      const savedStudents =
-        await Student.bulkCreate(
-          studentData
-        );
+      const savedStudents = await Student.bulkCreate(studentData);
 
       // If there were any email conflicts, return the existing emails along with saved students
       if (existingEmails.length > 0) {
         return res.status(409).json({
-          message:
-            "Emails already exist for some students.",
+          message: "Emails already exist for some students.",
           existingEmails,
           savedStudents,
         });
@@ -425,74 +415,49 @@ const bulkSaveStudents = async (
 
       // Respond with the saved students
       res.status(201).json({
-        message:
-          "Students added successfully",
+        message: "Students added successfully",
         students: savedStudents,
       });
     } else {
-      res
-        .status(400)
-        .json({
-          message:
-            "No valid students to add",
-        });
+      res.status(400).json({
+        message: "No valid students to add",
+      });
     }
   } catch (error) {
-    console.error(
-      "Error saving student data:",
-      error
-    );
-    res
-      .status(500)
-      .json({
-        message:
-          "Internal Server Error",
-        error: error.message,
-      });
+    console.error("Error saving student data:", error);
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 };
 
 // controller to update batchId for multiple students based on emails
-const updateBatchIdForUsers = async (
-  req,
-  res
-) => {
+const updateBatchIdForUsers = async (req, res) => {
   try {
-    const { emails, batchId } =
-      req.body;
+    const { emails, batchId } = req.body;
 
     // Validate if emails and batchId are provided
-    if (
-      !emails ||
-      !Array.isArray(emails) ||
-      emails.length === 0
-    ) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Emails are required and should be an array",
-        });
+    if (!emails || !Array.isArray(emails) || emails.length === 0) {
+      return res.status(400).json({
+        message: "Emails are required and should be an array",
+      });
     }
 
     if (!batchId) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Batch ID is required",
-        });
+      return res.status(400).json({
+        message: "Batch ID is required",
+      });
     }
 
     // Loop through each email and update the corresponding user
     const updatedStudents = [];
     for (let email of emails) {
-      const student =
-        await Student.findOne({
-          where: {
-            emailAddress: email,
-          },
-        });
+      const student = await Student.findOne({
+        where: {
+          emailAddress: email,
+        },
+      });
 
       if (!student) {
         // If student not found, skip to the next email
@@ -508,12 +473,9 @@ const updateBatchIdForUsers = async (
 
     // If no students were updated, send an appropriate response
     if (updatedStudents.length === 0) {
-      return res
-        .status(404)
-        .json({
-          message:
-            "No students found with the provided emails",
-        });
+      return res.status(404).json({
+        message: "No students found with the provided emails",
+      });
     }
 
     // Send a success response
@@ -522,16 +484,10 @@ const updateBatchIdForUsers = async (
       updatedStudents,
     });
   } catch (error) {
-    console.error(
-      "Error updating batchId:",
-      error
-    );
-    return res
-      .status(500)
-      .json({
-        message:
-          "Internal Server Error",
-      });
+    console.error("Error updating batchId:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+    });
   }
 };
 
@@ -558,63 +514,170 @@ const updateBatchIdForUsers = async (
 // Controller to save new batch information
 const createBatch = async (req, res) => {
   try {
-    const { batchId, batchName, no_of_students } = req.body;
+    const { batchName, no_of_students, studentIds, status } = req.body;
     const adminId = req.adminId;
 
     if (!adminId) {
+      return res.status(400).json({ message: "Admin ID is required" });
+    }
+
+    if (
+      !batchName ||
+      !no_of_students ||
+      !Array.isArray(studentIds) ||
+      typeof status !== "boolean"
+    ) {
       return res.status(400).json({
-        message: "Admin ID is required",
+        message:
+          "Batch Name, Number of Students, Student IDs (array), and Status are required.",
       });
     }
 
-    // Validate if all required fields are present
-    if (!batchId || !batchName || !no_of_students) {
-      return res.status(400).json({
-        message: "Batch ID, Batch Name, and Number of Students are required.",
-      });
-    }
+    const batchId = nanoid(10);
 
-    // Check if batchId already exists (globally unique)
-    const existingBatchById = await Batch.findOne({
-      where: { batchId },
-    });
+    const existingBatchById = await Batch.findOne({ where: { batchId } });
     if (existingBatchById) {
-      return res.status(409).json({
-        message: "Batch ID already exists",
-      });
+      return res.status(409).json({ message: "Batch ID already exists" });
     }
 
-    // Check if same admin already has a batch with the same name
-    const existingBatchByNameForAdmin = await Batch.findOne({
-      where: {
-        batchName,
-        admin_id: adminId,
-      },
+    const existingBatchByName = await Batch.findOne({
+      where: { batchName, admin_id: adminId },
     });
-    if (existingBatchByNameForAdmin) {
-      return res.status(409).json({
-        message: "You already have a batch with this name",
-      });
+    if (existingBatchByName) {
+      return res
+        .status(409)
+        .json({ message: "You already have a batch with this name" });
     }
 
-    // Create the new batch
     const newBatch = await Batch.create({
       batchId,
       batchName,
       no_of_students,
+      status,
       admin_id: adminId,
     });
 
-    res.status(201).json({
+    if (studentIds.length > 0) {
+      const students = await Student.findAll({
+        where: { id: studentIds },
+      });
+
+      if (students.length !== studentIds.length) {
+        return res
+          .status(400)
+          .json({ message: "One or more student IDs are invalid" });
+      }
+
+      // ✅ Use addStudents instead of setStudents
+      await newBatch.addStudents(students);
+    }
+
+    return res.status(201).json({
       message: "Batch created successfully",
       batch: newBatch,
     });
   } catch (error) {
     console.error("Error creating batch:", error);
-    res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
+
+// Controller to update an existing batch
+const updateBatch = async (req, res) => {
+  try {
+    const { batchId } = req.params; // Passed in the URL
+    const { batchName, no_of_students, status, studentIds } = req.body;
+    const adminId = req.adminId;
+
+    if (!adminId) {
+      return res.status(400).json({ message: "Admin ID is required" });
+    }
+
+    // Check if the batch exists and belongs to the admin
+    const batch = await Batch.findOne({
+      where: { batchId, admin_id: adminId },
+      include: [Student], // Optional: preload students
     });
+
+    if (!batch) {
+      return res
+        .status(404)
+        .json({ message: "Batch not found or unauthorized" });
+    }
+
+    // Update fields if provided
+    if (batchName) batch.batchName = batchName;
+    if (typeof no_of_students === "number")
+      batch.no_of_students = no_of_students;
+    if (typeof status === "boolean") batch.status = status;
+
+    // Save updated batch
+    await batch.save();
+
+    // Handle new student additions
+    if (Array.isArray(studentIds) && studentIds.length > 0) {
+      const newStudents = await Student.findAll({
+        where: { id: studentIds },
+      });
+
+      if (newStudents.length !== studentIds.length) {
+        return res
+          .status(400)
+          .json({ message: "One or more student IDs are invalid" });
+      }
+
+      // Add new students without removing existing ones
+      await batch.addStudents(newStudents); // Sequelize will prevent duplicates if defined correctly
+    }
+
+    res.status(200).json({
+      message: "Batch updated successfully",
+      batch,
+    });
+  } catch (error) {
+    console.error("Error updating batch:", error);
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
+//controller to delete the batches from the batches table
+const deleteBatch = async (req, res) => {
+  try {
+    const { batchId } = req.params; // use `batchId` for consistency
+    const adminId = req.adminId;
+
+    if (!adminId) {
+      return res.status(400).json({ message: "Admin ID is required" });
+    }
+
+    // Find the batch by batchId and admin_id
+    const batch = await Batch.findOne({
+      where: { batchId, admin_id: adminId },
+    });
+
+    if (!batch) {
+      return res
+        .status(404)
+        .json({ message: "Batch not found or unauthorized" });
+    }
+
+    // Optionally remove student associations before deleting (if many-to-many)
+    await batch.setStudents([]); // Clears associated students
+
+    // Delete the batch
+    await batch.destroy();
+
+    res.status(200).json({ message: "Batch deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting batch:", error);
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
 };
 
@@ -629,7 +692,7 @@ const getBatchNames = async (req, res) => {
 
     const batchData = await Batch.findAll({
       where: { admin_id: adminId },
-      attributes: ['batchName'],
+      attributes: ["batchName"],
     });
 
     if (batchData.length === 0) {
@@ -639,109 +702,45 @@ const getBatchNames = async (req, res) => {
     }
 
     return res.status(200).json({ batchData });
-
   } catch (error) {
     console.error("Error fetching batch names:", error);
     return res.status(500).json({
       message: "Error finding batches",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-
-const getBatchInfo = async (
-  req,
-  res
-) => {
+const getBatchInfo = async (req, res) => {
   try {
     const adminId = req.adminId; // Assuming adminId is sent in the request body
     if (!adminId) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Admin ID is required",
-        });
+      return res.status(400).json({
+        message: "Admin ID is required",
+      });
     }
 
     // Fetching batch information from the Batches table
-    const batchData =
-      await Batch.findAll({
-        attributes: [
-          "batchId",
-          "batchName",
-          "no_of_students",
-
-        ],
-        where: {
-          admin_id: req.adminId,
-        },
-      });
+    const batchData = await Batch.findAll({
+      attributes: ["batchId", "batchName", "no_of_students"],
+      where: {
+        admin_id: req.adminId,
+      },
+    });
 
     // If no batch data found, return an error response
     if (batchData.length === 0) {
-      return res
-        .status(404)
-        .json({
-          message: "No batches found",
-        });
+      return res.status(404).json({
+        message: "No batches found",
+      });
     }
     // Return the retrieved batch data in the response
     res.status(200).json({ batchData });
   } catch (error) {
-    console.error(
-      "Error fetching batch data:",
-      error
-    );
-    res
-      .status(500)
-      .json({
-        message:
-          "Internal Server Error",
-      });
-  }
-};
-
-//controller to delete the batches from the batches table
-const deleteBatch = async (
-  req,
-  res
-) => {
-  try {
-    const { batch_Id } = req.params;
-
-    // Find and delete the batch
-    const batch = await Batch.findOne({
-      where: { batch_Id },
+    console.error("Error fetching batch data:", error);
+    res.status(500).json({
+      message: "Internal Server Error",
     });
-    if (!batch) {
-      return res
-        .status(404)
-        .json({
-          message: "Batch not found",
-        });
-    }
-
-    await batch.destroy(); // Delete the batch from the database
-
-    res
-      .status(200)
-      .json({
-        message:
-          "Batch deleted successfully",
-      });
-  } catch (error) {
-    console.error(
-      "Error deleting batch:",
-      error
-    );
-    res
-      .status(500)
-      .json({
-        message:
-          "Internal Server Error",
-      });
   }
 };
 
@@ -751,7 +750,10 @@ export {
   bulkSaveStudents,
   updateBatchIdForUsers,
   createBatch,
+  updateBatch,
+  deleteBatch,
   getBatchInfo,
   deleteStudentById,
-  getBatchNames
+  getBatchNames,
+  getStudentInfoByBatch,
 };

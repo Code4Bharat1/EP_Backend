@@ -72,61 +72,60 @@ const getStudentInfo = async (req, res) => {
     });
   }
 };
+
 const getStudentInfoByBatch = async (req, res) => {
   try {
     const { addedByAdminId, batchId } = req.body;
-
+    console.log("Added By Admin ID:", addedByAdminId);
+    console.log("Batch ID:", batchId);
     if (!addedByAdminId || !batchId) {
-      return res.status(400).json({
-        message: "Both Admin ID and Batch ID are required",
-      });
+      return res.status(400).json({ message: "Both Admin ID and Batch ID are required" });
     }
 
-    // Fetch students associated with the batch and added by the admin
     const batch = await Batch.findOne({
-      where: { batchId },
-      include: {
+      where: { batchId },    // use the attribute name
+      include: [{
         model: Student,
-        where: { addedByAdminId },
+        as: "Students",   // must match the `as` above
         attributes: [
-          "id",
-          "firstName",
-          "lastName",
-          "emailAddress",
-          "mobileNumber",
-          "gender",
-          "dateOfBirth",
-          "isVerified",
-          "addedByAdminId",
+          "id", "firstName", "lastName",
+          "emailAddress", "mobileNumber",
+          "gender", "dateOfBirth", "isVerified",
+          "addedByAdminId"
         ],
-        through: { attributes: [] }, // exclude BatchStudents join table data
-      },
+        through: { attributes: [] }
+      }],
     });
 
-    if (!batch || batch.Students.length === 0) {
-      return res.status(404).json({
-        message: "No students found for the given admin and batch",
-      });
+    if (!batch) {
+      return res.status(404).json({ message: "Batch not found" });
+    }
+    console.log("Batch Students:", batch);   
+
+    const studentInfo = batch.Students
+      .filter(s => String(s.addedByAdminId) === String(addedByAdminId))
+      .map(s => ({
+        id: s.id,
+        fullName: `${s.firstName} ${s.lastName}`,
+        email: s.emailAddress,
+        phone: s.mobileNumber,
+        status: s.isVerified ? "Active" : "Inactive",
+      }));
+
+    if (!studentInfo.length) {
+      return res.status(404).json({ message: "No students in this batch for that admin" });
     }
 
-    // Format data
-    const studentInfo = batch.Students.map((student) => ({
-      id: student.id,
-      fullName: `${student.firstName} ${student.lastName}`,
-      email: student.emailAddress,
-      phoneNumber: student.mobileNumber,
-      gender: student.gender,
-      dateOfBirth: student.dateOfBirth,
-      status: student.isVerified ? "Active" : "Inactive",
-      addedByAdminId: student.addedByAdminId,
-    }));
-
-    res.status(200).json({ studentInfo });
+    return res.status(200).json({ studentInfo });
   } catch (error) {
     console.error("Error fetching student data:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+
+
+
 
 // Controller to save student information with specific fields
 const saveBasicStudentData = async (req, res) => {
@@ -491,6 +490,9 @@ const updateBatchIdForUsers = async (req, res) => {
   }
 };
 
+
+
+
 //deleting students from the students table
 // const deleteStudent = async (student) => {
 //   try {
@@ -510,6 +512,11 @@ const updateBatchIdForUsers = async (req, res) => {
 //     });
 //   }
 // };
+
+
+
+
+
 
 // Controller to save new batch information
 const createBatch = async (req, res) => {
@@ -584,6 +591,36 @@ const createBatch = async (req, res) => {
   }
 };
 
+// controllers to get batch by ID
+const getBatchById = async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    const adminId      = req.adminId;
+
+    const batch = await Batch.findOne({
+      where: { batchId, admin_id: adminId },
+      include: [{
+        model: Student,
+        as:    "Students",
+        attributes: [
+          "id","firstName","lastName",
+          "emailAddress","mobileNumber",
+          "isVerified"
+        ],
+        through: { attributes: [] }
+      }]
+    });
+
+    if (!batch) {
+      return res.status(404).json({ message: "Batch not found" });
+    }
+
+    return res.status(200).json({ batch });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 // Controller to update an existing batch
 const updateBatch = async (req, res) => {
@@ -591,6 +628,7 @@ const updateBatch = async (req, res) => {
     const { batchId } = req.params; // Passed in the URL
     const { batchName, no_of_students, status, studentIds } = req.body;
     const adminId = req.adminId;
+    console.log("Admin ID:", adminId);
 
     if (!adminId) {
       return res.status(400).json({ message: "Admin ID is required" });
@@ -681,6 +719,12 @@ const deleteBatch = async (req, res) => {
   }
 };
 
+
+
+
+
+
+
 //get batch names
 const getBatchNames = async (req, res) => {
   try {
@@ -751,6 +795,7 @@ export {
   updateBatchIdForUsers,
   createBatch,
   updateBatch,
+  getBatchById,
   deleteBatch,
   getBatchInfo,
   deleteStudentById,

@@ -37,12 +37,20 @@ const fetchQuestions = async (req, res) => {
 
     // Build Subject-Chapter Pairs
     for (const subject of selectedSubjects) {
-      const chapters = selectedChapters[subject];
-      for (const chapter of chapters) {
-        const chapterName = chapter.name.toLowerCase().trim();
-        subjectChapterPairs.push({ subject, chapter: chapterName });
-      }
-    }
+  const chapters = selectedChapters[subject];
+
+  // Defensive: ensure chapters is an array before iterating
+  if (!Array.isArray(chapters) || chapters.length === 0) {
+    console.warn(`No chapters provided for subject ${subject}`);
+    continue; // skip this subject
+  }
+
+  for (const chapter of chapters) {
+    const chapterName = chapter.name.toLowerCase().trim();
+    subjectChapterPairs.push({ subject, chapter: chapterName });
+  }
+}
+
     console.log("Subject-Chapter Pairs:", subjectChapterPairs);
 
     // Build JSON-based chapter-topicId map

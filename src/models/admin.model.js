@@ -139,7 +139,7 @@ const Batch = sequelizeCon.define(
 
 
 Admin.hasMany(Batch, { foreignKey: "admin_id", onDelete: "SET NULL" });
-Batch.belongsTo(Admin, { foreignKey: "admin_id" });
+
 //await sequelizeCon.sync({ force: false,alter: true  });
 //await sequelizeCon.sync(); 
 

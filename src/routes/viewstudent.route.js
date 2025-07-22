@@ -7,6 +7,7 @@ import getStudentInfo, {
   updateBatchIdForUsers,
   deleteStudentById,
   updateBatch,
+  getBatchById,
   getStudentInfoByBatch,
 } from "../controller/viewstudent.controller.js";
 import { saveBasicStudentData } from "../controller/viewstudent.controller.js";
@@ -17,6 +18,7 @@ const router = express.Router();
 
 router.post("/info", getStudentInfo); // get student info by ID
 router.post("/batch-student", getStudentInfoByBatch); // get student info by batch ID
+router.get("/batch/:batchId", verifyToken, getBatchById); // get batch by ID
 router.post("/save", saveBasicStudentData);
 router.post("/bulk-save", bulkSaveStudents);
 router.post("/update", updateBatchIdForUsers);

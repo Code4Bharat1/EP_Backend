@@ -190,7 +190,7 @@ export const getTestSummariesForAllStudents = async (req, res) => {
 
 export const createAdmintest = async (req, res) => {
   try {
-    // Extract batchId instead of batch_name
+    // Extract data from request body
     const {
       addedByAdminId,
       testname,
@@ -209,27 +209,31 @@ export const createAdmintest = async (req, res) => {
       exam_start_date,
       exam_end_date,
       instruction,
-      batchId,        // <-- new
+      batch_name,
+      batchId, // 👈 new
       status,
     } = req.body;
 
-    // Decode the JWT token to extract the admin ID
+    // Decode JWT to extract admin ID
     let decodedAdminId = null;
     if (addedByAdminId) {
       const decoded = jwt.decode(addedByAdminId);
-      if (decoded && decoded.id) decodedAdminId = decoded.id;
+      if (decoded && decoded.id) {
+        decodedAdminId = decoded.id;
+      }
     }
+
     const adminId = decodedAdminId || null;
 
-    // Coerce subject array into CSV string
+    // Convert subject array to string if needed
     const subjectString = Array.isArray(subject) ? subject.join(", ") : subject || null;
 
-    // Build the payload
+    // Build the test data
     const newTestData = {
       addedByAdminId: adminId,
       testname: testname || null,
       difficulty: difficulty || null,
-      subject: subjectString || null,
+      subject: subjectString,
       marks: marks || null,
       positivemarks: positivemarks || null,
       negativemarks: negativemarks || null,
@@ -243,12 +247,14 @@ export const createAdmintest = async (req, res) => {
       exam_start_date: exam_start_date ? new Date(exam_start_date) : null,
       exam_end_date: exam_end_date ? new Date(exam_end_date) : null,
       instruction: instruction || null,
-      batchId: batchId || null,   // <-- set the FK here
+      batch_name: batch_name || null,
+      batchId: batchId || null, // 👈 added batchId
       status: status || null,
     };
 
     console.log("Test Data to be inserted:", newTestData);
 
+    // Create the test
     const newTest = await Admintest.create(newTestData);
 
     return res.status(201).json({
@@ -374,17 +380,14 @@ export const getStudentTestDetails = async (req, res) => {
 
 export const getTestDetailsById = async (req, res) => {
   try {
-    // Extract testid from req.body
     const { testid } = req.body;
 
-    // Check if testid is provided
     if (!testid) {
       return res.status(400).json({
         message: "testid is required",
       });
     }
 
-    // Fetch the test details from the Admintest table using the provided testid
     const testDetails = await Admintest.findOne({
       where: { id: testid },
       attributes: [
@@ -392,17 +395,15 @@ export const getTestDetailsById = async (req, res) => {
         'negativemarks', 'correctanswer', 'question_ids', 'unitName', 'topic_name',
         'no_of_questions', 'question_id', 'duration', 'exam_start_date', 'exam_end_date',
         'instruction', 'batch_name', 'status'
-      ], // Specify the columns you want to retrieve
+      ],
     });
 
-    // If no test details found for the given testid
     if (!testDetails) {
       return res.status(404).json({
         message: "Test not found",
       });
     }
 
-    // Send the retrieved test details as the response
     return res.status(200).json({
       message: "Test details fetched successfully",
       test: testDetails,
@@ -415,6 +416,7 @@ export const getTestDetailsById = async (req, res) => {
     });
   }
 };
+
 
 export const getTestQuestionsWithAnswers = async (req, res) => {
   try {

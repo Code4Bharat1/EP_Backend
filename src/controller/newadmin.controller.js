@@ -190,7 +190,7 @@ export const getTestSummariesForAllStudents = async (req, res) => {
 
 export const createAdmintest = async (req, res) => {
   try {
-    // Extract the data from req.body and keep things null if not provided
+    // Extract data from request body
     const {
       addedByAdminId,
       testname,
@@ -210,54 +210,51 @@ export const createAdmintest = async (req, res) => {
       exam_end_date,
       instruction,
       batch_name,
+      batchId, // 👈 new
       status,
     } = req.body;
 
-    
-
-    // Decode the JWT token to extract the admin ID
+    // Decode JWT to extract admin ID
     let decodedAdminId = null;
     if (addedByAdminId) {
-      const decoded = jwt.decode(addedByAdminId); // Decode the token
+      const decoded = jwt.decode(addedByAdminId);
       if (decoded && decoded.id) {
-        decodedAdminId = decoded.id; // Extract the ID from the decoded token
+        decodedAdminId = decoded.id;
       }
     }
 
-    // If the decoded ID is not found, set it to null (or handle error as needed)
     const adminId = decodedAdminId || null;
-    console.log(adminId);
 
-    // If the subject is provided as an array, convert it to a comma-separated string
+    // Convert subject array to string if needed
     const subjectString = Array.isArray(subject) ? subject.join(", ") : subject || null;
 
-    // Prepare the test data with dynamic values from the request body (keep null if not provided)
+    // Build the test data
     const newTestData = {
-      addedByAdminId: adminId, // Null if not provided
-      testname: testname || null, // Null if not provided
-      difficulty: difficulty || null, // Null if not provided
-      subject: subjectString, // Store as a comma-separated string or null
-      marks: marks || null, // Null if not provided
-      positivemarks: positivemarks || null, // Null if not provided
-      negativemarks: negativemarks || null, // Null if not provided
-      correctanswer: correctanswer || null, // Null if not provided
-      question_ids: question_ids || null, // Null if not provided
-      unitName: unitName || null, // Null if not provided
-      topic_name: topic_name || null, // Null if not provided
-      no_of_questions: no_of_questions || null, // Null if not provided
-      question_id: question_id || null, // Null if not provided
-      duration: duration || null, // Null if not provided
-      exam_start_date: exam_start_date ? new Date(exam_start_date) : null, // Convert to Date if provided, else null
-      exam_end_date: exam_end_date ? new Date(exam_end_date) : null, // Convert to Date if provided, else null
-      instruction: instruction || null, // Null if not provided
-      batch_name: batch_name || null, // Null if not provided
-      status: status || null, // Null if not provided
+      addedByAdminId: adminId,
+      testname: testname || null,
+      difficulty: difficulty || null,
+      subject: subjectString,
+      marks: marks || null,
+      positivemarks: positivemarks || null,
+      negativemarks: negativemarks || null,
+      correctanswer: correctanswer || null,
+      question_ids: question_ids || null,
+      unitName: unitName || null,
+      topic_name: topic_name || null,
+      no_of_questions: no_of_questions || null,
+      question_id: question_id || null,
+      duration: duration || null,
+      exam_start_date: exam_start_date ? new Date(exam_start_date) : null,
+      exam_end_date: exam_end_date ? new Date(exam_end_date) : null,
+      instruction: instruction || null,
+      batch_name: batch_name || null,
+      batchId: batchId || null, // 👈 added batchId
+      status: status || null,
     };
 
-    // Log the data to be inserted
     console.log("Test Data to be inserted:", newTestData);
 
-    // Create a new test entry in the database with the dynamic data from req.body
+    // Create the test
     const newTest = await Admintest.create(newTestData);
 
     return res.status(201).json({
@@ -382,17 +379,14 @@ export const getStudentTestDetails = async (req, res) => {
 
 export const getTestDetailsById = async (req, res) => {
   try {
-    // Extract testid from req.body
     const { testid } = req.body;
 
-    // Check if testid is provided
     if (!testid) {
       return res.status(400).json({
         message: "testid is required",
       });
     }
 
-    // Fetch the test details from the Admintest table using the provided testid
     const testDetails = await Admintest.findOne({
       where: { id: testid },
       attributes: [
@@ -400,17 +394,15 @@ export const getTestDetailsById = async (req, res) => {
         'negativemarks', 'correctanswer', 'question_ids', 'unitName', 'topic_name', 
         'no_of_questions', 'question_id', 'duration', 'exam_start_date', 'exam_end_date',
         'instruction', 'batch_name', 'status'
-      ], // Specify the columns you want to retrieve
+      ],
     });
 
-    // If no test details found for the given testid
     if (!testDetails) {
       return res.status(404).json({
         message: "Test not found",
       });
     }
 
-    // Send the retrieved test details as the response
     return res.status(200).json({
       message: "Test details fetched successfully",
       test: testDetails,
@@ -423,6 +415,7 @@ export const getTestDetailsById = async (req, res) => {
     });
   }
 };
+
 
 export const getTestQuestionsWithAnswers = async (req, res) => {
   try {

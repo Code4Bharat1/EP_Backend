@@ -736,7 +736,7 @@ const getBatchNames = async (req, res) => {
 
     const batchData = await Batch.findAll({
       where: { admin_id: adminId },
-      attributes: ["batchName"],
+      attributes: ["batch_id", "batchName"], // 👈 include batchId (id)
     });
 
     if (batchData.length === 0) {

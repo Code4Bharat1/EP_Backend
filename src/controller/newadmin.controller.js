@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import { Admin } from '../models/admin.model.js';
 import { Op } from 'sequelize';
 import jwt from 'jsonwebtoken';
-import config from 'config'; 
+import config from 'config';
 import Student from "../models/student.model.js";
 import FullTestResults from '../models/fullTestResults.model.js';
 import MeTest from '../models/saved.js';
@@ -32,7 +32,7 @@ const createAdmin = async (req, res) => {
     otherColor,
   } = req.body;
 
-  console.log(AdminId,PassKey,
+  console.log(AdminId, PassKey,
     name,
     Course,
     Email,
@@ -47,7 +47,7 @@ const createAdmin = async (req, res) => {
     sidebarColor,
     otherColor,)
 
-  try { 
+  try {
     // Basic required field validation
     if (!AdminId || !PassKey || !name || !Email || !mobileNumber) {
       return res.status(400).json({ message: "Missing required fields." });
@@ -70,7 +70,7 @@ const createAdmin = async (req, res) => {
 
     // Create new admin
     const newAdmin = await Admin.create({
-      AdminId,  
+      AdminId,
       PassKey: hashedPassKey,
       name,
       Course,
@@ -270,38 +270,39 @@ export const createAdmintest = async (req, res) => {
   }
 };
 
+
 //getting the testid according to the admin id
 
 const getTestbyAdminId = async (req, res) => {
   try {
-    const {adminId} = req.body;
+    const { adminId } = req.body;
 
-    if(!adminId) {
+    if (!adminId) {
       return res.status(400).json({
-        message : "student id is required"
+        message: "student id is required"
       })
     }
 
     const studentTests = await Admintest.findAll({
-      where : {addedByAdminId : adminId}
+      where: { addedByAdminId: adminId }
     });
 
-    if(studentTests.length === 0) {
+    if (studentTests.length === 0) {
       return res.status(404).json({
-        message : "No test found for your admin"
+        message: "No test found for your admin"
       })
     }
 
     return res.status(200).json({
-      message : "Test details fetched successfully",
-      tests : studentTests
+      message: "Test details fetched successfully",
+      tests: studentTests
     })
 
-  }catch(error) {
+  } catch (error) {
     console.error("Error Fetching Test");
     return res.status(500).json({
-      message : "Failed to retrieve test details",
-      error : error.message
+      message: "Failed to retrieve test details",
+      error: error.message
     })
   }
 }
@@ -312,7 +313,7 @@ export const getStudentTestDetails = async (req, res) => {
   try {
     // Get student ID from request (could be from params, body, or auth token)
     const { studentId } = req.body;
-    
+
     if (!studentId) {
       return res.status(400).json({
         message: "Student ID is required",
@@ -390,8 +391,8 @@ export const getTestDetailsById = async (req, res) => {
     const testDetails = await Admintest.findOne({
       where: { id: testid },
       attributes: [
-        'id', 'testname', 'difficulty', 'subject', 'marks', 'positivemarks', 
-        'negativemarks', 'correctanswer', 'question_ids', 'unitName', 'topic_name', 
+        'id', 'testname', 'difficulty', 'subject', 'marks', 'positivemarks',
+        'negativemarks', 'correctanswer', 'question_ids', 'unitName', 'topic_name',
         'no_of_questions', 'question_id', 'duration', 'exam_start_date', 'exam_end_date',
         'instruction', 'batch_name', 'status'
       ],
@@ -585,7 +586,7 @@ const updateTest = async (req, res) => {
     console.error(error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
-};  
+};
 
 
 //getting students, batches, and tests created by user
@@ -738,13 +739,13 @@ const getTestResults = async (req, res) => {
 
 const getProfile = async (req, res) => {
   try {
-    const  adminId  = req.adminId;// Decode the JWT token to get the admin ID
+    const adminId = req.adminId;// Decode the JWT token to get the admin ID
 
     if (!adminId) {
       return res.status(400).json({ success: false, message: "Admin ID is required" });
     }
-    
-    const admin = await Admin.findOne({ where: { id:  adminId } });
+
+    const admin = await Admin.findOne({ where: { id: adminId } });
 
     if (!admin) {
       return res.status(404).json({ message: "Admin not found" });
@@ -776,7 +777,7 @@ const getProfile = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const  adminId  = req.adminId;
+    const adminId = req.adminId;
 
     if (!adminId) {
       return res.status(400).json({ success: false, message: "Admin ID is required" });
@@ -834,7 +835,7 @@ const updateProfile = async (req, res) => {
 
 const getTestData = async (req, res) => {
   try {
-    const  adminId  = req.adminId;
+    const adminId = req.adminId;
 
     if (!adminId) {
       return res.status(400).json({ success: false, message: "Admin ID is required" });
@@ -865,11 +866,11 @@ const getTestData = async (req, res) => {
   }
 };
 
- const getUpcomingTestByBatch = async (req, res) => {
+const getUpcomingTestByBatch = async (req, res) => {
   try {
     // Get student ID from request (could be from params, body, or auth token)
-    const  studentId  = req.adminId;
-    
+    const studentId = req.adminId;
+
     if (!studentId) {
       return res.status(400).json({
         message: "Student ID is required",
@@ -911,7 +912,7 @@ const getTestData = async (req, res) => {
     // Retrieve tests that match the student's batch name
     const studentTests = await Admintest.findAll({
       where: { batch_name: batch.batchName },
-      attributes : ["id", "testname", "subject", "exam_start_date"]
+      attributes: ["id", "testname", "subject", "exam_start_date"]
     });
 
     // Check if any tests exist for this batch
@@ -937,7 +938,7 @@ const getTestData = async (req, res) => {
 
 export const getAdminColors = async (req, res) => {
   try {
-    const { id } = req.body; 
+    const { id } = req.body;
 
     if (!id) {
       return res.status(400).json({
@@ -1043,4 +1044,4 @@ export const getAdminColorsByStudentId = async (req, res) => {
 };
 
 
-export {dashboardDetails, getTestbyAdminId, createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults, getProfile,updateProfile , getTestData, getUpcomingTestByBatch};
+export { dashboardDetails, getTestbyAdminId, createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults, getProfile, updateProfile, getTestData, getUpcomingTestByBatch };

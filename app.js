@@ -82,7 +82,7 @@ app.use("/api/test", pasttestRoute);
 app.use("/api/dashboard", dashboardRoute);
 app.use('/api/studentdata', studentviewRoute); // handle student and batch data
 app.use("/api/admintest", admingenerateRoute); // test
-app.use("/api/newadmin", newAdminRoute);
+app.use("/api/newadmin", newAdminRoute); // test realted to admin
 app.use("/api/dashboard", dsb);
 app.use("/api/logout", studentslogged)
 app.use("/api/testresult", testresult)

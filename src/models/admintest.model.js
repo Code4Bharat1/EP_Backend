@@ -1,4 +1,5 @@
 import { sequelizeCon, DataTypes } from "../init/dbConnection.js";
+import { Batch } from "./admin.model.js" // Import the Batch model;
 
 
 const Admintest = sequelizeCon.define("Admintest", {
@@ -106,6 +107,8 @@ const Admintest = sequelizeCon.define("Admintest", {
 
 // await sequelizeCon.sync({ alter: true }); // ✅ `alter` keeps data, updates structure
 
-// await sequelizeCon.sync({ force: false,alter: true  });
+// Define association
+Admintest.belongsTo(Batch, { foreignKey: "batchId" });
+Batch.hasMany(Admintest, { foreignKey: "batchId" });
 
 export default Admintest;

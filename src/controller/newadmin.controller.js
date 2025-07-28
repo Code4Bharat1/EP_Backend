@@ -1,16 +1,15 @@
-import bcrypt from 'bcrypt';
-import { Admin } from '../models/admin.model.js';
-import { Op } from 'sequelize';
-import jwt from 'jsonwebtoken';
-import config from 'config';
+import bcrypt from "bcrypt";
+import { Admin } from "../models/admin.model.js";
+import { Op } from "sequelize";
+import jwt from "jsonwebtoken";
+import config from "config";
 import Student from "../models/student.model.js";
-import FullTestResults from '../models/fullTestResults.model.js';
-import MeTest from '../models/saved.js';
-import Admintest from '../models/admintest.model.js';
-import { Question, Option } from '../models/everytestmode.refrence.js';
-import generateTestResult from '../models/generateTestresult.model.js';
-import { Batch } from '../models/admin.model.js';
-
+import FullTestResults from "../models/fullTestResults.model.js";
+import MeTest from "../models/saved.js";
+import Admintest from "../models/admintest.model.js";
+import { Question, Option } from "../models/everytestmode.refrence.js";
+import generateTestResult from "../models/generateTestresult.model.js";
+import { Batch } from "../models/admin.model.js";
 
 // Controller to register a new admin
 const createAdmin = async (req, res) => {
@@ -32,7 +31,9 @@ const createAdmin = async (req, res) => {
     otherColor,
   } = req.body;
 
-  console.log(AdminId, PassKey,
+  console.log(
+    AdminId,
+    PassKey,
     name,
     Course,
     Email,
@@ -45,7 +46,8 @@ const createAdmin = async (req, res) => {
     logo,
     navbarColor,
     sidebarColor,
-    otherColor,)
+    otherColor
+  );
 
   try {
     // Basic required field validation
@@ -57,12 +59,14 @@ const createAdmin = async (req, res) => {
     // Check for existing AdminId or Email
     const existingAdmin = await Admin.findOne({
       where: {
-        [Op.or]: [{ AdminId }, { Email }]
-      }
+        [Op.or]: [{ AdminId }, { Email }],
+      },
     });
 
     if (existingAdmin) {
-      return res.status(400).json({ message: "Admin with this ID or Email already exists." });
+      return res
+        .status(400)
+        .json({ message: "Admin with this ID or Email already exists." });
     }
 
     // Hash the password
@@ -111,7 +115,9 @@ const loginAdmin = async (req, res) => {
   try {
     // Validate if AdminId and PassKey are provided
     if (!AdminId || !PassKey) {
-      return res.status(400).json({ message: "AdminId and PassKey are required." });
+      return res
+        .status(400)
+        .json({ message: "AdminId and PassKey are required." });
     }
 
     // Find the admin using AdminId instead of Email
@@ -146,11 +152,11 @@ const loginAdmin = async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
   }
 };
-
-
 
 // Controller to get selected fields of FullTestResults for all students
 export const getTestSummariesForAllStudents = async (req, res) => {
@@ -170,7 +176,12 @@ export const getTestSummariesForAllStudents = async (req, res) => {
           [Op.in]: studentIds,
         },
       },
-      attributes: ["testName", "marksObtained", "totalMarks", "subjectWisePerformance"],
+      attributes: [
+        "testName",
+        "marksObtained",
+        "totalMarks",
+        "subjectWisePerformance",
+      ],
     });
 
     return res.status(200).json({
@@ -186,7 +197,6 @@ export const getTestSummariesForAllStudents = async (req, res) => {
     });
   }
 };
-
 
 export const createAdmintest = async (req, res) => {
   try {
@@ -226,7 +236,9 @@ export const createAdmintest = async (req, res) => {
     const adminId = decodedAdminId || null;
 
     // Convert subject array to string if needed
-    const subjectString = Array.isArray(subject) ? subject.join(", ") : subject || null;
+    const subjectString = Array.isArray(subject)
+      ? subject.join(", ")
+      : subject || null;
 
     // Build the test data
     const newTestData = {
@@ -270,7 +282,6 @@ export const createAdmintest = async (req, res) => {
   }
 };
 
-
 //getting the testid according to the admin id
 
 const getTestbyAdminId = async (req, res) => {
@@ -279,34 +290,32 @@ const getTestbyAdminId = async (req, res) => {
 
     if (!adminId) {
       return res.status(400).json({
-        message: "student id is required"
-      })
+        message: "student id is required",
+      });
     }
 
     const studentTests = await Admintest.findAll({
-      where: { addedByAdminId: adminId }
+      where: { addedByAdminId: adminId },
     });
 
     if (studentTests.length === 0) {
       return res.status(404).json({
-        message: "No test found for your admin"
-      })
+        message: "No test found for your admin",
+      });
     }
 
     return res.status(200).json({
       message: "Test details fetched successfully",
-      tests: studentTests
-    })
-
+      tests: studentTests,
+    });
   } catch (error) {
     console.error("Error Fetching Test");
     return res.status(500).json({
       message: "Failed to retrieve test details",
-      error: error.message
-    })
+      error: error.message,
+    });
   }
-}
-
+};
 
 // Controller to retrieve test details based on student's batch
 export const getStudentTestDetails = async (req, res) => {
@@ -323,8 +332,8 @@ export const getStudentTestDetails = async (req, res) => {
     // Find the student to get their batchId
     const student = await Student.findOne({
       where: { id: studentId },
-      attributes: ['batchId'],
-      raw: true
+      attributes: ["batchId"],
+      raw: true,
     });
 
     if (!student) {
@@ -342,8 +351,8 @@ export const getStudentTestDetails = async (req, res) => {
     // Find the batch to get batchName
     const batch = await Batch.findOne({
       where: { batchId: student.batchId },
-      attributes: ['batchName'],
-      raw: true
+      attributes: ["batchName"],
+      raw: true,
     });
 
     if (!batch) {
@@ -354,7 +363,7 @@ export const getStudentTestDetails = async (req, res) => {
 
     // Retrieve tests that match the student's batch name
     const studentTests = await Admintest.findAll({
-      where: { batch_name: batch.batchName }
+      where: { batch_name: batch.batchName },
     });
 
     // Check if any tests exist for this batch
@@ -391,10 +400,25 @@ export const getTestDetailsById = async (req, res) => {
     const testDetails = await Admintest.findOne({
       where: { id: testid },
       attributes: [
-        'id', 'testname', 'difficulty', 'subject', 'marks', 'positivemarks',
-        'negativemarks', 'correctanswer', 'question_ids', 'unitName', 'topic_name',
-        'no_of_questions', 'question_id', 'duration', 'exam_start_date', 'exam_end_date',
-        'instruction', 'batch_name', 'status'
+        "id",
+        "testname",
+        "difficulty",
+        "subject",
+        "marks",
+        "positivemarks",
+        "negativemarks",
+        "correctanswer",
+        "question_ids",
+        "unitName",
+        "topic_name",
+        "no_of_questions",
+        "question_id",
+        "duration",
+        "exam_start_date",
+        "exam_end_date",
+        "instruction",
+        "batch_name",
+        "status",
       ],
     });
 
@@ -416,7 +440,6 @@ export const getTestDetailsById = async (req, res) => {
     });
   }
 };
-
 
 export const getTestQuestionsWithAnswers = async (req, res) => {
   try {
@@ -481,7 +504,9 @@ export const getTestQuestionsWithAnswers = async (req, res) => {
     }
 
     if (response.length === 0) {
-      return res.status(404).json({ message: "No questions found for given testid" });
+      return res
+        .status(404)
+        .json({ message: "No questions found for given testid" });
     }
 
     return res.status(200).json({
@@ -543,7 +568,6 @@ export const saveGenerateTestResult = async (req, res) => {
   }
 };
 
-
 //updating the data from the req.boy
 const updateTest = async (req, res) => {
   try {
@@ -563,7 +587,9 @@ const updateTest = async (req, res) => {
     }
 
     // Find the test by ID
-    const testToUpdate = await Admintest.findOne({ where: { id: Number(testid) } });
+    const testToUpdate = await Admintest.findOne({
+      where: { id: Number(testid) },
+    });
 
     if (!testToUpdate) {
       return res.status(404).json({ message: "Test not found" });
@@ -573,7 +599,8 @@ const updateTest = async (req, res) => {
     testToUpdate.testname = testname || testToUpdate.testname;
     testToUpdate.batch_name = batch_name || testToUpdate.batch_name;
     testToUpdate.duration = duration || testToUpdate.duration;
-    testToUpdate.exam_start_date = exam_start_date || testToUpdate.exam_start_date;
+    testToUpdate.exam_start_date =
+      exam_start_date || testToUpdate.exam_start_date;
     testToUpdate.exam_end_date = exam_end_date || testToUpdate.exam_end_date;
     testToUpdate.status = status || testToUpdate.status;
 
@@ -581,13 +608,14 @@ const updateTest = async (req, res) => {
     await testToUpdate.save();
 
     // Send success response
-    res.status(200).json({ message: "Test updated successfully", test: testToUpdate });
+    res
+      .status(200)
+      .json({ message: "Test updated successfully", test: testToUpdate });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 
 //getting students, batches, and tests created by user
 
@@ -622,7 +650,6 @@ const dashboardDetails = async (req, res) => {
         totalTests: testCount,
       },
     });
-
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
     return res.status(500).json({
@@ -631,9 +658,6 @@ const dashboardDetails = async (req, res) => {
     });
   }
 };
-
-
-
 
 //dashboard data of student
 const dashboardStudentData = async (req, res) => {
@@ -646,7 +670,13 @@ const dashboardStudentData = async (req, res) => {
 
     const student = await Student.findOne({
       where: { id: studentId },
-      attributes: ['firstName', 'lastName', 'emailAddress', 'mobileNumber', 'profileImage'],
+      attributes: [
+        "firstName",
+        "lastName",
+        "emailAddress",
+        "mobileNumber",
+        "profileImage",
+      ],
     });
 
     if (!student) {
@@ -666,7 +696,6 @@ const dashboardStudentData = async (req, res) => {
   }
 };
 
-
 //admin student dashboard
 const getTestResults = async (req, res) => {
   try {
@@ -679,13 +708,18 @@ const getTestResults = async (req, res) => {
     // Fetch the test result for the student from FullTestResults
     const testResults = await FullTestResults.findAll({
       where: { studentId },
-      attributes: ['testName', 'totalMarks', 'marksObtained'], // Only select the necessary fields
+      attributes: ["testName", "totalMarks", "marksObtained"], // Only select the necessary fields
     });
 
     // Fetch the test result for the student from MeTest
     const metestResults = await MeTest.findAll({
       where: { studentId },
-      attributes: ['testName', 'totalQuestions', 'overAllMarks', 'subjectWiseMarks'],
+      attributes: [
+        "testName",
+        "totalQuestions",
+        "overAllMarks",
+        "subjectWiseMarks",
+      ],
     });
 
     // Calculate totalMarks for each test result in MeTest (totalQuestions * 4)
@@ -736,13 +770,14 @@ const getTestResults = async (req, res) => {
   }
 };
 
-
 const getProfile = async (req, res) => {
   try {
-    const adminId = req.adminId;// Decode the JWT token to get the admin ID
+    const adminId = req.adminId; // Decode the JWT token to get the admin ID
 
     if (!adminId) {
-      return res.status(400).json({ success: false, message: "Admin ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Admin ID is required" });
     }
 
     const admin = await Admin.findOne({ where: { id: adminId } });
@@ -780,7 +815,9 @@ const updateProfile = async (req, res) => {
     const adminId = req.adminId;
 
     if (!adminId) {
-      return res.status(400).json({ success: false, message: "Admin ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Admin ID is required" });
     }
     // Decode the JWT token to get the admin ID
     const admin = await Admin.findOne({ where: { id: adminId } });
@@ -790,14 +827,8 @@ const updateProfile = async (req, res) => {
     }
 
     // Allowed fields to update (excluding id, adminId, StartDate, ExpiryDate)
-    const {
-      name,
-      Email,
-      mobileNumber,
-      whatsappNumber,
-      address,
-      HodName,
-    } = req.body;
+    const { name, Email, mobileNumber, whatsappNumber, address, HodName } =
+      req.body;
 
     // Update only allowed fields
     if (name) admin.name = name;
@@ -818,8 +849,8 @@ const updateProfile = async (req, res) => {
         email: admin.Email,
         mobileNumber: admin.mobileNumber,
         whatsappNumber: admin.whatsappNumber,
-        startDate: admin.StartDate,       // returned but not updated
-        expiryDate: admin.ExpiryDate,     // returned but not updated
+        startDate: admin.StartDate, // returned but not updated
+        expiryDate: admin.ExpiryDate, // returned but not updated
         address: admin.address,
         hodName: admin.HodName,
       },
@@ -838,15 +869,16 @@ const getTestData = async (req, res) => {
     const adminId = req.adminId;
 
     if (!adminId) {
-      return res.status(400).json({ success: false, message: "Admin ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Admin ID is required" });
     }
-
 
     const tests = await Admintest.findAll({
       where: {
         addedByAdminId: adminId, // Use the adminId from the decoded token
       },
-      order: [['createdAt', 'DESC']] // Optional: latest first
+      order: [["createdAt", "DESC"]], // Optional: latest first
     });
 
     if (!tests || tests.length === 0) {
@@ -855,13 +887,13 @@ const getTestData = async (req, res) => {
 
     return res.status(200).json({
       message: "Test data fetched successfully",
-      data: tests
+      data: tests,
     });
   } catch (error) {
     console.error("Error fetching test data:", error);
     return res.status(500).json({
       message: "Internal server error",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -880,8 +912,8 @@ const getUpcomingTestByBatch = async (req, res) => {
     // Find the student to get their batchId
     const student = await Student.findOne({
       where: { id: studentId },
-      attributes: ['batchId'],
-      raw: true
+      attributes: ["batchId"],
+      raw: true,
     });
 
     if (!student) {
@@ -899,8 +931,8 @@ const getUpcomingTestByBatch = async (req, res) => {
     // Find the batch to get batchName
     const batch = await Batch.findOne({
       where: { batchId: student.batchId },
-      attributes: ['batchName'],
-      raw: true
+      attributes: ["batchName"],
+      raw: true,
     });
 
     if (!batch) {
@@ -912,7 +944,7 @@ const getUpcomingTestByBatch = async (req, res) => {
     // Retrieve tests that match the student's batch name
     const studentTests = await Admintest.findAll({
       where: { batch_name: batch.batchName },
-      attributes: ["id", "testname", "subject", "exam_start_date"]
+      attributes: ["id", "testname", "subject", "exam_start_date"],
     });
 
     // Check if any tests exist for this batch
@@ -950,7 +982,7 @@ export const getAdminColors = async (req, res) => {
     // Find admin by AdminId
     const admin = await Admin.findOne({
       where: { id },
-      attributes: ['navbarColor', 'sidebarColor', 'otherColor'], // Only fetch these fields
+      attributes: ["navbarColor", "sidebarColor", "otherColor"], // Only fetch these fields
     });
 
     if (!admin) {
@@ -963,12 +995,11 @@ export const getAdminColors = async (req, res) => {
     return res.status(200).json({
       success: true,
       colors: {
-        navbarColor: admin.navbarColor || '#ffffff', // Default to white if null
-        sidebarColor: admin.sidebarColor || '#ffffff', // Default to white if null
-        textColor: admin.otherColor || '#000000', // Default to black if null
+        navbarColor: admin.navbarColor || "#ffffff", // Default to white if null
+        sidebarColor: admin.sidebarColor || "#ffffff", // Default to white if null
+        textColor: admin.otherColor || "#000000", // Default to black if null
       },
     });
-
   } catch (error) {
     console.error("Error fetching admin colors:", error);
     return res.status(500).json({
@@ -993,7 +1024,7 @@ export const getAdminColorsByStudentId = async (req, res) => {
     // Find the student by id and get addedByAdminId
     const student = await Student.findOne({
       where: { id: studentId },
-      attributes: ['addedByAdminId'],
+      attributes: ["addedByAdminId"],
     });
 
     if (!student) {
@@ -1014,7 +1045,7 @@ export const getAdminColorsByStudentId = async (req, res) => {
     // Fetch the admin colors
     const admin = await Admin.findOne({
       where: { id: adminId },
-      attributes: ['navbarColor', 'sidebarColor', 'otherColor'],
+      attributes: ["navbarColor", "sidebarColor", "otherColor"],
     });
 
     if (!admin) {
@@ -1027,12 +1058,11 @@ export const getAdminColorsByStudentId = async (req, res) => {
     return res.status(200).json({
       success: true,
       colors: {
-        navbarColor: admin.navbarColor || '#ffffff',
-        sidebarColor: admin.sidebarColor || '#ffffff',
-        textColor: admin.otherColor || '#000000',
+        navbarColor: admin.navbarColor || "#ffffff",
+        sidebarColor: admin.sidebarColor || "#ffffff",
+        textColor: admin.otherColor || "#000000",
       },
     });
-
   } catch (error) {
     console.error("Error fetching admin colors by student ID:", error);
     return res.status(500).json({
@@ -1043,5 +1073,59 @@ export const getAdminColorsByStudentId = async (req, res) => {
   }
 };
 
+// get student test details by admin
+const getBatchByStudentTest = async (req, res) => {
+  const { email } = req.body;
 
-export { dashboardDetails, getTestbyAdminId, createAdmin, loginAdmin, updateTest, dashboardStudentData, getTestResults, getProfile, updateProfile, getTestData, getUpcomingTestByBatch };
+  try {
+    // Step 1: Get student and batches
+    const student = await Student.findOne({
+      where: { emailAddress: email },
+      include: [
+        {
+          model: Batch,
+          through: { attributes: [] },
+        },
+      ],
+    });
+
+    if (!student || !student.Batches.length) {
+      return res.status(404).json({ error: "No batches found for student" });
+    }
+
+    // Step 2: Extract batchIds
+    const batchIds = student.Batches.map((b) => b.batchId);
+    console.log("Batch IDs:", batchIds);
+
+    // Step 3: Get all tests for those batches
+    const tests = await Admintest.findAll({
+      where: {
+        batchId: batchIds, // Sequelize will convert this to IN(...)
+      },
+    });
+
+    return res.status(200).json({
+      email: student.emailAddress,
+      batches: student.Batches,
+      tests,
+    });
+  } catch (error) {
+    console.error("Error fetching tests by student batch:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export {
+  dashboardDetails,
+  getTestbyAdminId,
+  createAdmin,
+  loginAdmin,
+  updateTest,
+  dashboardStudentData,
+  getTestResults,
+  getProfile,
+  updateProfile,
+  getTestData,
+  getUpcomingTestByBatch,
+  getBatchByStudentTest,
+};

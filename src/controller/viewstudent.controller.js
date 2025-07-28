@@ -11,43 +11,22 @@ import { nanoid } from "nanoid";
 // Controller to fetch student information
 const getStudentInfo = async (req, res) => {
   try {
-    // Extract the admin ID from the request body
     const { addedByAdminId } = req.body;
 
     if (!addedByAdminId) {
-      return res.status(400).json({
-        message: "Admin ID is required",
-      });
+      return res.status(400).json({ message: "Admin ID is required" });
     }
 
-    // Fetching specific fields from the Student table where addedByAdminId matches
     const studentData = await Student.findAll({
-      attributes: [
-        "id",
-        "firstName", // Student's first name
-        "lastName", // Student's last name
-        "emailAddress", // Student's email address
-        "mobileNumber", // Student's phone number
-        "gender", // Student's gender
-        "dateOfBirth", // Student's date of birth
-        "isVerified", // Whether the student is verified or not
-        "addedByAdminId", // Shows the adminid (2)
-      ],
-      where: {
-        addedByAdminId: addedByAdminId, // Filter students by addedByAdminId
-      },
+      attributes: ["id", "firstName", "lastName", "emailAddress", "mobileNumber", "gender", "dateOfBirth", "isVerified", "addedByAdminId"],
+      where: { addedByAdminId },
     });
 
-    // If no students found, return an error response
     if (studentData.length === 0) {
-      return res.status(404).json({
-        message: "No students found for the given admin",
-      });
+      return res.status(404).json({ message: "No students found for the given admin" });
     }
 
-    // Format the data to include full name and status (active/inactive)
     const studentInfo = studentData.map((student) => {
-      // Getting the firstname and lastname inside fullname
       const fullName = `${student.firstName} ${student.lastName}`;
       const status = student.isVerified ? "Active" : "Inactive";
 
@@ -63,15 +42,13 @@ const getStudentInfo = async (req, res) => {
       };
     });
 
-    // Send response with formatted student info
     res.status(200).json({ studentInfo });
   } catch (error) {
     console.error("Error fetching student data:", error);
-    res.status(500).json({
-      message: "Internal Server Error",
-    });
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 const getStudentInfoByBatch = async (req, res) => {
   try {

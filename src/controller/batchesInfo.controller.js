@@ -1,4 +1,5 @@
 import { Batch } from "../models/admin.model.js";
+import { StudentBatch } from "../models/BatchStudent.model.js";
 import Admintest from "../models/admintest.model.js";
 import Student from "../models/student.model.js";
 
@@ -145,4 +146,142 @@ const batchesAndTestInfo = async (req, res) => {
     });
   }
 };
-export { batchesInfo, getBatches, batchesAndTestInfo };
+
+const getStudentsByBatchId = async (req, res) => {
+  try {
+    const { batchId } = req.body;
+
+    // Verify the batch exists
+    const batch = await Batch.findOne({
+      where: { batch_id: batchId } // Use batchId (primary key) instead of batch_id
+    });
+
+    if (!batch) {
+      return res.status(404).json({
+        success: false,
+        message: "Batch not found"
+      });
+    }
+
+    // Method 1: Using include with the junction table
+    // const students = await Student.findAll({
+    //   include: [{
+    //     model: StudentBatch,
+    //     where: { batch_id: batchId },
+    //     attributes: [] // Don't include junction table data in response
+    //   }],
+    //   attributes: { 
+    //     exclude: ['password'] // Always exclude password
+    //   },
+    //   order: [
+    //     ['fullName', 'ASC'] // Order by full name
+    //   ]
+    // });
+
+    // Alternative Method 2: Using raw query approach
+    const students = await Student.findAll({
+      include: [{
+        model: Batch,
+        where: { batch_id: batchId },
+        through: { attributes: [] }, // Exclude junction table attributes
+        attributes: [] // Don't include batch data in student response
+      }],
+      attributes: { 
+        exclude: ['password']
+      },
+      order: [
+        ['fullName', 'ASC']
+      ]
+    });
+
+    // Alternative Method 3: Direct junction table query
+    // const studentBatchRecords = await StudentBatch.findAll({
+    //   where: { batchId: batchId }
+    // });
+    // 
+    // const studentIds = studentBatchRecords.map(record => record.studentId);
+    // 
+    // const students = await Student.findAll({
+    //   where: { 
+    //     id: { [Op.in]: studentIds } 
+    //   },
+    //   attributes: { 
+    //     exclude: ['password']
+    //   },
+    //   order: [
+    //     ['fullName', 'ASC']
+    //   ]
+    // });
+
+    if (!students || students.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No students found in this batch"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: students.length,
+      batchInfo: {
+        batchId: batch.batchId,
+        batchName: batch.batchName,
+        totalStudents: batch.no_of_students
+      },
+      data: students
+    });
+
+  } catch (error) {
+    console.error("Error fetching students by batch ID:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching students",
+      error: error.message
+    });
+  }
+};
+
+const getTestBasicInfo = async (req, res) => {
+  try {
+    const { testId } = req.body; // or req.query if you prefer
+
+    if (!testId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Test ID is required" 
+      });
+    }
+
+    // Fetch only the basic test info
+    const test = await Admintest.findOne({
+      where: { id: testId },
+      attributes: ['id', 'testname', 'subject'] // Only these fields
+    });
+
+    if (!test) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Test not found" 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      testInfo: {
+        id: test.id,
+        name: test.testname,
+        subject: test.subject
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching test info:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error while fetching test info",
+      error: error.message 
+    });
+  }
+};
+
+export { batchesInfo, getBatches, batchesAndTestInfo, getStudentsByBatchId , getTestBasicInfo };

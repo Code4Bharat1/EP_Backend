@@ -22,7 +22,7 @@ const getAllTopicsForSubject = (jsonData, subject) => {
 
   chapters.forEach(chapterName => {
     const topicsArray = jsonData[subject][chapterName];
-    
+
     if (Array.isArray(topicsArray)) {
       topicsArray.forEach(topic => {
         allTopics.push({
@@ -83,9 +83,10 @@ const fetchAllQuestions = async (req, res, subject) => {
       where: {
         pdf_id: topicIds,
       },
-      attributes: ['id', 'pdf_id', 'question_text'],
+      attributes: ['id', 'pdf_id', 'question_text', 'question_type'], // <-- added here
       order: [['id', 'ASC']]
     };
+
 
     // Fetch **all** questions
     const questions = await Question.findAll(queryOptions);
@@ -99,10 +100,12 @@ const fetchAllQuestions = async (req, res, subject) => {
       const topicInfo = filteredTopics.find((topic) => topic.topic_id === question.pdf_id);
       return {
         ...question.dataValues,
+        question_type: question.question_type, // This is redundant but ensures the field exists
         chapter_name: topicInfo ? topicInfo.chapter_name : null,
-        topic_name: topicInfo ? topicInfo.topic_name : null
+        topic_name: topicInfo ? topicInfo.topic_name : null,
       };
     });
+
 
     res.status(200).json({
       questions: questionsWithTopicDetails,
@@ -177,7 +180,7 @@ const getQuestionCount = async (req, res) => {
   try {
     const { subject } = req.params;
     const { chapter_name = null, topic_ids = null } = req.query;
-    
+
     const jsonData = loadJsonData();
 
     if (!jsonData) {
@@ -218,9 +221,9 @@ const getQuestionCount = async (req, res) => {
   }
 };
 
-export { 
-  fetchPhysicsQuestions, 
-  fetchChemistryQuestions, 
+export {
+  fetchPhysicsQuestions,
+  fetchChemistryQuestions,
   fetchBiologyQuestions,
   getSubjectMetadata,
   getQuestionCount

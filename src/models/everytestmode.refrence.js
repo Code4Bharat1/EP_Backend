@@ -124,12 +124,17 @@ const Question = sequelizeCon.define("Question", {
     references: {
       model: Topic,
       key: "id",
-    },  
+    },
   },
   difficulty_level: {
     type: DataTypes.ENUM('simple', 'medium', 'hard'),
-    allowNull: true, // Change to false if required
-    defaultValue: 'medium', // Optional: set default
+    allowNull: true, // Set to false if you want it required
+    defaultValue: 'medium',
+  },
+  question_type: {
+    type: DataTypes.STRING,    // Use STRING for open-ended, ENUM if you have fixed types
+    allowNull: true,
+    // If you want, you can restrict with ENUM: type: DataTypes.ENUM('MCQ', 'Assertion-Reason', 'True/False', 'Match', ...)
   },
 }, {
   tableName: "questions",

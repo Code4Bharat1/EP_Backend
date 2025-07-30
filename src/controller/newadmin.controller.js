@@ -11,6 +11,7 @@ import { Question, Option } from "../models/everytestmode.refrence.js";
 import generateTestResult from "../models/generateTestresult.model.js";
 import { Batch } from "../models/admin.model.js";
 
+
 // Controller to register a new admin
 const createAdmin = async (req, res) => {
   const {
@@ -1115,6 +1116,45 @@ const getBatchByStudentTest = async (req, res) => {
   }
 };
 
+const getUserSubmittedTestsByEmail = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    // Step 1: Find the student by email
+    const student = await Student.findOne({
+      where: { emailAddress: email },
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    // Step 2: Find all submitted tests by this student
+    const submittedTests = await generateTestResult.findAll({
+      where: {
+        studentId: student.id,
+      },
+    });
+
+    if (!submittedTests.length) {
+      return res.status(200).json({
+        message: "No submitted tests found for this student",
+        tests: [],
+      });
+    }
+    console.log("Submitted Tests:", submittedTests);
+
+    return res.status(200).json({
+      email: student.emailAddress,
+      studentId: student.id,
+      tests: submittedTests,
+    });
+  } catch (error) {
+    console.error("Error fetching submitted tests by email:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export {
   dashboardDetails,
   getTestbyAdminId,
@@ -1128,4 +1168,5 @@ export {
   getTestData,
   getUpcomingTestByBatch,
   getBatchByStudentTest,
+  getUserSubmittedTestsByEmail
 };

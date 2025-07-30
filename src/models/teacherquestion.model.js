@@ -33,7 +33,7 @@ const TeacherQuestion = sequelizeCon.define(
       allowNull: false,
     },
     answer: {
-      type: DataTypes.ENUM("a", "b", "c", "d"),
+      type: DataTypes.STRING, // or DataTypes.TEXT or DataTypes.ENUM if using options
       allowNull: false,
     },
     difficulty: {

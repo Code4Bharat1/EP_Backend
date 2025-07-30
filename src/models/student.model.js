@@ -311,10 +311,10 @@ const Student = sequelizeCon.define("Student",
 );
 
 // Hash the password before saving
-Student.beforeCreate(async (student, options) => {
-  const hashedPassword = await bcrypt.hash(student.password, 10);
-  student.password = hashedPassword;
-});
+// Student.beforeCreate(async (student, options) => {
+//   const hashedPassword = await bcrypt.hash(student.password, 10);
+//   student.password = hashedPassword;
+// });
 
 
 // Student.sync({ alter: true })

@@ -40,6 +40,7 @@ const register = async (req, res) => {
     
     const expirationTime = Date.now() + 10 * 60 * 1000; // OTP expires in 10 minutes
 
+    const hashedPassword = await bcrypt.hash(password, 10);
     // Store OTP in the in-memory store (or use a database for production)
     otpStore[emailAddress] = { otp, expirationTime };
 
@@ -47,7 +48,7 @@ const register = async (req, res) => {
     await Student.create({
       name,
       emailAddress,
-      password, // Plain password, will be hashed automatically in model
+      password:hashedPassword, 
       isVerified: false, // Verification will happen later with OTP
     });
 
@@ -320,8 +321,8 @@ console.log("Login", emailAddress, password);
     }
 
     // Log the entered password and the hashed password stored in the database
-    // console.log("Entered Password:", password); // Log entered password
-    // console.log("Stored Hashed Password:", student.password);
+    console.log("Entered Password:", password); // Log entered password
+    console.log("Stored Hashed Password:", student.password);
     // Compare the entered password with the hashed password
     console.log("Comparing passwords... :", password , student.password, student);
     const isPasswordValid = await bcrypt.compare(password, student?.password);
@@ -374,12 +375,14 @@ const forgotPassword = async (req, res) => {
 
     otpStore[emailAddress] = { otp, expirationTime };
 
-    await sendEmail(
-      emailAddress,
-      "Your OTP for Password Reset",
-      `Your OTP for resetting your password is ${otp}. It expires in 10 minutes.`,
-      `<p>Your OTP for resetting your password is <b>${otp}</b>. It expires in 10 minutes.</p>`
-    );
+     // **Correct call** to sendEmail:
+    await sendEmail({
+      to:      emailAddress,
+      subject: "Your OTP for Password Reset",
+      text:    `Your OTP is ${otp}. It expires in 10 minutes.`,
+      // html is optional if you don’t need it:
+      html:    `<p>Your OTP is <b>${otp}</b>. It expires in 10 minutes.</p>`
+    });
 
     return res
       .status(200)

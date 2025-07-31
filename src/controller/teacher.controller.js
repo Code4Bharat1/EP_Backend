@@ -15,6 +15,8 @@ export const createTeacherQuestion = async (req, res) => {
     explanation,
   } = req.body;
 
+  console.log("this is difficulty:",difficulty)
+
   // === Basic Validation ===
   if (
     !teacherId ||
@@ -42,19 +44,19 @@ export const createTeacherQuestion = async (req, res) => {
   }
 
   // Optional: Check difficulty is one of predefined values
-  // const validDifficulties = ["Simple", "Medium", "Hard"];
-  // if (!validDifficulties.includes(difficulty.toLowerCase())) {
-  //   console.log("Answer must be one of the provided options")
-  //   return res.status(400).json({
-  //     message: "Difficulty must be one of: easy, medium, hard",
-  //   });
-  // }
+  const validDifficulties = ["easy", "medium", "hard"];
+  if (!validDifficulties.includes(difficulty.toLowerCase())) {
+    console.log("Answer must be one of the provided options")
+    return res.status(400).json({
+      message: "Difficulty must be one of: easy, medium, hard",
+    });
+  }
 
   try {
     await TeacherQuestion.sync({ alter: true });
 
     const newQuestion = await TeacherQuestion.create({
-      teacherId,
+      teacherId : req.adminId,
       subject: subject.trim(),
       chapter: chapter.trim(),
       topic: topic.trim(),

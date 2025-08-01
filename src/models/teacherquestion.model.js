@@ -24,6 +24,10 @@ const TeacherQuestion = sequelizeCon.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    topicId: {
+      type: DataTypes.INTEGER,
+      allowNull: true, // set false if topic is mandatory
+    },
     question: {
       type: DataTypes.TEXT,
       allowNull: false,
@@ -43,7 +47,7 @@ const TeacherQuestion = sequelizeCon.define(
     explanation: {
       type: DataTypes.TEXT,
       allowNull: true,
-    }
+    },
   },
   {
     timestamps: true,

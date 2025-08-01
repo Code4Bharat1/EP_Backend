@@ -39,13 +39,25 @@ const pastTest = async (req, res) => {
           'selectedChapters', 'correct', 'incorrect', 'unattempted', 'createdAt'
         ]
       }),
-      generateTestResult.findAll({
+        generateTestResult.findAll({
         where: { studentId: userId },
         attributes: [
-          'id', 'testname', 'subjectWiseMarks', 'selectedChapters',
-          'correctAnswers', 'incorrectAnswers', 'unattempted', 'createdAt'
-        ]
-      })
+          // Alias your real PK "testid" to "id" for consistency
+          ["testid", "id"],
+          "testname",
+          "selectedChapters",
+          "answers",
+          "score",
+          "correctAnswers",
+          "incorrectAnswers",
+          "unattempted",
+          "totalquestions",
+          "overallmarks",
+          "subjectWiseMarks",
+          "createdAt",
+        ],
+        order: [["createdAt", "DESC"]],
+      }),
     ]);
 
     const fullTestAnalytics = fullTestData.map(test => {

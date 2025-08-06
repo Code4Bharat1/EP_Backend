@@ -1,6 +1,7 @@
 import TestSeriesTest from "../models/TestSeriesTest.model.js";
 import TestSeries from "../models/TestSeries.model.js";
 import TestSeriesQuestions from "../models/TestSeriesQuestions.model.js";
+import { json, where } from "sequelize";
 
 // create the test series
 export const createTestSeries = async (req, res) => {
@@ -317,5 +318,82 @@ export const getTestSeriesQuestionsByTestId = async (req, res) => {
       success: false,
       message: "Internal server error while fetching questions.",
     });
+  }
+};
+
+export const editQuestions = async (req, res) => {
+  try {
+    const {
+      questionId,
+      questionText,
+      options,
+      correctAnswer,
+      explanation,
+      marks,
+      negativeMarks,
+      difficulty,
+      questionType,
+    } = req.body;
+
+    //validate input
+    if (!questionId) {
+      res.status(400).json({ message: "Reiquered field are missing" });
+    }
+
+    // find question
+    const question = await TestSeriesQuestions.findByPk(questionId);
+    if (!question) {
+      res.status(404).json({ message: "question not found" });
+    }
+
+    //update questions
+    const updateQuestion = await TestSeriesQuestions.update(
+      {
+        questionText,
+        options: JSON.stringify(options),
+        correctAnswer,
+        explanation,
+        marks,
+        negativeMarks,
+        difficulty,
+        questionType,
+      },
+      { where: { id: questionId } }
+    );
+
+    //send res 200
+    res.status(201).json({
+      message: "the question is updated ",
+      updateQuestion: updateQuestion,
+    });
+  } catch (error) {
+    console.error("Error editing question:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteQuestions = async (req, res) => {
+  try {
+    const { questionId } = req.body;
+    //validate body
+    if (!questionId) {
+      res.status(400).json({ message: "required filed not found" });
+    }
+    // find the question
+    const question = await TestSeriesQuestions.findByPk(questionId);
+    if (!question) {
+      res.status(404).json({ message: "question not found" });
+    }
+    // delete the question
+    const questionDelete = await TestSeriesQuestions.destroy({
+      where: { id: questionId },
+    });
+    // send the status res
+    res
+      .status(200)
+      .json({ message: "success", questionDelete: questionDelete });
+  } catch (error) {
+    console.error("Error deleteing question:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };

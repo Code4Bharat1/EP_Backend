@@ -3,6 +3,8 @@ import {
   addQuestions,
   createTest,
   createTestSeries,
+  deleteQuestions,
+  editQuestions,
   getAllTestSeries,
   getTestsBySeriesId,
   getTestSeriesDetails,
@@ -22,7 +24,11 @@ router.post("/create-test-series/test", verifyToken, createTest);
 router.get("/test-series-test/:seriesId/tests", getTestsBySeriesId);
 router.get("/test-series-test/:testId", getTestSeriesTestDetails);
 
-router.post("/test-series/question", addQuestions);
+//test series questions 
+router.post("/question/create", addQuestions);
 router.get("/test-series-question/:testId", getTestSeriesQuestionsByTestId);
+router.put("/question/edit" , editQuestions)
+router.delete("/question/delete" , deleteQuestions)
+
 
 export default router;

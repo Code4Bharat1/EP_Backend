@@ -2,6 +2,7 @@ import express from "express";
 import {
   addQuestions,
   createTest,
+  createTestResult,
   createTestSeries,
   deleteQuestions,
   editQuestions,
@@ -29,6 +30,9 @@ router.post("/question/create", addQuestions);
 router.get("/test-series-question/:testId", getTestSeriesQuestionsByTestId);
 router.put("/question/edit" , editQuestions)
 router.delete("/question/delete" , deleteQuestions)
+
+// test result 
+router.post("/test-result", createTestResult) 
 
 
 export default router;

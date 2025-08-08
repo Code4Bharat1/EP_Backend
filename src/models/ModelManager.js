@@ -3,20 +3,19 @@ import Student from "./student.model.js"; // if exported default
 import { Batch } from "./admin.model.js"; // if exported named
 import { StudentBatch } from "./BatchStudent.model.js"; // join table
 
-import TestSeries from "./TestSeries.model.js"
+import TestSeries from "./TestSeries.model.js";
 import TestSeriesTest from "./TestSeriesTest.model.js";
 import TestSeriesQuestions from "./TestSeriesQuestions.model.js";
+import TestResult from "./TestSeriesResult.js"; // ✅ import this
 
 /* ----------------------- TestSeries <-> TestSeriesTest ----------------------- */
 
-// 1 TestSeries has many Tests
 TestSeries.hasMany(TestSeriesTest, {
   foreignKey: "seriesId",
   as: "tests",
   onDelete: "CASCADE",
 });
 
-// 1 Test belongs to a TestSeries
 TestSeriesTest.belongsTo(TestSeries, {
   foreignKey: "seriesId",
   as: "series",
@@ -24,20 +23,19 @@ TestSeriesTest.belongsTo(TestSeries, {
 
 /* -------------------- TestSeriesTest <-> TestSeriesQuestions -------------------- */
 
-// 1 Test has many Questions
 TestSeriesTest.hasMany(TestSeriesQuestions, {
   foreignKey: "testId",
   as: "questions",
   onDelete: "CASCADE",
 });
 
-// 1 Question belongs to a Test
 TestSeriesQuestions.belongsTo(TestSeriesTest, {
   foreignKey: "testId",
   as: "test",
 });
 
-// Correct many-to-many setup
+/* -------------------------- Student <-> Batch (Many-to-Many) -------------------------- */
+
 Student.belongsToMany(Batch, {
   through: StudentBatch,
   foreignKey: "studentId",
@@ -49,8 +47,40 @@ Batch.belongsToMany(Student, {
   otherKey: "studentId",
 });
 
-// Sync only in dev
-// sync with no alters
-// await sequelizeCon.sync({ alter: false });
+/* ------------------------- TestSeriesTest <-> TestResult ------------------------- */
 
-export { Student, Batch, StudentBatch, TestSeries , TestSeriesTest , TestSeriesQuestions };
+// 1 Test can have many TestResults (for different students or multiple attempts)
+TestSeriesTest.hasMany(TestResult, {
+  foreignKey: "testId",
+  as: "results",
+  onDelete: "CASCADE",
+});
+TestResult.belongsTo(TestSeriesTest, {
+  foreignKey: "testId",
+  as: "test",
+});
+TestResult.belongsTo(TestSeries, { foreignKey: "seriesId" });
+
+/* ---------------------------- Student <-> TestResult ---------------------------- */
+
+// 1 Student can have many TestResults
+Student.hasMany(TestResult, {
+  foreignKey: "studentId",
+  as: "testResults",
+  onDelete: "CASCADE",
+});
+TestResult.belongsTo(Student, {
+  foreignKey: "studentId",
+  as: "student",
+});
+
+// ✅ EXPORT all
+export {
+  Student,
+  Batch,
+  StudentBatch,
+  TestSeries,
+  TestSeriesTest,
+  TestSeriesQuestions,
+  TestResult, // ✅ include this
+};

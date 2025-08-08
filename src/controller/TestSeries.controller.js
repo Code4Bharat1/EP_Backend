@@ -1,7 +1,9 @@
 import TestSeriesTest from "../models/TestSeriesTest.model.js";
 import TestSeries from "../models/TestSeries.model.js";
 import TestSeriesQuestions from "../models/TestSeriesQuestions.model.js";
+import Student from "../models/student.model.js";
 import { json, where } from "sequelize";
+import TestResult from "../models/TestSeriesResult.js";
 
 // create the test series
 export const createTestSeries = async (req, res) => {
@@ -394,6 +396,68 @@ export const deleteQuestions = async (req, res) => {
       .json({ message: "success", questionDelete: questionDelete });
   } catch (error) {
     console.error("Error deleteing question:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const createTestResult = async (req, res) => {
+  try {
+    const {
+      studentId,
+      testId,
+      totalMarks,
+      marksObtained,
+      correctAnswers,
+      incorrectAnswers,
+      unattempted,
+      timeTaken,
+    } = req.body;
+
+    // ✅ Validate required fields
+    if (!studentId || !testId) {
+      return res.status(400).json({
+        message: "Required fields missing: studentId or testId",
+      });
+    }
+
+    // ✅ Check if student exists
+    const student = await Student.findByPk(studentId);
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    // ✅ Check if test exists (use real testId)
+    const test = await TestSeriesTest.findByPk(testId);
+    if (!test) {
+      return res.status(404).json({ message: "Test not found" });
+    }
+
+    // ✅ Find last attempt number for this student-test pair
+    const lastAttempt = await TestResult.max("attemptNumber", {
+      where: { studentId, testId },
+    });
+
+    const attemptNumber = lastAttempt ? lastAttempt + 1 : 1;
+
+    // ✅ Create a new attempt (don’t update old ones)
+    const result = await TestResult.create({
+      studentId,
+      testId,
+      attemptNumber,
+      totalMarks,
+      marksObtained,
+      correctAnswers,
+      incorrectAnswers,
+      unattempted,
+      timeTaken,
+      percentage: ((marksObtained / totalMarks) * 100).toFixed(2),
+    });
+
+    return res
+      .status(201)
+      .json({ message: "Test result submitted successfully", result });
+  } catch (error) {
+    console.error("Error Creating the Result", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };

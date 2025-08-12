@@ -2,12 +2,14 @@ import { Op } from "sequelize";
 import FullTestResults from "../models/fullTestResults.model.js";
 import Student from "../models/student.model.js";
 
+
+
 // Controller to get selected fields of FullTestResults for all students along with rank, studentId, fullName, accuracy, and marks
 export const getTestSummariesForAllStudents = async (req, res) => {
   try {
     // Step 1: Get all students along with their full names (firstName, lastName)
     const students = await Student.findAll({
-      attributes: ["id", "firstName", "lastName"], // Fetch id, firstName, and lastName
+      attributes: ["id","fullName", "firstName", "lastName"], // Fetch id, firstName, and lastName
     });
 
     if (!students || students.length === 0) {

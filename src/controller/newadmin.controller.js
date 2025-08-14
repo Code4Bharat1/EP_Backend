@@ -12,7 +12,6 @@ import generateTestResult from "../models/generateTestresult.model.js";
 import { Batch } from "../models/admin.model.js";
 import { applyResultUpdate } from "../service/analyticsAggregator.js";
 
-
 // Controller to register a new admin
 const createAdmin = async (req, res) => {
   const {
@@ -134,11 +133,29 @@ const loginAdmin = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid AdminId or password." });
     }
+    console.log("admin : ",admin)
 
-    // Generate a JWT token
-    const token = jwt.sign({ id: admin.id }, config.get("jwtSecret"), {
-      expiresIn: "30d", // Token expires in 30 days
-    });
+    let token 
+    if (admin.created_by_admin_id == null) {
+      console.log("null")
+      // Generate a JWT token
+      token = jwt.sign(
+        { id: admin.id, role: admin.role },
+        config.get("jwtSecret"),
+        {
+          expiresIn: "30d", // Token expires in 30 days
+        }
+      );
+    } else {
+      // Generate a JWT token
+      token = jwt.sign(
+        { id: admin.created_by_admin_id, role: admin.role },
+        config.get("jwtSecret"),
+        {
+          expiresIn: "30d", // Token expires in 30 days
+        }
+      );
+    }
 
     // Return success message along with the token and admin details
     return res.status(200).json({
@@ -1177,5 +1194,5 @@ export {
   getTestData,
   getUpcomingTestByBatch,
   getBatchByStudentTest,
-  getUserSubmittedTestsByEmail
+  getUserSubmittedTestsByEmail,
 };

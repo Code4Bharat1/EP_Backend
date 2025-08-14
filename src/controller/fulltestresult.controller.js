@@ -2,6 +2,7 @@ import fullTestResults from "../models/fullTestResults.model.js";
 import { Solution, Question } from "../models/everytestmode.refrence.js"; // ✅ Import the correct Questions table model
 import jwt from "jsonwebtoken";
 import config from "config";
+import { applyResultUpdate } from "../service/analyticsAggregator.js";
 
 const submitTest = async (req, res) => {
   try {
@@ -198,6 +199,18 @@ const submitTest = async (req, res) => {
       chapterWisePerformance: JSON.stringify(chapterWisePerformance), // Now in array format
       detailedAnswers: JSON.stringify(detailedAnswers), // Now in 2D array format [questionId, solutionText]
     });
+
+    console.log("Controller is running")
+ // 🔔 Update StudentAnalytics after saving the full-length test result
+await applyResultUpdate({
+  studentId,                 // from the decoded token
+  testType: "full",          // "full" | "series" | "teacher" | "user"
+  testId: newTestResult.id,  // your fullTestResults row id (OK to reuse)
+  resultId: newTestResult.id // lets the aggregator fetch by PK reliably
+});
+// console.log("[AGG] start", { studentId, testType, testId, resultId });
+
+console.log("student analytics added")
 
     res.status(201).json({
       message: "✅ Test submitted successfully!",

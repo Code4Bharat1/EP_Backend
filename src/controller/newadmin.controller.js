@@ -10,6 +10,7 @@ import Admintest from "../models/admintest.model.js";
 import { Question, Option } from "../models/everytestmode.refrence.js";
 import generateTestResult from "../models/generateTestresult.model.js";
 import { Batch } from "../models/admin.model.js";
+import { applyResultUpdate } from "../service/analyticsAggregator.js";
 
 
 // Controller to register a new admin
@@ -555,6 +556,14 @@ export const saveGenerateTestResult = async (req, res) => {
       overallmarks,
       subjectWiseMarks,
     });
+    console.log("test submitted")
+    await applyResultUpdate({
+  studentId,
+  testType: "teacher",
+  testId: testid,        // Admintest.id (the test definition)
+  resultId: newResult.id // this attempt's result row
+  });
+    console.log("test submitted and analytics added")
 
     res.status(201).json({
       message: "Test result saved successfully.",

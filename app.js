@@ -41,6 +41,7 @@ import topicWiseRouter from './src/routes/topicwise.router.js'
 import demoRoute from './src/routes/demo.route.js';
 import teacherRouter from './src/routes/teacher.router.js';
 import akashTest from "./src/routes/TestSeries.router.js"
+import r from './src/routes/coach.routes.js';
 
 const app = express();
 const port = 3085;
@@ -107,6 +108,7 @@ app.use("/api/topic-wise", topicWiseRouter);
 app.use("/api/demo" , demoRoute);
 app.use("/api/teacher", teacherRouter);
 app.use("/api/test-series",akashTest)
+app.use("/api/coach", r)
 
 app.use("/api/review", reviewQuestion);
 // Start the server

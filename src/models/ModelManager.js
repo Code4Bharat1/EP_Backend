@@ -7,6 +7,7 @@ import TestSeries from "./TestSeries.model.js";
 import TestSeriesTest from "./TestSeriesTest.model.js";
 import TestSeriesQuestions from "./TestSeriesQuestions.model.js";
 import TestResult from "./TestSeriesResult.js"; // ✅ import this
+import StudentAnalytics from "./studentAnalytics.model.js";
 
 /* ----------------------- TestSeries <-> TestSeriesTest ----------------------- */
 
@@ -74,6 +75,20 @@ TestResult.belongsTo(Student, {
   as: "student",
 });
 
+/*----------------------------Student <-> Student Analytics -----------------------*/
+
+// 1 student ↔ 1 analytics row
+Student.hasOne(StudentAnalytics, {
+  foreignKey: { name: "student_id", allowNull: false },
+  as: "analytics",
+  onDelete: "CASCADE",   // delete analytics when student is deleted
+});
+
+
+StudentAnalytics.belongsTo(Student, {
+  foreignKey: { name: "student_id", allowNull: false },
+  as: "student",
+});
 // ✅ EXPORT all
 export {
   Student,

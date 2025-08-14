@@ -45,7 +45,7 @@ import akashTest from "./src/routes/TestSeries.router.js"
 const app = express();
 const port = 3085;
 const corsOptions = {
-  origin: ["https://neet720.com","https://admin.neet720.com","http://localhost:3000","http://localhost:3001"],
+  origin: ["https://neet720.com","https://admin.neet720.com","https://superadmin.neet720.com","http://localhost:3000","http://localhost:3001"],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
   allowedHeaders: ['Content-Type', 'Authorization'], 
   credentials: true,

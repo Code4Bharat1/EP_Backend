@@ -171,8 +171,15 @@ const saveBasicStudentData = async (req, res) => {
     // Check if the email already exists
     const existingStudent = await Student.findOne({
       where: {
-        emailAddress: email,
-        addedByAdminId,
+        [Op.and]: [
+          { addedByAdminId }, // Ensure the admin ID is considered
+          {
+            [Op.or]: [
+              { emailAddress: email }, // Check email uniqueness for the admin
+              { mobileNumber: phoneNumber }, // Check phone number uniqueness for the admin
+            ],
+          },
+        ],
       },
     });
     if (existingStudent) {

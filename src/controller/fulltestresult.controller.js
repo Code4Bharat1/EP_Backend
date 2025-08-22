@@ -3,6 +3,8 @@ import { Solution, Question } from "../models/everytestmode.refrence.js"; // ✅
 import jwt from "jsonwebtoken";
 import config from "config";
 import { applyResultUpdate } from "../service/analyticsAggregator.js";
+import { Op } from "sequelize";
+import { Option } from "../models/everytestmode.refrence.js";
 
 const submitTest = async (req, res) => {
   try {
@@ -27,7 +29,7 @@ const submitTest = async (req, res) => {
         .status(403)
         .json({ error: "Unauthorized: Invalid or expired token" });
     }
-    console.log("✅ Student ID extracted:", studentId); // Debugging log
+    // console.log("✅ Student ID extracted:", studentId); // Debugging log
     // ✅ Extract test submission data from request body
     const {
       correctAnswers = [],
@@ -57,7 +59,7 @@ const submitTest = async (req, res) => {
     const correctAnswersCount = correctAnswers.length;
     const wrongAnswersCount = wrongAnswers.length;
     const notAttemptedCount = notAttempted.length;
-    console.log("✅ Total Questions:", totalQuestions);
+    // console.log("✅ Total Questions:", totalQuestions);
     let subjectWisePerformance = [];
     let chapterWisePerformance = [];
     correctAnswers.forEach(
@@ -139,7 +141,7 @@ const submitTest = async (req, res) => {
         (s) => s[0] === subject
       );
       if (!existingSubject) {
-        existingSubject = [subject, 0, 0, 0, 0]; 
+        existingSubject = [subject, 0, 0, 0, 0];
         subjectWisePerformance.push(existingSubject);
       }
       existingSubject[3] += 1; // Increment notAttempted
@@ -200,17 +202,17 @@ const submitTest = async (req, res) => {
       detailedAnswers: JSON.stringify(detailedAnswers), // Now in 2D array format [questionId, solutionText]
     });
 
-    console.log("Controller is running")
- // 🔔 Update StudentAnalytics after saving the full-length test result
-await applyResultUpdate({
-  studentId,                 // from the decoded token
-  testType: "full",          // "full" | "series" | "teacher" | "user"
-  testId: newTestResult.id,  // your fullTestResults row id (OK to reuse)
-  resultId: newTestResult.id // lets the aggregator fetch by PK reliably
-});
-// console.log("[AGG] start", { studentId, testType, testId, resultId });
+    // console.log("Controller is running");
+    // 🔔 Update StudentAnalytics after saving the full-length test result
+    await applyResultUpdate({
+      studentId, // from the decoded token
+      testType: "full", // "full" | "series" | "teacher" | "user"
+      testId: newTestResult.id, // your fullTestResults row id (OK to reuse)
+      resultId: newTestResult.id, // lets the aggregator fetch by PK reliably
+    });
+    // console.log("[AGG] start", { studentId, testType, testId, resultId });
 
-console.log("student analytics added")
+    console.log("student analytics added ");
 
     res.status(201).json({
       message: "✅ Test submitted successfully!",
@@ -228,7 +230,7 @@ const getResults = async (req, res) => {
   try {
     // ✅ Extract Student ID from Request
     const studentId = req.user.id;
-    console.log("✅ Fetching results for Student ID:", studentId);
+    // console.log("✅ Fetching results for Student ID:", studentId);
 
     // ✅ Fetch Latest Test Result for the Student
     const testResult = await fullTestResults.findOne({
@@ -318,14 +320,14 @@ const getReviewMistakes = async (req, res) => {
         .json({ error: "Unauthorized: Invalid or expired token" });
     }
 
-    console.log("✅ Student ID extracted:", studentId);
+    // console.log("✅ Student ID extracted:", studentId);
 
     const { testId } = req.query;
     if (!testId)
       return res.status(400).json({ error: "Missing testId in request." });
 
     const testResult = await fullTestResults.findOne({
-      where: { id: testId, studentId },
+      where: { id: testId, studentId: studentId },
       attributes: [
         "correctAnswers",
         "wrongAnswers",
@@ -391,14 +393,14 @@ const getReviewMistakes = async (req, res) => {
         const correctAnswer = answer[4] || "Answer not available"; // correctAnswer is at index 4
         const timeSpent = answer[6] || "Time not recorded"; // Assuming timeSpent is at index 6
 
-        console.log({
-          questionId: answer[0],
-          questionText: question ? question.questionText : "Question not found",
-          yourAnswer: yourAnswer,
-          correctAnswer: correctAnswer,
-          explanation: explanation,
-          timeSpent: timeSpent,
-        });
+        // console.log({
+        //   questionId: answer[0],
+        //   questionText: question ? question.questionText : "Question not found",
+        //   yourAnswer: yourAnswer,
+        //   correctAnswer: correctAnswer,
+        //   explanation: explanation,
+        //   timeSpent: timeSpent,
+        // });
 
         return {
           questionId: answer[0],

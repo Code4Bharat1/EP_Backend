@@ -135,15 +135,6 @@ const saveBasicStudentData = async (req, res) => {
       gender,
       addedByAdminId,
     } = req.body;
-    console.log(
-      email,
-      password,
-      firstName,
-      dateOfBirth,
-      phoneNumber,
-      gender,
-      addedByAdminId
-    );
 
     // Validate if all required fields are present
     if (

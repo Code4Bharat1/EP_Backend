@@ -3,10 +3,10 @@ import config from 'config';
 
 const studentAuth = (req, res, next) => {
 
-  console.log("this is headers",req.headers.authorization)
+  // console.log("this is headers",req.headers.authorization)
 
   const authHeader = req.headers.authorization;
-  console.log(req.headers.authorization);
+  // console.log(req.headers.authorization);
   if (!authHeader) {
     return res.status(401).json({ message: 'No token provided' });
   }

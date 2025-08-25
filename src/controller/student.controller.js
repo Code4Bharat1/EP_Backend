@@ -37,7 +37,7 @@ const register = async (req, res) => {
     // Generate a random 4-digit OTP
     const otp = crypto.randomInt(1000, 9999).toString();
     console.log("otp", otp);
-    
+
     const expirationTime = Date.now() + 10 * 60 * 1000; // OTP expires in 10 minutes
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -48,7 +48,7 @@ const register = async (req, res) => {
     await Student.create({
       name,
       emailAddress,
-      password:hashedPassword, 
+      password: hashedPassword,
       isVerified: false, // Verification will happen later with OTP
     });
 
@@ -72,23 +72,33 @@ const register = async (req, res) => {
 
 const savePersonalData = async (req, res) => {
   try {
-    console.log('Received body:', req.body);
-    console.log('Received file:', req.file);
+    console.log("Received body:", req.body);
+    console.log("Received file:", req.file);
 
     const {
       firstName,
-      lastName, 
+      lastName,
       examType,
       dateOfBirth,
-      domicileState,       
-      targetYear,      
-      mobileNumber,         
-      gender,     
-      emailAddress,        
-      fullAddress
+      domicileState,
+      targetYear,
+      mobileNumber,
+      gender,
+      emailAddress,
+      fullAddress,
     } = req.body;
 
-    console.log(firstName, lastName, examType, dateOfBirth, state, country, language, email, fullAddress);
+    console.log(
+      firstName,
+      lastName,
+      examType,
+      dateOfBirth,
+      state,
+      country,
+      language,
+      email,
+      fullAddress
+    );
 
     // Validate required fields
     if (!firstName || !lastName || !emailAddress) {
@@ -104,14 +114,16 @@ const savePersonalData = async (req, res) => {
     }
 
     let updatedProfileImage = student.profileImage;
-    
+
     if (req.file) {
       try {
         const uploadedProfileImage = await uploadOnCloudinary(req.file.path);
         updatedProfileImage = uploadedProfileImage.url;
       } catch (uploadError) {
         console.error("Error uploading image:", uploadError);
-        return res.status(500).json({ message: "Error uploading profile image" });
+        return res
+          .status(500)
+          .json({ message: "Error uploading profile image" });
       }
     }
 
@@ -130,10 +142,10 @@ const savePersonalData = async (req, res) => {
       gender: gender || null,
       emailAddress: emailAddress,
       fullAddress: fullAddress || null,
-      profileImage: updatedProfileImage
+      profileImage: updatedProfileImage,
     };
 
-    console.log('Updating with:', updateData);
+    console.log("Updating with:", updateData);
 
     await student.update(updateData);
 
@@ -141,16 +153,14 @@ const savePersonalData = async (req, res) => {
       message: "Personal data updated successfully",
       student,
     });
-
   } catch (error) {
     console.error("Error saving personal data:", error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: "Internal server error",
-      error: error.message 
+      error: error.message,
     });
   }
 };
-
 
 const newSavePersonalData = async (req, res) => {
   try {
@@ -169,9 +179,8 @@ const newSavePersonalData = async (req, res) => {
       fullAddress,
     } = req.body;
 
-    
     const student = await Student.findOne({ where: { id } });
-    
+
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
@@ -183,7 +192,7 @@ const newSavePersonalData = async (req, res) => {
       dateOfBirth: dateOfBirth || student.dateOfBirth,
       domicileState: domicileState || student.domicileState,
       targetYear: targetYear || student.targetYear,
-      mobileNumber : mobileNumber || student.mobileNumber,
+      mobileNumber: mobileNumber || student.mobileNumber,
       gender: gender || student.gender,
       emailAddress: emailAddress || student.emailAddress,
       fullAddress: fullAddress || student.fullAddress,
@@ -196,12 +205,11 @@ const newSavePersonalData = async (req, res) => {
       message: "Personal Data Updated Successfully",
       student,
     });
-
   } catch (error) {
     console.error("Error saving personal Data: ", error);
     return res.status(500).json({
       message: "Internal Server Error",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -305,8 +313,11 @@ const resendOtp = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { emailAddress, password } = req.body;
-    
-console.log("Login", emailAddress, password);
+
+    console.log("=== LOGIN DEBUG ===");
+    console.log("Login attempt for email:", emailAddress);
+    console.log("Password type:", typeof password);
+    console.log("Password length:", password.length);
 
     // Basic validation
     if (!emailAddress || !password) {
@@ -314,37 +325,51 @@ console.log("Login", emailAddress, password);
         .status(400)
         .json({ message: "Email and password are required" });
     }
+
     // Find student in the database
     const student = await Student.findOne({ where: { emailAddress } });
+
     if (!student) {
+      console.log("No student found with email:", emailAddress);
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    // Log the entered password and the hashed password stored in the database
-    console.log("Entered Password:", password); // Log entered password
-    console.log("Stored Hashed Password:", student.password);
+    console.log("Student found:", student.id, student.emailAddress);
+    console.log("Password hash from DB:", student.password);
+
+    // Ensure password is a string
+    const passwordString = String(password).trim();
+    console.log("Processed login password:", passwordString);
+
     // Compare the entered password with the hashed password
-    console.log("Comparing passwords... :", password , student.password, student);
-    const isPasswordValid = await bcrypt.compare(password, student?.password);
+    const isPasswordValid = await bcrypt.compare(
+      passwordString,
+      student.password
+    );
 
-
-    console.log("Password Validation Result:", isPasswordValid);
+    console.log("Password validation result:", isPasswordValid);
 
     if (!isPasswordValid) {
+      console.log("Password validation failed for email:", emailAddress);
       return res.status(400).json({ message: "Invalid email or password" });
     }
+
     // Check if the student is verified
     if (!student.isVerified) {
       return res
         .status(400)
         .json({ message: "Please verify your email before logging in" });
     }
+
     // Generate JWT token
     const token = jwt.sign(
       { id: student.id, email: student.emailAddress },
       config.get("jwtSecret"),
       { expiresIn: "30d" }
     );
+
+    console.log("=== END LOGIN DEBUG ===");
+
     return res.json({
       message: "Login successful",
       token,
@@ -375,13 +400,13 @@ const forgotPassword = async (req, res) => {
 
     otpStore[emailAddress] = { otp, expirationTime };
 
-     // **Correct call** to sendEmail:
+    // **Correct call** to sendEmail:
     await sendEmail({
-      to:      emailAddress,
+      to: emailAddress,
       subject: "Your OTP for Password Reset",
-      text:    `Your OTP is ${otp}. It expires in 10 minutes.`,
+      text: `Your OTP is ${otp}. It expires in 10 minutes.`,
       // html is optional if you don’t need it:
-      html:    `<p>Your OTP is <b>${otp}</b>. It expires in 10 minutes.</p>`
+      html: `<p>Your OTP is <b>${otp}</b>. It expires in 10 minutes.</p>`,
     });
 
     return res

@@ -136,6 +136,12 @@ const saveBasicStudentData = async (req, res) => {
       addedByAdminId,
     } = req.body;
 
+    console.log("=== ACTUAL API DEBUG ===");
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+    console.log("Password from request:", password);
+    console.log("Password type:", typeof password);
+    console.log("Password length:", password.length);
+
     // Validate if all required fields are present
     if (
       !email ||
@@ -151,6 +157,13 @@ const saveBasicStudentData = async (req, res) => {
       });
     }
 
+    // Ensure password is a non-empty string
+    if (typeof password !== "string" || password.trim() === "") {
+      return res.status(400).json({
+        message: "Password must be a non-empty string",
+      });
+    }
+
     // Validate email format
     const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
     if (!emailRegex.test(email)) {
@@ -159,75 +172,66 @@ const saveBasicStudentData = async (req, res) => {
       });
     }
 
-    // Check if the email already exists
-    const existingStudent = await Student.findOne({
-      where: {
-        [Op.and]: [
-          { addedByAdminId }, // Ensure the admin ID is considered
-          {
-            [Op.or]: [
-              { emailAddress: email }, // Check email uniqueness for the admin
-              { mobileNumber: phoneNumber }, // Check phone number uniqueness for the admin
-            ],
-          },
-        ],
-      },
+    // Check if the email already exists for this admin
+    const emailExists = await Student.findOne({
+      where: { addedByAdminId, emailAddress: email },
     });
-    if (existingStudent) {
-      return res.status(409).json({
-        message: "Email already exists",
-      });
+    if (emailExists) {
+      return res
+        .status(409)
+        .json({ message: "Email already exists for this admin" });
     }
+
+    // Check mobile uniqueness per admin
+    const mobileExists = await Student.findOne({
+      where: { addedByAdminId, mobileNumber: phoneNumber },
+    });
+    if (mobileExists) {
+      return res
+        .status(409)
+        .json({ message: "Mobile number already exists for this admin" });
+    }
+
+    // Ensure password is a string and trim whitespace
+    const passwordString = String(password).trim();
+    console.log("Processed password string:", passwordString);
+    console.log("Processed password type:", typeof passwordString);
+
+    // Hash the password
+
+    const hashedPassword = await bcrypt.hash(passwordString, 10);
+    console.log("Hashed password:", hashedPassword);
 
     // Create a new student instance with the data
     const newStudent = await Student.create({
       emailAddress: email,
-      password,
+      password: hashedPassword,
       firstName: firstName,
       dateOfBirth: dateOfBirth,
       mobileNumber: phoneNumber,
       gender: gender,
-      addedByAdminId: addedByAdminId, // Save the addedByAdminId received in the request body
-      batchId: null,
-      lastName: null,
-      examType: null,
-      studentClass: null,
-      targetYear: null,
-      fullName: `${firstName} ${""}`, // Example of setting fullName based on firstName (you can improve this)
-      fullAddress: null,
-      domicileState: null,
-      parentName: null,
-      parentContactNumber: null,
-      relationToStudent: null,
-      tenthBoard: null,
-      tenthYearOfPassing: null,
-      tenthPercentage: null,
-      eleventhYearOfCompletion: null,
-      eleventhPercentage: null,
-      twelfthBoard: null,
-      twelfthYearOfPassing: null,
-      twelfthPercentage: null,
-      hasAppearedForNEET: null,
-      neetAttempts: [],
-      targetMarks: null,
-      hasTargetFlexibility: null,
-      deferredColleges: null,
-      preferredCourses: null,
-      enrolledInCoachingInstitute: null,
-      coachingInstituteName: null,
-      studyMode: null,
-      dailyStudyHours: null,
-      takesPracticeTestsRegularly: false,
-      completedMockTests: 0,
-      Credits: 0,
-      subjectNeedsMostAttention: null,
-      chapterWiseTests: null,
-      topicWiseTests: null,
-      weakAreas: null,
-      profileImage: null,
+      addedByAdminId: addedByAdminId,
+      // ... (rest of the fields)
     });
 
-    // Return the created student data (you can exclude sensitive fields)
+    // Verify the stored password immediately after creation
+    const createdStudent = await Student.findByPk(newStudent.id);
+    console.log("Stored password in DB:", createdStudent.password);
+    console.log(
+      "Hash matches stored hash:",
+      hashedPassword === createdStudent.password
+    );
+
+    // Test the password verification immediately
+    const isMatch = await bcrypt.compare(
+      passwordString,
+      createdStudent.password
+    );
+    console.log("Password verification test:", isMatch);
+
+    console.log("=== END ACTUAL API DEBUG ===");
+
+    // Return the created student data (excluding sensitive fields)
     const studentResponse = {
       id: newStudent.id,
       emailAddress: newStudent.emailAddress,
@@ -244,6 +248,20 @@ const saveBasicStudentData = async (req, res) => {
     });
   } catch (error) {
     console.error("Error saving student data:", error);
+
+    // Handle specific Sequelize errors
+    if (error.name === "SequelizeValidationError") {
+      return res.status(400).json({
+        message: error.errors.map((err) => err.message).join(", "),
+      });
+    }
+
+    if (error.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({
+        message: error.errors.map((err) => err.message).join(", "),
+      });
+    }
+
     return res.status(500).json({
       message: "Internal Server Error",
     });

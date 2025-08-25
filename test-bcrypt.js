@@ -1,14 +1,41 @@
-import bcrypt from 'bcrypt'
+// test-fixed-hooks.js
+import Student from './src/models/student.model.js';
+import bcrypt from 'bcrypt';
 
-// test-bcrypt.js
-
-async function check() {
-  const plain = 'y2003';
-  const hash  = '$2b$10$XXCoe15QaVRCmLZrbz1O7O0TQLeMPmcBnba3yG9/qixyHr7u0P89m';
-
-  console.log('Hash length:', hash.length);
-  console.log('Hash JSON:', JSON.stringify(hash));  
-  const ok = await bcrypt.compare(plain, hash);
-  console.log('Compare result:', ok);
+async function testFixedHooks() {
+  try {
+    const studentId = 149;
+    const newPassword = 'y2025';
+    
+    console.log('=== TESTING FIXED HOOKS ===');
+    
+    // Find the student
+    const student = await Student.findByPk(studentId);
+    if (!student) {
+      console.log('Student not found');
+      return;
+    }
+    
+    console.log('Found student:', student.emailAddress);
+    console.log('Current password hash:', student.password);
+    
+    // Update the password normally (with hooks enabled)
+    console.log('\nUpdating password with hooks enabled...');
+    await student.update({ password: newPassword });
+    
+    // Check the updated password
+    const updatedStudent = await Student.findByPk(studentId);
+    console.log('Updated password hash:', updatedStudent.password);
+    
+    // Test the password
+    const isMatch = await bcrypt.compare(newPassword, updatedStudent.password);
+    console.log('Password match:', isMatch);
+    
+    console.log('\n=== END TESTING FIXED HOOKS ===');
+    
+  } catch (error) {
+    console.error('Error testing fixed hooks:', error);
+  }
 }
-check();
+
+testFixedHooks();

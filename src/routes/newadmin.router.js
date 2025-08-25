@@ -3,6 +3,7 @@
 import express from 'express'
 import { createAdmin, getUpcomingTestByBatch, createAdmintest,getTestbyAdminId, getStudentTestDetails, getBatchByStudentTest , getProfile, updateProfile, getTestData, saveGenerateTestResult, getTestDetailsById, getTestQuestionsWithAnswers, getTestSummariesForAllStudents, loginAdmin, updateTest, dashboardStudentData, getTestResults, dashboardDetails, getAdminColors,getAdminColorsByStudentId , getUserSubmittedTestsByEmail} from '../controller/newadmin.controller.js';
 import { verifyToken } from '../middleware/jwtDecoder.middleware.js';
+import { studentAuth } from '../middleware/studentAuth.js';
 const router = express.Router();
 
 router.post("/signup", createAdmin);
@@ -24,7 +25,7 @@ router.post("/dashboard-details", dashboardDetails);
 router.get("/upcomingtest-data", verifyToken, getUpcomingTestByBatch);
 router.post("/colors", getAdminColors);
 router.post("/studentcolors", getAdminColorsByStudentId);
-router.post("/getStudentTestDetails", getBatchByStudentTest);
+router.get("/getStudentTestDetails", studentAuth , getBatchByStudentTest);
 router.post("/getUserSubmittedTestsByEmail", getUserSubmittedTestsByEmail);
 
 export default router;

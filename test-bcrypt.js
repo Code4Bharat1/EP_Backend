@@ -4,8 +4,8 @@ import bcrypt from 'bcrypt';
 
 async function testFixedHooks() {
   try {
-    const studentId = 149;
-    const newPassword = 'y2025';
+    const studentId = 182;
+    const newPassword = 'yogu';
     
     console.log('=== TESTING FIXED HOOKS ===');
     

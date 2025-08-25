@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import { Admin } from "../models/admin.model.js";
-import { Op } from "sequelize";
+import { Op, where } from "sequelize";
 import jwt from "jsonwebtoken";
 import config from "config";
 import Student from "../models/student.model.js";
@@ -11,6 +11,7 @@ import { Question, Option } from "../models/everytestmode.refrence.js";
 import generateTestResult from "../models/generateTestresult.model.js";
 import { Batch } from "../models/admin.model.js";
 import { applyResultUpdate } from "../service/analyticsAggregator.js";
+import { StudentBatch } from "../models/BatchStudent.model.js";
 
 // Controller to register a new admin
 const createAdmin = async (req, res) => {
@@ -133,11 +134,11 @@ const loginAdmin = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid AdminId or password." });
     }
-    console.log("admin : ",admin)
+    console.log("admin : ", admin);
 
-    let token 
+    let token;
     if (admin.created_by_admin_id == null) {
-      console.log("null")
+      console.log("null");
       // Generate a JWT token
       token = jwt.sign(
         { id: admin.id, role: admin.role },
@@ -573,14 +574,14 @@ export const saveGenerateTestResult = async (req, res) => {
       overallmarks,
       subjectWiseMarks,
     });
-    console.log("test submitted")
+    console.log("test submitted");
     await applyResultUpdate({
-  studentId,
-  testType: "teacher",
-  testId: testid,        // Admintest.id (the test definition)
-  resultId: newResult.id // this attempt's result row
-  });
-    console.log("test submitted and analytics added")
+      studentId,
+      testType: "teacher",
+      testId: testid, // Admintest.id (the test definition)
+      resultId: newResult.id, // this attempt's result row
+    });
+    console.log("test submitted and analytics added");
 
     res.status(201).json({
       message: "Test result saved successfully.",
@@ -1102,46 +1103,58 @@ export const getAdminColorsByStudentId = async (req, res) => {
 
 // get student test details by admin
 const getBatchByStudentTest = async (req, res) => {
-  const { email } = req.body;
-
   try {
-    // Step 1: Get student and batches
-    const student = await Student.findOne({
-      where: { emailAddress: email },
-      include: [
-        {
-          model: Batch,
-          through: { attributes: [] },
-        },
-      ],
-    });
-
-    if (!student || !student.Batches.length) {
-      return res.status(404).json({ error: "No batches found for student" });
+    const { id } = req.user;
+    // Validate required field
+    if (!id) {
+      return res.status(400).json({ error: "No required field found" });
     }
 
-    // Step 2: Extract batchIds
-    const batchIds = student.Batches.map((b) => b.batchId);
-    console.log("Batch IDs:", batchIds);
-
-    // Step 3: Get all tests for those batches
-    const tests = await Admintest.findAll({
-      where: {
-        batchId: batchIds, // Sequelize will convert this to IN(...)
-      },
+    // Find the student's batch
+    const batchStudent = await StudentBatch.findOne({
+      where: { student_id: id },
     });
 
+    if (!batchStudent) {
+      return res
+        .status(200)
+        .json({ message: "You are not added to any batch" });
+    }
+
+    // Get current date in UTC for comparison
+    const currentDate = new Date();
+
+    // Find tests for this batch that are currently active
+    const findTest = await Admintest.findAll({
+      where: {
+        batchId: batchStudent.batchId,
+        // Only include tests where current date is between start and end dates
+        exam_start_date: {
+          [Op.lte]: currentDate, // Start date is less than or equal to current date
+        },
+        exam_end_date: {
+          [Op.gte]: currentDate, // End date is greater than or equal to current date
+        },
+      },
+      order: [["exam_start_date", "ASC"]], // Optional: Order by start date
+    });
+
+    if (findTest.length === 0) {
+      return res.status(200).json({
+        message: "You don't have any active tests at this time",
+      });
+    }
+
     return res.status(200).json({
-      email: student.emailAddress,
-      batches: student.Batches,
-      tests,
+      message: "Success",
+      count: findTest.length,
+      tests: findTest,
     });
   } catch (error) {
     console.error("Error fetching tests by student batch:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-
 const getUserSubmittedTestsByEmail = async (req, res) => {
   const { email } = req.body;
 
@@ -1168,7 +1181,7 @@ const getUserSubmittedTestsByEmail = async (req, res) => {
         tests: [],
       });
     }
-    console.log("Submitted Tests:", submittedTests);
+    // console.log("Submitted Tests:", submittedTests);
 
     return res.status(200).json({
       email: student.emailAddress,

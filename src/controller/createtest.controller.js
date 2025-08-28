@@ -25,7 +25,7 @@ function loadJsonData() {
 const fetchQuestions = async (req, res) => {
   try {
     const { selectedSubjects, selectedChapters, numQuestions } = req.body;
-    console.log("Requested number of questions:", numQuestions);
+    console.log("Requested number of questions:", selectedChapters);
 
     const jsonData = loadJsonData();
     if (!jsonData) {

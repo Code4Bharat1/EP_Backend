@@ -181,6 +181,27 @@ const newSavePersonalData = async (req, res) => {
 
     const student = await Student.findOne({ where: { id } });
 
+    // console.log("student : ", student);
+
+    const findEmail = await Student.findOne({
+      where: {
+        emailAddress: emailAddress,
+        addedByAdminId: student.addedByAdminId,
+      },
+    });
+    if (findEmail.id !== student.id) {
+      return res.status(409).json({ message: "Email address already exists." });
+    }
+    const findPhone = await Student.findOne({
+      where: {
+        mobileNumber: mobileNumber,
+        addedByAdminId: student.addedByAdminId,
+      },
+    });
+    if (findPhone.id !== student.id) {
+      return res.status(409).json({ message: "Phone number already exists." });
+    }
+
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }

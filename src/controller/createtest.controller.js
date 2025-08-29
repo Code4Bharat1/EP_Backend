@@ -257,7 +257,7 @@ const submitTest = async (req, res) => {
     });
 
     res.status(201).json({
-      message: "✅ Test submitted successfully!",
+      message: "Test submitted successfully!",
       testId: newTest.id,
     });
   } catch (error) {

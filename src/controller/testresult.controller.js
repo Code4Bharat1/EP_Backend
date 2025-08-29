@@ -60,3 +60,12 @@ export const getLastTestResultsForAllStudents = async (req, res) => {
         });
     }
 };
+
+
+export const allTestReviewByTestType = async (req,res)=>{
+    try {
+        
+    } catch (error) {
+        
+    }
+}

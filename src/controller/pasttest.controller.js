@@ -39,11 +39,11 @@ const pastTest = async (req, res) => {
           'selectedChapters', 'correct', 'incorrect', 'unattempted', 'createdAt'
         ]
       }),
-        generateTestResult.findAll({
+      generateTestResult.findAll({
         where: { studentId: userId },
         attributes: [
           // Alias your real PK "testid" to "id" for consistency
-          ["testid", "id"],
+          "testid",
           "testname",
           "selectedChapters",
           "answers",
@@ -100,6 +100,7 @@ const pastTest = async (req, res) => {
       return {
         testId: test.id,
         testName: test.testName,
+        testType: "fulltest",  // Add the testType field
         difficultyLevel: test.difficultyLevel,
         subjects: uniqueSubjects,
         correctAnswers,
@@ -131,6 +132,7 @@ const pastTest = async (req, res) => {
       return {
         testId: test.id,
         testName: test.testName,
+        testType: "meTest",  // Add the testType field
         subjects,
         difficultyLevel: test.difficultyLevel,
         correct: test.correct,
@@ -157,8 +159,9 @@ const pastTest = async (req, res) => {
       }
 
       return {
-        testId: test.id,
+        testId: test.testid,
         testName: test.testname,
+        testType: "generate",  // Add the testType field
         subjects,
         correct: test.correctAnswers,
         incorrect: test.incorrectAnswers,
@@ -172,6 +175,7 @@ const pastTest = async (req, res) => {
       meTests: meTestAnalytics,
       generatedTests: generateTestAnalytics
     };
+
 
     const totalTestsCount = fullTestAnalytics.length + meTestAnalytics.length + generateTestAnalytics.length;
 

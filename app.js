@@ -42,13 +42,13 @@ import demoRoute from './src/routes/demo.route.js';
 import teacherRouter from './src/routes/teacher.router.js';
 import akashTest from "./src/routes/TestSeries.router.js"
 import r from './src/routes/coach.routes.js';
-
+import reviewTestRoute from './src/routes/reviewTest.route.js';
 const app = express();
 const port = 3085;
 const corsOptions = {
-  origin: ["https://neet720.com","https://admin.neet720.com","https://superadmin.neet720.com","http://localhost:3000","http://localhost:3001"],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
-  allowedHeaders: ['Content-Type', 'Authorization'], 
+  origin: ["https://neet720.com", "https://admin.neet720.com", "https://superadmin.neet720.com", "http://localhost:3000", "http://localhost:3001"],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
 app.use(cors(corsOptions));
@@ -91,7 +91,7 @@ app.use("/api/logout", studentslogged)
 app.use("/api/testresult", testresult)
 app.use("/api/spotlight", spotlight)
 app.use("/api/loginattendance", loginattendance)
-app.use("/api/practicetest" ,practice)
+app.use("/api/practicetest", practice)
 app.use("/api/generatetest", customize);
 app.use('/api/user', userprofile);
 app.use('/api', sendEmailrouter);
@@ -105,11 +105,11 @@ app.use('/api', uploadImageRouter);
 app.use("/api", PreviousYearQuestionRouter);
 app.use("/api/verify", verifySubjectRouter);
 app.use("/api/topic-wise", topicWiseRouter);
-app.use("/api/demo" , demoRoute);
+app.use("/api/demo", demoRoute);
 app.use("/api/teacher", teacherRouter);
-app.use("/api/test-series",akashTest)
+app.use("/api/test-series", akashTest)
 app.use("/api/coach", r)
-// app.use("/api/review")
+app.use("/api/review", reviewTestRoute)
 
 app.use("/api/review", reviewQuestion);
 // Start the server

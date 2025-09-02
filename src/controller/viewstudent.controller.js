@@ -1,11 +1,8 @@
 import Student from "../models/student.model.js";
 import bcrypt from "bcrypt";
 import { Batch } from "../models/admin.model.js";
-import {
-  Student as StudentModel,
-  Batch as BatchModel,
-  StudentBatch,
-} from "../models/ModelManager.js";
+import Sequelize from "sequelize";
+import { StudentBatch } from "../models/ModelManager.js";
 import { Op } from "sequelize";
 
 // Controller to fetch student information
@@ -501,25 +498,130 @@ const updateBatchIdForUsers = async (req, res) => {
   }
 };
 
-//deleting students from the students table
-// const deleteStudent = async (student) => {
-//   try {
-//     const response = await axios.delete(`${process.env.NEXT_PUBLIC_API_BASE_URL}/studentdata/delete`, {
-//       data: { id: student.id }
-//     });
-//     if (response.status === 200) {
-//       setStudents((prevStudents) => prevStudents.filter((s) => s.id !== student.id));
-//       toast.success("Student deleted successfully", {
-//         duration: 5000
-//       });
-//     }
-//   } catch (error) {
-//     console.error("Error deleting student:", error);
-//     toast.error("Error deleting student", {
-//       duration: 5000
-//     });
-//   }
-// };
+const updateStudentData = async (req, res) => {
+  try {
+    // Destructure the required data from the request body
+    const { email, firstName, dateOfBirth, phoneNumber, gender } = req.body;
+    const studentId = req.body.id;
+    console.log("=== ACTUAL API DEBUG ===");
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+
+    // Validate if all required fields are present
+    if (
+      !studentId ||
+      !email ||
+      !firstName ||
+      !dateOfBirth ||
+      !phoneNumber ||
+      !gender
+    ) {
+      console.log(
+        studentId,
+        email,
+        firstName,
+        dateOfBirth,
+        phoneNumber,
+        gender
+      );
+      return res.status(400).json({
+        message: "All fields are required",
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: "Invalid email format",
+      });
+    }
+
+    // Check if the email already exists for this admin
+    const emailExists = await Student.findOne({
+      where: { emailAddress: email, id: { [Sequelize.Op.ne]: studentId } },
+    });
+    if (emailExists) {
+      return res.status(409).json({ message: "Email already exists" });
+    }
+
+    // Check mobile uniqueness
+    const mobileExists = await Student.findOne({
+      where: {
+        mobileNumber: phoneNumber,
+        id: { [Sequelize.Op.ne]: studentId },
+      },
+    });
+    if (mobileExists) {
+      return res.status(409).json({ message: "Mobile number already exists" });
+    }
+
+    // Find the student by ID
+    const student = await Student.findByPk(studentId);
+
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+      });
+    }
+
+    // Update the student's details (skip password and addedByAdminId update)
+    student.emailAddress = email;
+    student.firstName = firstName;
+    student.dateOfBirth = dateOfBirth;
+    student.mobileNumber = phoneNumber;
+    student.gender = gender;
+
+    // Save the updated student data
+    await student.save();
+
+    // Return the updated student data (excluding sensitive fields)
+    const studentResponse = {
+      id: student.id,
+      emailAddress: student.emailAddress,
+      firstName: student.firstName,
+      dateOfBirth: student.dateOfBirth,
+      mobileNumber: student.mobileNumber,
+      gender: student.gender,
+    };
+
+    console.log("=== END ACTUAL API DEBUG ===");
+
+    // Send a success response with the updated student data
+    return res.status(200).json({
+      message: "Student updated successfully",
+      student: studentResponse,
+    });
+  } catch (error) {
+    console.error("Error updating student data:", error);
+
+    // Handle specific Sequelize errors
+    if (error.name === "SequelizeValidationError") {
+      return res.status(400).json({
+        message: error.errors.map((err) => err.message).join(", "),
+      });
+    }
+
+    if (error.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({
+        message: error.errors.map((err) => err.message).join(", "),
+      });
+    }
+
+    return res.status(500).json({
+      message: "Internal Server Error",
+    });
+  }
+};
+
+
+
+
+
+
+
+
+
+// batch realted controller
 
 // Controller to save new batch information
 const createBatch = async (req, res) => {
@@ -527,6 +629,7 @@ const createBatch = async (req, res) => {
     const { batchName, no_of_students, studentIds, status } = req.body;
     const adminId = req.adminId;
 
+    // Validation (unchanged)
     if (!adminId) {
       return res.status(400).json({ message: "Admin ID is required" });
     }
@@ -543,29 +646,26 @@ const createBatch = async (req, res) => {
       });
     }
 
-    // Get the current year and month
+    // Generate batch ID (unchanged)
     const year = new Date().getFullYear();
-    const month = (new Date().getMonth() + 1).toString().padStart(2, "0"); // Ensure MM format
+    const month = (new Date().getMonth() + 1).toString().padStart(2, "0");
 
-    // Find the last batch in the current year and month to get the next sequence number
     const lastBatch = await Batch.findOne({
       where: { batchId: { [Op.like]: `BATCH-${year}-${month}-%` } },
-      order: [["batchId", "DESC"]], // Order in descending order to get the latest batch
+      order: [["batchId", "DESC"]],
     });
 
     const sequenceNumber = lastBatch
       ? parseInt(lastBatch.batchId.split("-")[3]) + 1
-      : 1; // Increment the sequence number or start at 1 if no batch exists
-
+      : 1;
     const batchId = `BATCH-${year}-${month}-${sequenceNumber.toString().padStart(3, "0")}`;
 
-    // Check if batch already exists by the generated ID
+    // Check for existing batch (unchanged)
     const existingBatchById = await Batch.findOne({ where: { batchId } });
     if (existingBatchById) {
       return res.status(409).json({ message: "Batch ID already exists" });
     }
 
-    // Check if a batch with the same name already exists for the admin
     const existingBatchByName = await Batch.findOne({
       where: { batchName, admin_id: adminId },
     });
@@ -575,7 +675,7 @@ const createBatch = async (req, res) => {
         .json({ message: "You already have a batch with this name" });
     }
 
-    // Create the new batch
+    // Create batch without students initially
     const newBatch = await Batch.create({
       batchId,
       batchName,
@@ -584,8 +684,8 @@ const createBatch = async (req, res) => {
       admin_id: adminId,
     });
 
-    // Add students to the batch if provided
-    if (studentIds.length > 0) {
+    // Add students only if provided
+    if (studentIds && studentIds.length > 0) {
       const students = await Student.findAll({
         where: { id: studentIds },
       });
@@ -596,8 +696,13 @@ const createBatch = async (req, res) => {
           .json({ message: "One or more student IDs are invalid" });
       }
 
-      // Add students to the batch
-      await newBatch.addStudents(students);
+      // Create junction table entries
+      const studentBatchAssociations = students.map((student) => ({
+        studentId: student.id,
+        batchId: newBatch.batchId,
+      }));
+
+      await StudentBatch.bulkCreate(studentBatchAssociations);
     }
 
     return res.status(201).json({
@@ -611,6 +716,139 @@ const createBatch = async (req, res) => {
       .json({ message: "Internal Server Error", error: error.message });
   }
 };
+// Controller to update an existing batch
+const updateBatch = async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    const { batchName, no_of_students, status, studentIds } = req.body;
+    const adminId = req.adminId;
+
+    if (!adminId) {
+      return res.status(400).json({ message: "Admin ID is required" });
+    }
+
+    // Find batch with current students - use the correct alias
+    const batch = await Batch.findOne({
+      where: { batchId, admin_id: adminId },
+      include: {
+        model: Student,
+        through: { attributes: [] },
+        as: 'Students'  // This must match the alias in your association
+      }
+    });
+
+    if (!batch) {
+      return res.status(404).json({ message: "Batch not found or unauthorized" });
+    }
+
+    // Update batch fields if provided
+    if (batchName !== undefined) batch.batchName = batchName;
+    if (no_of_students !== undefined) batch.no_of_students = no_of_students;
+    if (status !== undefined) batch.status = status;
+
+    // Handle student updates if studentIds is provided
+    if (studentIds !== undefined) {
+      // Validate all student IDs exist
+      const students = await Student.findAll({
+        where: { id: studentIds }
+      });
+
+      if (students.length !== studentIds.length) {
+        return res.status(400).json({ 
+          message: "One or more student IDs are invalid",
+          invalidIds: studentIds.filter(id => !students.some(s => s.id === id))
+        });
+      }
+
+      // Get current student IDs - use the correct alias
+      const currentStudentIds = batch.Students.map(student => student.id);
+      
+      // Find students to add (new IDs not in current list)
+      const studentsToAdd = studentIds.filter(id => !currentStudentIds.includes(id));
+      
+      // Find students to remove (current IDs not in new list)
+      const studentsToRemove = currentStudentIds.filter(id => !studentIds.includes(id));
+
+      // Add new students
+      if (studentsToAdd.length > 0) {
+        const newStudents = students.filter(student => studentsToAdd.includes(student.id));
+        await batch.addStudents(newStudents);
+      }
+
+      // Remove students
+      if (studentsToRemove.length > 0) {
+        await batch.removeStudents(studentsToRemove);
+      }
+
+      // Update student count if no_of_students wasn't explicitly provided
+      if (no_of_students === undefined) {
+        batch.no_of_students = studentIds.length;
+      }
+    }
+
+    // Save all changes
+    await batch.save();
+
+    // Return updated batch with fresh student data
+    const updatedBatch = await Batch.findOne({
+      where: { batchId },
+      include: {
+        model: Student,
+        through: { attributes: [] },
+        as: 'Students'  // Use the same alias here
+      }
+    });
+
+    res.status(200).json({
+      message: "Batch updated successfully",
+      batch: updatedBatch
+    });
+  } catch (error) {
+    console.error("Error updating batch:", error);
+    res.status(500).json({ 
+      message: "Internal Server Error", 
+      error: error.message 
+    });
+  }
+};
+//controller to delete the batches from the batches table
+const deleteBatch = async (req, res) => {
+  try {
+    const { batchId } = req.params; // use `batchId` for consistency
+    const adminId = req.adminId;
+
+    if (!adminId) {
+      return res.status(400).json({ message: "Admin ID is required" });
+    }
+
+    // Find the batch by batchId and admin_id
+    const batch = await Batch.findOne({
+      where: { batchId, admin_id: adminId },
+    });
+
+    if (!batch) {
+      return res
+        .status(404)
+        .json({ message: "Batch not found or unauthorized" });
+    }
+
+    // Optionally remove student associations before deleting (if many-to-many)
+    await batch.setStudents([]); // Clears associated students
+
+    // Delete the batch
+    await batch.destroy();
+
+    res.status(200).json({ message: "Batch deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting batch:", error);
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
+
+
 
 // controllers to get batch by ID
 const getBatchById = async (req, res) => {
@@ -645,103 +883,6 @@ const getBatchById = async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Internal Server Error" });
-  }
-};
-
-// Controller to update an existing batch
-const updateBatch = async (req, res) => {
-  try {
-    const { batchId } = req.params; // Passed in the URL
-    const { batchName, no_of_students, status, studentIds } = req.body;
-    const adminId = req.adminId;
-    console.log("Admin ID:", adminId);
-
-    if (!adminId) {
-      return res.status(400).json({ message: "Admin ID is required" });
-    }
-
-    // Check if the batch exists and belongs to the admin
-    const batch = await Batch.findOne({
-      where: { batchId, admin_id: adminId },
-      include: [Student], // Optional: preload students
-    });
-
-    if (!batch) {
-      return res
-        .status(404)
-        .json({ message: "Batch not found or unauthorized" });
-    }
-
-    // Update fields if provided
-    if (batchName) batch.batchName = batchName;
-    if (typeof no_of_students === "number")
-      batch.no_of_students = no_of_students;
-    if (typeof status === "boolean") batch.status = status;
-
-    // Save updated batch
-    await batch.save();
-
-    // Handle new student additions
-    if (Array.isArray(studentIds) && studentIds.length > 0) {
-      const newStudents = await Student.findAll({
-        where: { id: studentIds },
-      });
-
-      if (newStudents.length !== studentIds.length) {
-        return res
-          .status(400)
-          .json({ message: "One or more student IDs are invalid" });
-      }
-
-      // Add new students without removing existing ones
-      await batch.addStudents(newStudents); // Sequelize will prevent duplicates if defined correctly
-    }
-
-    res.status(200).json({
-      message: "Batch updated successfully",
-      batch,
-    });
-  } catch (error) {
-    console.error("Error updating batch:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
-  }
-};
-
-//controller to delete the batches from the batches table
-const deleteBatch = async (req, res) => {
-  try {
-    const { batchId } = req.params; // use `batchId` for consistency
-    const adminId = req.adminId;
-
-    if (!adminId) {
-      return res.status(400).json({ message: "Admin ID is required" });
-    }
-
-    // Find the batch by batchId and admin_id
-    const batch = await Batch.findOne({
-      where: { batchId, admin_id: adminId },
-    });
-
-    if (!batch) {
-      return res
-        .status(404)
-        .json({ message: "Batch not found or unauthorized" });
-    }
-
-    // Optionally remove student associations before deleting (if many-to-many)
-    await batch.setStudents([]); // Clears associated students
-
-    // Delete the batch
-    await batch.destroy();
-
-    res.status(200).json({ message: "Batch deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting batch:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
   }
 };
 
@@ -808,6 +949,7 @@ const getBatchInfo = async (req, res) => {
   }
 };
 
+
 export default getStudentInfo;
 export {
   saveBasicStudentData,
@@ -821,4 +963,5 @@ export {
   deleteStudentById,
   getBatchNames,
   getStudentInfoByBatch,
+  updateStudentData,
 };

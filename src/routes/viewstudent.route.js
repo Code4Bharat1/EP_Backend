@@ -9,6 +9,7 @@ import getStudentInfo, {
   updateBatch,
   getBatchById,
   getStudentInfoByBatch,
+  updateStudentData
 } from "../controller/viewstudent.controller.js";
 import { saveBasicStudentData } from "../controller/viewstudent.controller.js";
 import { deleteBatch } from "../controller/admin.controller.js";
@@ -28,8 +29,11 @@ router.put("/batch/:batchId", verifyToken, updateBatch);
 // DELETE /api/batch/:batchId
 router.delete("/batch/:batchId", verifyToken, deleteBatch);
 router.get("/getbatch", verifyToken, getBatchInfo); // get batch info
-router.get("/batches/:batchId", deleteBatch); // delete batch by ID
+// router.get("/batches/:batchId", deleteBatch); // delete batch by ID
 router.post("/batchnames", getBatchNames);
-router.delete("/delete", deleteStudentById);
+
+router.delete("/delete", deleteStudentById); // delete student 
+router.put("/update" , updateStudentData)
+
 
 export default router;

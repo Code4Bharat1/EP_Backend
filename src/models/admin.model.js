@@ -1,5 +1,6 @@
 import { sequelizeCon, DataTypes } from "../init/dbConnection.js";
-
+import Student from "./student.model.js";
+import { StudentBatch } from "./BatchStudent.model.js";
 const Admin = sequelizeCon.define(
   "Admin",
   {
@@ -112,6 +113,23 @@ Admin.belongsTo(Admin, {
   as: "CreatedBy", // admin.CreatedBy -> the admin who created this admin
   foreignKey: "created_by_admin_id",
 });
+
+
+// Batch ↔ Student (Many-to-Many)
+Batch.belongsToMany(Student, {
+  through: StudentBatch,
+  foreignKey: 'batchId',
+  otherKey: 'studentId',
+  as: 'Students'  // Use this exact alias name
+});
+
+Student.belongsToMany(Batch, {
+  through: StudentBatch,
+  foreignKey: 'studentId',
+  otherKey: 'batchId',
+  as: 'Batches'
+});
+
 
 // await sequelizeCon.sync({ alter: true });
 

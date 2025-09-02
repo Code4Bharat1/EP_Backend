@@ -89,7 +89,7 @@ const Student = sequelizeCon.define(
       type: DataTypes.STRING,
       allowNull: true,
       validate: {
-        isIn: [["Male", "Female", "Non-binary", "Prefer not to say"]], // gender validation
+        isIn: [["Male", "Female", "Other", "Prefer not to say"]], // gender validation
       },
     },
     mobileNumber: {

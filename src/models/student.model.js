@@ -89,7 +89,7 @@ const Student = sequelizeCon.define(
       type: DataTypes.STRING,
       allowNull: true,
       validate: {
-        isIn: [["Male", "Female", "Other", "Prefer not to say"]], // gender validation
+        isIn: [["Male", "Female", "Other"]], // gender validation
       },
     },
     mobileNumber: {
@@ -326,31 +326,31 @@ const Student = sequelizeCon.define(
 Student.beforeCreate(async (student, options) => {
   // Only hash the password if it's not already hashed
   if (!student.password.startsWith("$2")) {
-    console.log("Hashing password in beforeCreate hook");
+    // console.log("Hashing password in beforeCreate hook");
     const hashedPassword = await bcrypt.hash(student.password, 10);
     student.password = hashedPassword;
   } else {
-    console.log(
-      "Skipping password hashing in beforeCreate hook (already hashed)"
-    );
+    // console.log(
+    //   "Skipping password hashing in beforeCreate hook (already hashed)"
+    // );
   }
 });
 
 Student.beforeUpdate(async (student, options) => {
   // Only hash the password if it has been modified and is not already hashed
   if (student.changed("password") && !student.password.startsWith("$2")) {
-    console.log("Hashing password in beforeUpdate hook");
+    // console.log("Hashing password in beforeUpdate hook");
     const hashedPassword = await bcrypt.hash(student.password, 10);
     student.password = hashedPassword;
   } else {
-    console.log(
-      "Skipping password hashing in beforeUpdate hook (already hashed)"
-    );
+    // console.log(
+    //   "Skipping password hashing in beforeUpdate hook (already hashed)"
+    // );
   }
 });
 
-Student.sync({ alter: true })
-  .then(() => console.log("Student table synced successfully"))
-  .catch((err) => console.error("Error syncing Student table:", err));
+// Student.sync({ alter: true })
+//   .then(() => console.log("Student table synced successfully"))
+//   .catch((err) => console.error("Error syncing Student table:", err));
 
 export default Student;

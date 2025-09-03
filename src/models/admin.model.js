@@ -29,10 +29,20 @@ const Admin = sequelizeCon.define(
       allowNull: true,
       validate: { len: [10, 10], isNumeric: true },
     },
+    // In your Admin model definition
     whatsappNumber: {
       type: DataTypes.STRING,
-      allowNull: true,
-      validate: { len: [10, 10], isNumeric: true },
+      allowNull: true, // Allow null values
+      validate: {
+        // Only validate if value is provided
+        isNumeric: {
+          msg: "WhatsApp number must contain only digits",
+        },
+        len: {
+          args: [10, 15],
+          msg: "WhatsApp number must be between 10 and 15 digits",
+        },
+      },
     },
 
     StartDate: { type: DataTypes.DATEONLY, allowNull: true },
@@ -114,22 +124,20 @@ Admin.belongsTo(Admin, {
   foreignKey: "created_by_admin_id",
 });
 
-
 // Batch ↔ Student (Many-to-Many)
 Batch.belongsToMany(Student, {
   through: StudentBatch,
-  foreignKey: 'batchId',
-  otherKey: 'studentId',
-  as: 'Students'  // Use this exact alias name
+  foreignKey: "batchId",
+  otherKey: "studentId",
+  as: "Students", // Use this exact alias name
 });
 
 Student.belongsToMany(Batch, {
   through: StudentBatch,
-  foreignKey: 'studentId',
-  otherKey: 'batchId',
-  as: 'Batches'
+  foreignKey: "studentId",
+  otherKey: "batchId",
+  as: "Batches",
 });
-
 
 // await sequelizeCon.sync({ alter: true });
 

@@ -1,11 +1,11 @@
 import { Admin } from "../models/admin.model.js";
 import { Op, where } from "sequelize";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken"
 
 const createAdmin = async (req, res) => {
   try {
     const {
-      AdminId,
       PassKey,
       name,
       Course,
@@ -30,11 +30,11 @@ const createAdmin = async (req, res) => {
       req.body.createdByAdminId ??
       req.body.created_by_admin_id ??
       null;
-
     const createdByAdminId = creatorFromAuth ?? creatorFromBody ?? null;
-
-    // Basic required field validation
-    if (!AdminId || !PassKey || !name || !Email || !mobileNumber) {
+    const processedWhatsappNumber =
+      whatsappNumber && whatsappNumber.trim() !== "" ? whatsappNumber : null;
+    // Basic required field validation (removed AdminId since we'll generate it)
+    if (!PassKey || !name || !Email || !mobileNumber) {
       return res.status(400).json({ message: "Missing required fields." });
     }
 
@@ -53,15 +53,18 @@ const createAdmin = async (req, res) => {
       }
     }
 
-    // Uniqueness check for AdminId or Email
+    // Generate unique AdminId
+    const AdminId = `ADM-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    // Uniqueness check for Email only (AdminId is now generated)
     const existingAdmin = await Admin.findOne({
-      where: { [Op.or]: [{ AdminId }, { Email }] },
+      where: { Email },
       attributes: ["id"], // avoid selecting all columns
     });
     if (existingAdmin) {
       return res
         .status(400)
-        .json({ message: "Admin with this ID or Email already exists." });
+        .json({ message: "Admin with this Email already exists." });
     }
 
     // Hash the password
@@ -75,7 +78,7 @@ const createAdmin = async (req, res) => {
       Course,
       Email,
       mobileNumber,
-      whatsappNumber,
+      whatsappNumber: processedWhatsappNumber, // Use processed value
       StartDate,
       ExpiryDate,
       address,
@@ -85,7 +88,7 @@ const createAdmin = async (req, res) => {
       sidebarColor,
       otherColor,
       role: role || "admin",
-      created_by_admin_id: createdByAdminId, // <-- save "added by" here
+      created_by_admin_id: createdByAdminId,
       credentials: "pending",
     });
 
@@ -112,8 +115,10 @@ const getAdminList = async (req, res) => {
   try {
     const admins = await Admin.findAll({
       attributes: [
+        "name",
         "AdminId",
         "id",
+        "role",
         "created_by_admin_id",
         "Email",
         "ExpiryDate",
@@ -226,17 +231,16 @@ const getadmin = async (req, res) => {
   }
 };
 
-
 const updateAdmin = async (req, res) => {
   try {
     // Identify the admin to update: prefer :id param, else body.id, else AdminId
-    const {adminId} =req.params
+    const { adminId } = req.params;
 
-    console.log(adminId)
+    console.log(adminId);
 
     // Load record
     const admin = await Admin.findByPk(adminId);
-    console.log(admin)
+    console.log(admin);
     if (!admin) {
       return res.status(404).json({ message: "Admin not found." });
     }
@@ -266,15 +270,17 @@ const updateAdmin = async (req, res) => {
     //   }
     // }
 
-    console.log(Email)
-    console.log(admin.Email)
+    console.log(Email);
+    console.log(admin.Email);
 
     if (Email && Email !== admin.Email) {
       const clash = await Admin.count({
         where: { Email, id: { [Op.ne]: admin.id } },
       });
       if (clash) {
-        return res.status(400).json({ message: "Another admin already uses this Email." });
+        return res
+          .status(400)
+          .json({ message: "Another admin already uses this Email." });
       }
     }
 
@@ -339,4 +345,73 @@ const updateAdmin = async (req, res) => {
   }
 };
 
-export { getAdminList, deleteAdminById, createAdmin, getStaffMember, getadmin , updateAdmin };
+// Fixed super admin credentials (in production, use environment variables)
+const FIXED_SUPER_ADMIN = {
+  username: "rishi",
+  passkey:  "rishi",
+};
+
+const superAdminLogin = async (req, res) => {
+  try {
+    const { username, passkey } = req.body;
+
+    // Basic validation
+    if (!username || !passkey) {
+      return res.status(400).json({
+        success: false,
+        message: "Username and password are required",
+      });
+    }
+
+    // Check against fixed credentials
+    if (
+      username !== FIXED_SUPER_ADMIN.username ||
+      passkey !== FIXED_SUPER_ADMIN.passkey
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        username: FIXED_SUPER_ADMIN.username,
+        role: "superadmin",
+        type: "fixed", // Indicate this is a fixed superadmin
+      },
+      process.env.JWT_SECRET, // Store this in your .env file
+      { expiresIn: "24h" } // Token expiration time
+    );
+
+    // Return success response
+    return res.status(200).json({
+      success: true,
+      message: "Super admin login successful",
+      token,
+      admin: {
+        username: FIXED_SUPER_ADMIN.username,
+        role: "superadmin",
+      },
+    });
+  } catch (error) {
+    console.error("Super admin login error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+
+export {
+  superAdminLogin , 
+  getAdminList,
+  deleteAdminById,
+  createAdmin,
+  getStaffMember,
+  getadmin,
+  updateAdmin,
+};

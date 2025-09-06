@@ -41,6 +41,8 @@ const getStudentInfo = async (req, res) => {
 
       return {
         id: student.id,
+        firstName : student.firstName,
+        lastName : student.lastName,
         fullName,
         email: student.emailAddress,
         phoneNumber: student.mobileNumber,

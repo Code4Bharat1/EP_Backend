@@ -4,128 +4,107 @@ import FullTestResults from "../models/fullTestResults.model.js";  // Import the
 import Student from "../models/student.model.js";  // Import the Student model
 
 // Unified Controller to get highest test results for all students (both FullTest and MeTest)
-export const getHighestTestResultsForAllStudents = async (req, res) => {
+export const getHighestTestResultsForAdminStudents = async (req, res) => {
     try {
-        // Step 1: Get all students along with their full names (firstName, lastName)
+        const { adminId } = req // or req.query (depends on your route)
+
+        if (!adminId) {
+            return res.status(400).json({ message: "Admin ID is required." });
+        }
+
+        // Step 1: Get all students created by this admin
         const students = await Student.findAll({
-            attributes: ["id", "firstName", "lastName"], // Fetch id, firstName, and lastName
+            where: { addedByAdminId: adminId }, // <-- filter students by admin
+            attributes: ["id", "firstName", "lastName"],
         });
 
         if (!students || students.length === 0) {
-            return res.status(404).json({ message: "No students found." });
+            return res.status(404).json({ message: "No students found for this admin." });
         }
 
-        // Step 2: Get FullTestResults for each student from the FullTestResults table
+        // Step 2: Get all FullTestResults for these students
         const fullTestResults = await FullTestResults.findAll({
             where: {
                 studentId: {
-                    [Op.in]: students.map((student) => student.id), // Match student IDs
+                    [Op.in]: students.map((student) => student.id),
                 },
             },
-            attributes: [
-                "studentId", // studentId to link the student
-                "testName",  // Name of the test
-                "marksObtained", // Total marks obtained in the test
-                "totalMarks",  // Total possible marks in the test
-                "totalQuestions", // Number of questions in the test (for dynamic totalMarks calculation)
-            ],
+            attributes: ["studentId", "testName", "marksObtained", "totalQuestions"],
         });
 
-        // Step 3: Get MeTest results for each student from the MeTest table
+        // Step 3: Get all MeTest results for these students
         const meTestResults = await MeTest.findAll({
             where: {
                 studentId: {
-                    [Op.in]: students.map((student) => student.id), // Match student IDs
+                    [Op.in]: students.map((student) => student.id),
                 },
             },
-            attributes: [
-                "studentId", // studentId to link the student
-                "testName",  // Name of the test
-                "score", // Obtained score in the test
-                "totalQuestions", // Total number of questions in the test
-            ],
+            attributes: ["studentId", "testName", "score", "totalQuestions"],
         });
 
-        // Step 4: Initialize array to store results for both test types
-        const resultWithFullName = students.map((student) => {
-            // Get all FullTestResults for the current student
-            const studentFullTestResults = fullTestResults.filter(
-                (testResult) => testResult.studentId === student.id
-            );
+        // Step 4: Prepare results (same as before, but now only for admin's students)
+        const results = students
+            .map((student) => {
+                const studentFullTestResults = fullTestResults.filter(
+                    (test) => test.studentId === student.id
+                );
+                const studentMeTestResults = meTestResults.filter(
+                    (test) => test.studentId === student.id
+                );
 
-            // Get all MeTest results for the current student
-            const studentMeTestResults = meTestResults.filter(
-                (testResult) => testResult.studentId === student.id
-            );
+                if (studentFullTestResults.length === 0 && studentMeTestResults.length === 0) {
+                    return null;
+                }
 
-            // If no test results found for this student, skip
-            if (studentFullTestResults.length === 0 && studentMeTestResults.length === 0) {
-                return null;
-            }
+                const highestFullTestResult = studentFullTestResults.reduce(
+                    (prev, current) =>
+                        prev.marksObtained > current.marksObtained ? prev : current,
+                    { marksObtained: 0 }
+                );
 
-            // Step 5: Find the highest score from FullTestResults
-            const highestFullTestResult = studentFullTestResults.reduce((prev, current) => {
-                return prev.marksObtained > current.marksObtained ? prev : current;
-            }, { marksObtained: 0 });
+                const highestMeTestResult = studentMeTestResults.reduce(
+                    (prev, current) => (prev.score > current.score ? prev : current),
+                    { score: 0 }
+                );
 
-            // Step 6: Find the highest score from MeTest
-            const highestMeTestResult = studentMeTestResults.reduce((prev, current) => {
-                return prev.score > current.score ? prev : current;
-            }, { score: 0 });
+                const subjectNames = ["Physics", "Chemistry", "Biology"];
+                const resultsArr = [];
 
-            // Step 7: Calculate the total marks for MeTest (totalQuestions * 4)
-            const totalMarksMeTest = highestMeTestResult.totalQuestions * 4;
+                if (highestFullTestResult.marksObtained > 0) {
+                    resultsArr.push({
+                        fullName: `${student.firstName} ${student.lastName}`,
+                        studentId: student.id,
+                        testName: highestFullTestResult.testName,
+                        subject: subjectNames.join(", "),
+                        marksObtained: highestFullTestResult.marksObtained,
+                        totalMarks: highestFullTestResult.totalQuestions * 4,
+                    });
+                }
 
-            // Step 8: Calculate the total marks for FullTest (totalQuestions * 4)
-            const totalMarksFullTest = highestFullTestResult.totalQuestions * 4;
+                if (highestMeTestResult.score > 0) {
+                    resultsArr.push({
+                        fullName: `${student.firstName} ${student.lastName}`,
+                        studentId: student.id,
+                        testName: highestMeTestResult.testName,
+                        subject: subjectNames.join(", "),
+                        marksObtained: highestMeTestResult.score,
+                        totalMarks: highestMeTestResult.totalQuestions * 4,
+                    });
+                }
 
-            // Step 9: Constant subjects
-            const subjectNames = ["Physics", "Chemistry", "Biology"];
+                return resultsArr;
+            })
+            .filter((r) => r !== null)
+            .flat();
 
-            // Step 10: Prepare the result with both FullTest and MeTest entries for the student
-            const results = [];
-
-            // Only include results if the student has FullTest data
-            if (highestFullTestResult.marksObtained > 0) {
-                results.push({
-                    fullName: `${student.firstName} ${student.lastName}`,
-                    studentId: student.id,
-                    testName: highestFullTestResult.testName,
-                    subject: subjectNames.join(", "),
-                    marksObtained: highestFullTestResult.marksObtained,
-                    totalMarks: totalMarksFullTest,  // Calculate total marks dynamically
-                });
-            }
-
-            // Only include results if the student has MeTest data
-            if (highestMeTestResult.score > 0) {
-                results.push({
-                    fullName: `${student.firstName} ${student.lastName}`,
-                    studentId: student.id,
-                    testName: highestMeTestResult.testName,
-                    subject: subjectNames.join(", "),
-                    marksObtained: highestMeTestResult.score,
-                    totalMarks: totalMarksMeTest,  // Calculate total marks dynamically
-                });
-            }
-
-            return results;
-        }).filter(result => result !== null); // Remove students with no test results
-
-        // Flatten the array and return the results in the final response
-        const flattenedResults = resultWithFullName.flat();
-
-        // Step 11: Return the final response with the adjusted output format
         return res.status(200).json({
-            message: "Highest Test Results fetched successfully",
-            count: flattenedResults.length,
-            results: flattenedResults,
+            message: "Highest test results for admin's students fetched successfully",
+            count: results.length,
+            results,
         });
     } catch (error) {
-        console.error("Error fetching highest test results:", error);
-        return res.status(500).json({
-            message: "Internal server error",
-            error: error.message,
-        });
+        console.error("Error fetching results:", error);
+        return res.status(500).json({ message: "Internal server error", error: error.message });
     }
 };
+

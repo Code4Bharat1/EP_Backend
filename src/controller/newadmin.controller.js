@@ -607,14 +607,13 @@ const updateTest = async (req, res) => {
       exam_start_date,
       exam_end_date,
       status,
-    } = req.body; // Extract the editable fields from the request body
+    } = req.body;
 
-    // Ensure testid is provided in the request body
     if (!testid) {
       return res.status(400).json({ message: "Test ID is required" });
     }
 
-    // Find the test by ID
+    // Find the test
     const testToUpdate = await Admintest.findOne({
       where: { id: Number(testid) },
     });
@@ -623,25 +622,27 @@ const updateTest = async (req, res) => {
       return res.status(404).json({ message: "Test not found" });
     }
 
-    // Only update the provided fields, keep the rest as is
-    testToUpdate.testname = testname || testToUpdate.testname;
-    testToUpdate.batch_name = batch_name || testToUpdate.batch_name;
-    testToUpdate.duration = duration || testToUpdate.duration;
-    testToUpdate.exam_start_date =
-      exam_start_date || testToUpdate.exam_start_date;
-    testToUpdate.exam_end_date = exam_end_date || testToUpdate.exam_end_date;
-    testToUpdate.status = status || testToUpdate.status;
+    // ✅ Update only test-related fields
+    if (testname) testToUpdate.testname = testname;
+    if (batch_name) testToUpdate.batch_name = batch_name;
+    if (duration) testToUpdate.duration = duration;
+    if (exam_start_date) testToUpdate.exam_start_date = exam_start_date;
+    if (exam_end_date) testToUpdate.exam_end_date = exam_end_date;
+    if (status) testToUpdate.status = status;
 
-    // Save the changes to the database
+    // Save changes
     await testToUpdate.save();
 
-    // Send success response
-    res
-      .status(200)
-      .json({ message: "Test updated successfully", test: testToUpdate });
+    return res.status(200).json({
+      message: "Test updated successfully",
+      test: testToUpdate,
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("Error updating test:", error);
+    return res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
   }
 };
 

@@ -1,7 +1,7 @@
 import { Admin } from "../models/admin.model.js";
 import { Op, where } from "sequelize";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken"
+import jwt from "jsonwebtoken";
 
 const createAdmin = async (req, res) => {
   try {
@@ -20,51 +20,79 @@ const createAdmin = async (req, res) => {
       navbarColor,
       sidebarColor,
       otherColor,
-      role, // optional, defaults to "admin" in model
+      role,
     } = req.body;
 
-    // Who is adding this admin?
-    const creatorFromAuth = req.user?.id ?? null; // requires auth middleware to set req.user
-    const creatorFromBody =
-      req.body.addedByAdminId ??
-      req.body.createdByAdminId ??
-      req.body.created_by_admin_id ??
-      null;
-    const createdByAdminId = creatorFromAuth ?? creatorFromBody ?? null;
+    // Get creator's AdminId (unique string)
+    let creatorAdminId = null;
+    const MAX_SUB_ADMINS = 4;
+    // First try to get from authenticated user
+    if (req.user?.AdminId) {
+      creatorAdminId = req.user.AdminId;
+    }
+    // If not available, get from request body
+    else if (req.body.addedByAdminId) {
+      creatorAdminId = req.body.addedByAdminId;
+    }
+
     const processedWhatsappNumber =
       whatsappNumber && whatsappNumber.trim() !== "" ? whatsappNumber : null;
-    // Basic required field validation (removed AdminId since we'll generate it)
+
+    // Basic required field validation
     if (!PassKey || !name || !Email || !mobileNumber) {
       return res.status(400).json({ message: "Missing required fields." });
     }
 
     // If a creator was provided, validate they exist and have a valid role
-    if (createdByAdminId !== null) {
-      const creator = await Admin.findByPk(createdByAdminId, {
-        attributes: ["id", "role"],
+    if (creatorAdminId !== null) {
+      // Find creator by AdminId
+      const creator = await Admin.findOne({
+        where: { AdminId: creatorAdminId },
+        attributes: ["AdminId", "role"],
       });
+
       if (!creator) {
         return res.status(400).json({ message: "Creator admin not found." });
       }
+
       if (!["superadmin", "admin"].includes(creator.role)) {
         return res
           .status(403)
           .json({ message: "Only superadmin or admin can add admins." });
       }
+
+      // Check if creator has reached the limit of sub-admins (4)
+      const subAdminCount = await Admin.count({
+        where: { created_by_admin_id: creatorAdminId },
+      });
+
+      // Set the maximum number of sub-admins allowed
+
+      if (subAdminCount >= MAX_SUB_ADMINS) {
+        return res.status(403).json({
+          message: `You have reached the maximum limit of ${MAX_SUB_ADMINS} sub-admins.`,
+        });
+      }
     }
 
-    // Generate unique AdminId
-    const AdminId = `ADM-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    // Generate unique AdminId for the new admin
+    const newAdminId = `ADM-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    let emailExists = false;
 
-    // Uniqueness check for Email only (AdminId is now generated)
-    const existingAdmin = await Admin.findOne({
-      where: { Email },
-      attributes: ["id"], // avoid selecting all columns
-    });
-    if (existingAdmin) {
-      return res
-        .status(400)
-        .json({ message: "Admin with this Email already exists." });
+    if (creatorAdminId) {
+      emailExists = await Admin.findOne({
+        where: {
+          Email,
+          created_by_admin_id: creatorAdminId, // only check under this creator
+        },
+        attributes: ["id"],
+      });
+    }
+
+    if (emailExists) {
+      return res.status(400).json({
+        message: "Admin with this Email already exists under your account.",
+      });
     }
 
     // Hash the password
@@ -72,13 +100,13 @@ const createAdmin = async (req, res) => {
 
     // Create new admin
     const newAdmin = await Admin.create({
-      AdminId,
+      AdminId: newAdminId,
       PassKey: hashedPassKey,
       name,
       Course,
       Email,
       mobileNumber,
-      whatsappNumber: processedWhatsappNumber, // Use processed value
+      whatsappNumber: processedWhatsappNumber,
       StartDate,
       ExpiryDate,
       address,
@@ -88,7 +116,7 @@ const createAdmin = async (req, res) => {
       sidebarColor,
       otherColor,
       role: role || "admin",
-      created_by_admin_id: createdByAdminId,
+      created_by_admin_id: creatorAdminId,
       credentials: "pending",
     });
 
@@ -100,6 +128,11 @@ const createAdmin = async (req, res) => {
         name: newAdmin.name,
         email: newAdmin.Email,
         created_by_admin_id: newAdmin.created_by_admin_id,
+        remainingSubAdminSlots:
+          MAX_SUB_ADMINS -
+          (await Admin.count({
+            where: { created_by_admin_id: creatorAdminId },
+          })),
       },
     });
   } catch (error) {
@@ -348,7 +381,7 @@ const updateAdmin = async (req, res) => {
 // Fixed super admin credentials (in production, use environment variables)
 const FIXED_SUPER_ADMIN = {
   username: "rishi",
-  passkey:  "rishi",
+  passkey: "rishi",
 };
 
 const superAdminLogin = async (req, res) => {
@@ -405,9 +438,8 @@ const superAdminLogin = async (req, res) => {
   }
 };
 
-
 export {
-  superAdminLogin , 
+  superAdminLogin,
   getAdminList,
   deleteAdminById,
   createAdmin,

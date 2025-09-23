@@ -85,10 +85,10 @@ const Admintest = sequelizeCon.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    status: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
+      status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
 
     // ✅ New batchId field
     batchId: {

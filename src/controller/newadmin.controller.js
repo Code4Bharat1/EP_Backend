@@ -124,7 +124,6 @@ const loginAdmin = async (req, res) => {
 
     // Find the admin using AdminId instead of Email
     const admin = await Admin.findOne({ where: { AdminId } });
-
     if (!admin) {
       return res.status(401).json({ message: "Invalid AdminId or password." });
     }
@@ -134,14 +133,14 @@ const loginAdmin = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid AdminId or password." });
     }
-    console.log("admin : ", admin);
+    // console.log("admin : ", admin);
 
     let token;
     if (admin.created_by_admin_id == null) {
       console.log("null");
       // Generate a JWT token
       token = jwt.sign(
-        { id: admin.id, role: admin.role },
+        { id: admin.id, role: admin.role , adminId : admin.AdminId},
         config.get("jwtSecret"),
         {
           expiresIn: "30d", // Token expires in 30 days
@@ -150,7 +149,7 @@ const loginAdmin = async (req, res) => {
     } else {
       // Generate a JWT token
       token = jwt.sign(
-        { id: admin.created_by_admin_id, role: admin.role },
+        { id: admin.created_by_admin_id, role: admin.role , adminId : admin.AdminId},
         config.get("jwtSecret"),
         {
           expiresIn: "30d", // Token expires in 30 days
@@ -778,6 +777,7 @@ const getTestResults = async (req, res) => {
     // Get the count of test results
     const fullTestCount = testResults.length;
     const meTestCount = metestResults.length;
+    const generatedTestCount = generateTestResult.length;
 
     // Return the test results along with counts and subject totals
     return res.status(200).json({
@@ -785,6 +785,7 @@ const getTestResults = async (req, res) => {
       data: {
         fullTestCount,
         meTestCount,
+        generatedTestCount,
         fullTestResults: testResults,
         resultsWithTotalMarks,
         subjectTotals,

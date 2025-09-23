@@ -21,7 +21,7 @@ const Admin = sequelizeCon.define(
     Email: {
       type: DataTypes.STRING,
       allowNull: true,
-      unique: true,
+      // unique: true,
       validate: { isEmail: true },
     },
     mobileNumber: {
@@ -75,9 +75,9 @@ const Admin = sequelizeCon.define(
 
     // NEW: self-reference — which Admin created this admin
     created_by_admin_id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING,
       allowNull: true,
-      references: { model: "Admins", key: "id" }, // string to avoid forward ref
+      references: { model: "Admins", key: "AdminId" }, // keep reference if needed
       onDelete: "SET NULL",
       onUpdate: "CASCADE",
     },

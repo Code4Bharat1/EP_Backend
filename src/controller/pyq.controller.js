@@ -62,7 +62,7 @@ export const getDistinctYears = async (req, res) => {
 
 export const getQuestionsByYear = async (req, res) => {
   const { year } = req.body;
-  console.log("selected year ", year);
+  // console.log("selected year ", year);
 
   if (!year) {
     return res.status(400).json({ error: "Year is required in the request body" });

@@ -5,11 +5,13 @@ import Student from "../models/student.model.js";
 
 const batchesInfo = async (req, res) => {
   try {
-    const { batchId } = req.query;
+    const { batchId } = req.params;
 
     if (!batchId) {
       return res.status(400).json({ message: "Batch ID is required" });
     }
+
+    console.log("Received batchId:", batchId);
 
     // 1. Fetch batch details
     const batch = await Batch.findOne({
@@ -249,7 +251,7 @@ const getTestBasicInfo = async (req, res) => {
     // Fetch only the basic test info
     const test = await Admintest.findOne({
       where: { id: testId },
-      attributes: ["id", "testname", "subject"], // Only these fields
+      // attributes: ["id", "testname", "subject"], // Only these fields
     });
 
     if (!test) {
@@ -261,11 +263,7 @@ const getTestBasicInfo = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      testInfo: {
-        id: test.id,
-        name: test.testname,
-        subject: test.subject,
-      },
+      testInfo: test,
     });
   } catch (error) {
     console.error("Error fetching test info:", error);

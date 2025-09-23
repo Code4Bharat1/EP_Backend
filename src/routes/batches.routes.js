@@ -9,7 +9,7 @@ import {
 import { verifyToken } from "../middleware/jwtDecoder.middleware.js";
 const router = express.Router();
 
-router.get("/batchesInfo", batchesInfo);
+router.get("/batchesInfo/:batchId", batchesInfo);
 router.get("/newadmin/batches", getBatches);
 router.post("/test-info", batchesAndTestInfo);
 router.post("/batch-students", getStudentsByBatchId);

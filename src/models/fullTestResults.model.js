@@ -94,5 +94,5 @@ const FullTestResults = sequelizeCon.define("fullTestResults", {
   },
 });
 
-await sequelizeCon.sync(); 
+// await sequelizeCon.sync(); 
 export default FullTestResults;

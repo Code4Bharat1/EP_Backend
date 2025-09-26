@@ -43,6 +43,13 @@ import teacherRouter from './src/routes/teacher.router.js';
 import akashTest from "./src/routes/TestSeries.router.js"
 import r from './src/routes/coach.routes.js';
 import reviewTestRoute from './src/routes/reviewTest.route.js';
+import './src/models/ModelManager.js'
+import { sequelizeCon } from './src/init/dbConnection.js';
+
+
+
+await sequelizeCon.authenticate();
+await sequelizeCon.sync({ alter: false }); // ONE place only
 const app = express();
 const port = 3085;
 const corsOptions = {

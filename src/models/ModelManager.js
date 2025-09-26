@@ -9,6 +9,9 @@ import TestSeriesQuestions from "./TestSeriesQuestions.model.js";
 import TestResult from "./TestSeriesResult.js"; // ✅ import this
 import StudentAnalytics from "./studentAnalytics.model.js";
 
+import Admintest from "./admintest.model.js";
+import BatchAdmintest from "./BatchAdmintest.model.js";
+
 /* ----------------------- TestSeries <-> TestSeriesTest ----------------------- */
 
 TestSeries.hasMany(TestSeriesTest, {
@@ -81,14 +84,29 @@ TestResult.belongsTo(Student, {
 Student.hasOne(StudentAnalytics, {
   foreignKey: { name: "student_id", allowNull: false },
   as: "analytics",
-  onDelete: "CASCADE",   // delete analytics when student is deleted
+  onDelete: "CASCADE", // delete analytics when student is deleted
 });
-
 
 StudentAnalytics.belongsTo(Student, {
   foreignKey: { name: "student_id", allowNull: false },
   as: "student",
 });
+
+/* --------------------------- ✅ Batch <-> Admintest (Many-to-Many) --------------------------- */
+Batch.belongsToMany(Admintest, {
+  through: BatchAdmintest,
+  foreignKey: "batchId", // points to BatchAdmintest.batchId
+  otherKey: "admintestId", // points to BatchAdmintest.admintestId
+  as: "tests", // now you can do batch.getTests()
+});
+
+Admintest.belongsToMany(Batch, {
+  through: BatchAdmintest,
+  foreignKey: "admintestId",
+  otherKey: "batchId",
+  as: "batches", // now you can do admintest.getBatches()
+});
+
 // ✅ EXPORT all
 export {
   Student,
@@ -98,4 +116,6 @@ export {
   TestSeriesTest,
   TestSeriesQuestions,
   TestResult, // ✅ include this
+  Admintest, // ✅ export
+  BatchAdmintest, // ✅ export
 };

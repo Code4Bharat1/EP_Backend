@@ -2,7 +2,8 @@ import { Batch } from "../models/admin.model.js";
 import { StudentBatch } from "../models/BatchStudent.model.js";
 import Admintest from "../models/admintest.model.js";
 import Student from "../models/student.model.js";
-
+import BatchAdmintest from "../models/BatchAdmintest.model.js";
+// get the test info of that batch
 const batchesInfo = async (req, res) => {
   try {
     const { batchId } = req.params;
@@ -10,8 +11,6 @@ const batchesInfo = async (req, res) => {
     if (!batchId) {
       return res.status(400).json({ message: "Batch ID is required" });
     }
-
-    console.log("Received batchId:", batchId);
 
     // 1. Fetch batch details
     const batch = await Batch.findOne({
@@ -23,7 +22,7 @@ const batchesInfo = async (req, res) => {
       return res.status(404).json({ message: "Batch not found" });
     }
 
-    // 2. Fetch associated students using many-to-many relation
+    // 2. Fetch associated students
     const students = await batch.getStudents({
       attributes: [
         "id",
@@ -32,12 +31,11 @@ const batchesInfo = async (req, res) => {
         "mobileNumber",
         "domicileState",
       ],
-      joinTableAttributes: [], // hide join table info
+      joinTableAttributes: [], // hide join table
     });
 
-    // 3. Fetch all tests where batchName matches
-    const adminTests = await Admintest.findAll({
-      where: { batch_name: batch.batchName },
+    // 3. Fetch tests via many-to-many relation
+    const tests = await batch.getTests({
       attributes: [
         "id",
         "testname",
@@ -47,6 +45,7 @@ const batchesInfo = async (req, res) => {
         "duration",
         "subject",
       ],
+      joinTableAttributes: [], // hide join table
       order: [["exam_start_date", "DESC"]],
     });
 
@@ -54,13 +53,80 @@ const batchesInfo = async (req, res) => {
       success: true,
       batch,
       students,
-      tests: adminTests,
+      tests,
     });
   } catch (error) {
     console.error("Error fetching batch info:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+//get the batch info of that test
+export const testBatchesInfo = async (req, res) => {
+  try {
+    const { testId } = req.params;
+
+    if (!testId) {
+      return res.status(400).json({ message: "Test ID is required" });
+    }
+
+    console.log("Received testId:", testId);
+
+    // 1. Fetch the test and include associated batches + students
+    const test = await Admintest.findOne({
+      where: { id: testId },
+      attributes: [
+        "id",
+        "testname",
+        "subject",
+        "difficulty",
+        "marks",
+        "duration",
+        "exam_start_date",
+        "exam_end_date",
+      ],
+      include: [
+        {
+          model: Batch,
+          as: "batches", // 👈 must match your association alias
+          attributes: ["batchId", "batchName", "no_of_students"],
+          through: { attributes: [] }, // hide join table
+          include: [
+            {
+              model: Student,
+              as: "Students", // 👈 must match your batch-student alias
+              attributes: [
+                "id",
+                "fullName",
+                "emailAddress",
+                "mobileNumber",
+                "domicileState",
+              ],
+              through: { attributes: [] },
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!test) {
+      return res.status(404).json({ message: "Test not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      test,
+    });
+  } catch (error) {
+    console.error("Error fetching test batches info:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
     });
   }
 };
@@ -71,6 +137,60 @@ const getBatches = async (req, res) => {
     attributes: ["batchId", "batchName"],
   });
   res.json(batches);
+};
+
+//assign batch to the test
+export const assignBatchesToTest = async (req, res) => {
+  try {
+    const { batchIds } = req.body; // batchIds = array of batch IDs
+    const { testId } = req.params;
+
+    if (!testId || !Array.isArray(batchIds) || batchIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "testId and batchIds[] are required",
+      });
+    }
+
+    // Check if test exists
+    const test = await Admintest.findByPk(testId);
+    if (!test) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Test not found" });
+    }
+
+    // Check if all batches exist
+    const batches = await Batch.findAll({ where: { batchId: batchIds } });
+    if (batches.length !== batchIds.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Some batches not found",
+      });
+    }
+
+    // Create or skip duplicates (thanks to unique index on batchId + admintestId)
+    const assignments = await Promise.all(
+      batchIds.map(async (batchId) => {
+        return BatchAdmintest.findOrCreate({
+          where: { batchId, admintestId: testId },
+        });
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `Assigned ${batchIds.length} batch(es) to test ${testId}`,
+      assignments,
+    });
+  } catch (error) {
+    console.error("Error assigning batches:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to assign batches",
+      error: error.message,
+    });
+  }
 };
 
 const batchesAndTestInfo = async (req, res) => {

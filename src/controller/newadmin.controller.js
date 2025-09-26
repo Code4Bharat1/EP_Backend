@@ -12,6 +12,7 @@ import generateTestResult from "../models/generateTestresult.model.js";
 import { Batch } from "../models/admin.model.js";
 import { applyResultUpdate } from "../service/analyticsAggregator.js";
 import { StudentBatch } from "../models/BatchStudent.model.js";
+import { sequelizeCon } from "../init/dbConnection.js";
 
 // Controller to register a new admin
 const createAdmin = async (req, res) => {
@@ -140,7 +141,7 @@ const loginAdmin = async (req, res) => {
       console.log("null");
       // Generate a JWT token
       token = jwt.sign(
-        { id: admin.id, role: admin.role , adminId : admin.AdminId},
+        { id: admin.id, role: admin.role, adminId: admin.AdminId },
         config.get("jwtSecret"),
         {
           expiresIn: "30d", // Token expires in 30 days
@@ -149,7 +150,11 @@ const loginAdmin = async (req, res) => {
     } else {
       // Generate a JWT token
       token = jwt.sign(
-        { id: admin.created_by_admin_id, role: admin.role , adminId : admin.AdminId},
+        {
+          id: admin.created_by_admin_id,
+          role: admin.role,
+          adminId: admin.AdminId,
+        },
         config.get("jwtSecret"),
         {
           expiresIn: "30d", // Token expires in 30 days
@@ -216,10 +221,10 @@ export const getTestSummariesForAllStudents = async (req, res) => {
     });
   }
 };
-
 export const createAdmintest = async (req, res) => {
+  const t = await sequelizeCon.transaction();
   try {
-    // Extract data from request body
+    // ---- 1) Read payload
     const {
       addedByAdminId,
       testname,
@@ -239,60 +244,92 @@ export const createAdmintest = async (req, res) => {
       exam_end_date,
       instruction,
       batch_name,
-      batchId, // 👈 new
+      batchId, // legacy single
+      batchIds, // new: array of batchIds
       status,
     } = req.body;
 
-    // Decode JWT to extract admin ID
+    // ---- 2) Admin id (your existing decode logic)
     let decodedAdminId = null;
     if (addedByAdminId) {
       const decoded = jwt.decode(addedByAdminId);
-      if (decoded && decoded.id) {
-        decodedAdminId = decoded.id;
-      }
+      if (decoded && decoded.id) decodedAdminId = decoded.id;
     }
-
     const adminId = decodedAdminId || null;
 
-    // Convert subject array to string if needed
+    // ---- 3) Normalize subject (array -> csv)
     const subjectString = Array.isArray(subject)
       ? subject.join(", ")
       : subject || null;
 
-    // Build the test data
+    // ---- 4) Normalize batches (support both legacy single & new array)
+    let targetBatchIds = [];
+    if (Array.isArray(batchIds)) targetBatchIds = batchIds;
+    if (batchId) targetBatchIds.push(batchId);
+    // de-duplicate & remove falsy
+    targetBatchIds = [...new Set(targetBatchIds.filter(Boolean))];
+
+    // ---- 5) Build test data (do NOT include batchId here anymore)
     const newTestData = {
-      addedByAdminId: adminId,
+      addedByAdminId: adminId, // ensure your model maps field if DB is camelCase
       testname: testname || null,
       difficulty: difficulty || null,
       subject: subjectString,
-      marks: marks || null,
-      positivemarks: positivemarks || null,
-      negativemarks: negativemarks || null,
-      correctanswer: correctanswer || null,
-      question_ids: question_ids || null,
-      unitName: unitName || null,
-      topic_name: topic_name || null,
-      no_of_questions: no_of_questions || null,
-      question_id: question_id || null,
-      duration: duration || null,
+      marks: marks ?? null,
+      positivemarks: positivemarks ?? null,
+      negativemarks: negativemarks ?? null,
+      correctanswer: correctanswer ?? null,
+      question_ids: question_ids ?? null,
+      unitName: unitName ?? null,
+      topic_name: topic_name ?? null,
+      no_of_questions: no_of_questions ?? null,
+      question_id: question_id ?? null,
+      duration: duration ?? null,
       exam_start_date: exam_start_date ? new Date(exam_start_date) : null,
       exam_end_date: exam_end_date ? new Date(exam_end_date) : null,
-      instruction: instruction || null,
-      batch_name: batch_name || null,
-      batchId: batchId || null, // 👈 added batchId
-      status: status || null,
+      instruction: instruction ?? null,
+      batch_name: batch_name ?? null,
+      status: status ?? null,
     };
 
-    console.log("Test Data to be inserted:", newTestData);
+    // ---- 6) Create test
+    const newTest = await Admintest.create(newTestData, { transaction: t });
 
-    // Create the test
-    const newTest = await Admintest.create(newTestData);
+    // ---- 7) If batches provided, link them via M:N
+    let linkedBatchIds = [];
+    if (targetBatchIds.length) {
+      const batches = await Batch.findAll({
+        where: { batchId: { [Op.in]: targetBatchIds } },
+        transaction: t,
+      });
+
+      // Optional: warn if some batchIds were invalid
+      const foundIds = new Set(batches.map((b) => b.batchId));
+      const missing = targetBatchIds.filter((x) => !foundIds.has(x));
+      if (missing.length) {
+        // You can choose to error instead:
+        // throw new Error(`Invalid batchIds: ${missing.join(", ")}`);
+        console.warn("createAdmintest: missing batchIds:", missing);
+      }
+
+      if (batches.length) {
+        await newTest.addBatches(batches, { transaction: t }); // uses the join table
+        linkedBatchIds = batches.map((b) => b.batchId);
+      }
+    }
+
+    await t.commit();
 
     return res.status(201).json({
       message: "Test created successfully",
       test: newTest,
+      linkedBatchIds, // helpful for UI confirmation
+      skippedBatchIds: targetBatchIds.filter(
+        (id) => !linkedBatchIds.includes(id)
+      ),
     });
   } catch (error) {
+    await t.rollback();
     console.error("Error creating test:", error);
     return res.status(500).json({
       message: "Failed to create test",
@@ -328,6 +365,7 @@ const getTestbyAdminId = async (req, res) => {
       tests: studentTests,
     });
   } catch (error) {
+    console.log(error);
     console.error("Error Fetching Test");
     return res.status(500).json({
       message: "Failed to retrieve test details",
@@ -643,7 +681,6 @@ const updateTest = async (req, res) => {
     });
   }
 };
-
 
 //getting students, batches, and tests created by user
 
@@ -1193,6 +1230,37 @@ const getUserSubmittedTestsByEmail = async (req, res) => {
   } catch (error) {
     console.error("Error fetching submitted tests by email:", error);
     return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteAdmintest = async (req, res) => {
+  try {
+    const { testId } = req.body;
+
+    if (!testId) {
+      return res.status(400).json({ message: "Test ID is required" });
+    }
+
+    // Check if test exists
+    const test = await Admintest.findByPk(testId);
+    if (!test) {
+      return res.status(404).json({ message: "Test not found" });
+    }
+
+    // Delete the test (will cascade to BatchAdmintests due to FK constraints)
+    await test.destroy();
+
+    return res.status(200).json({
+      success: true,
+      message: `Test with ID ${testId} deleted successfully`,
+    });
+  } catch (error) {
+    console.error("Error deleting test:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete test",
+      error: error.message,
+    });
   }
 };
 

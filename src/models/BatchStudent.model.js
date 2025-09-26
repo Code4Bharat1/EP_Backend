@@ -39,6 +39,6 @@ const StudentBatch = sequelizeCon.define(
 // …and/or:
 StudentBatch.removeAttribute('id');
 
-await sequelizeCon.sync({ alter: false });
+// await sequelizeCon.sync({ alter: false });
 
 export { StudentBatch };

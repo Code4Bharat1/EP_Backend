@@ -346,17 +346,26 @@ const getTestbyAdminId = async (req, res) => {
 
     if (!adminId) {
       return res.status(400).json({
-        message: "student id is required",
+        message: "Admin ID is required",
       });
     }
 
+    // Fetch tests created by admin along with associated batches
     const studentTests = await Admintest.findAll({
       where: { addedByAdminId: adminId },
+      include: [
+        {
+          model: Batch,
+          as: "batches", // Use alias defined in your association
+          attributes: ["batchId", "batchName", "no_of_students"], // Add other batch fields as necessary
+          through: { attributes: [] }, // Don't include join table attributes
+        },
+      ],
     });
 
     if (studentTests.length === 0) {
       return res.status(404).json({
-        message: "No test found for your admin",
+        message: "No tests found for your admin",
       });
     }
 
@@ -454,6 +463,7 @@ export const getTestDetailsById = async (req, res) => {
       });
     }
 
+    // Fetch test details along with associated batches
     const testDetails = await Admintest.findOne({
       where: { id: testid },
       attributes: [
@@ -477,6 +487,14 @@ export const getTestDetailsById = async (req, res) => {
         "batch_name",
         "status",
       ],
+      include: [
+        {
+          model: Batch,
+          as: "batches", // Alias from your association
+          attributes: ["batchId", "batchName", "no_of_students"], // Add more attributes as needed
+          through: { attributes: [] }, // Don't include join table attributes
+        },
+      ],
     });
 
     if (!testDetails) {
@@ -485,9 +503,15 @@ export const getTestDetailsById = async (req, res) => {
       });
     }
 
+    // Add batchCount to the response to show the number of batches assigned to this test
+    const response = {
+      ...testDetails.toJSON(),
+      batchCount: testDetails.batches.length, // Add batch count
+    };
+
     return res.status(200).json({
       message: "Test details fetched successfully",
-      test: testDetails,
+      test: response,
     });
   } catch (error) {
     console.error("Error retrieving test details:", error);

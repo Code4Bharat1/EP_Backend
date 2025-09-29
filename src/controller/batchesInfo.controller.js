@@ -395,10 +395,112 @@ const getTestBasicInfo = async (req, res) => {
   }
 };
 
+const getBatchesForAdmin = async (req, res) => {
+  try {
+    const { adminId } = req.params; // Assuming the adminId is passed as a URL parameter
+
+    if (!adminId) {
+      return res.status(400).json({
+        message: "Admin ID is required",
+      });
+    }
+
+    // Fetch batches for the given adminId
+    const batches = await Batch.findAll({
+      where: { admin_id : adminId }, // Filter by adminId (assuming this field exists in the Batch model)
+      attributes: ["batchId", "batchName"],
+    });
+
+    if (!batches || batches.length === 0) {
+      return res.status(404).json({
+        message: "No batches found for this admin",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Batches fetched successfully",
+      batches,
+    });
+  } catch (error) {
+    console.error("Error fetching batches:", error);
+    return res.status(500).json({
+      message: "Failed to retrieve batches",
+      error: error.message,
+    });
+  }
+};
+
+export const removeBatchesFromTest = async (req, res) => {
+  try {
+    const { batchIds } = req.body; // batchIds = array of batch IDs
+    const { testId } = req.params;
+
+    if (!testId || !Array.isArray(batchIds) || batchIds.length === 0) {
+      console.log("Invalid input:", { testId, batchIds });
+      return res.status(400).json({
+        success: false,
+        message: "testId and batchIds[] are required",
+      });
+    }
+
+    // Check if test exists
+    const test = await Admintest.findByPk(testId);
+    if (!test) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Test not found" });
+    }
+
+    // Check if all batches exist
+    const batches = await Batch.findAll({ where: { batchId: batchIds } });
+    if (batches.length !== batchIds.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Some batches not found",
+      });
+    }
+
+    // Remove batch associations
+    const removedAssignments = await Promise.all(
+      batchIds.map(async (batchId) => {
+        return BatchAdmintest.destroy({
+          where: {
+            batchId,
+            admintestId: testId,
+          },
+        });
+      })
+    );
+
+    // Check if removal was successful
+    if (removedAssignments.every((result) => result > 0)) {
+      return res.status(200).json({
+        success: true,
+        message: `Removed ${batchIds.length} batch(es) from test ${testId}`,
+      });
+    } else {
+      return res.status(404).json({
+        success: false,
+        message: "Some batches were not assigned to this test",
+      });
+    }
+  } catch (error) {
+    console.error("Error removing batches:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to remove batches",
+      error: error.message,
+    });
+  }
+};
+
+
+
 export {
   batchesInfo,
   getBatches,
   batchesAndTestInfo,
   getStudentsByBatchId,
   getTestBasicInfo,
+  getBatchesForAdmin,
 };

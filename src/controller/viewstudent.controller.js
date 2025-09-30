@@ -41,8 +41,8 @@ const getStudentInfo = async (req, res) => {
 
       return {
         id: student.id,
-        firstName : student.firstName,
-        lastName : student.lastName,
+        firstName: student.firstName,
+        lastName: student.lastName,
         fullName,
         email: student.emailAddress,
         phoneNumber: student.mobileNumber,
@@ -124,7 +124,6 @@ const getStudentInfoByBatch = async (req, res) => {
 // Controller to save student information with specific fields
 const saveBasicStudentData = async (req, res) => {
   try {
-    // Destructure the required data from the request body
     const {
       email,
       password,
@@ -136,136 +135,60 @@ const saveBasicStudentData = async (req, res) => {
       gender,
       addedByAdminId,
     } = req.body;
-    
-    console.log("=== ACTUAL API DEBUG ===");
-    console.log("Request body:", JSON.stringify(req.body, null, 2));
-    console.log("Password from request:", password);
-    console.log("Password type:", typeof password);
-    console.log("Password length:", password.length);
-    
-    // Validate if all required fields are present
+
     if (
       !email ||
       !password ||
       !firstName ||
-      // !lastName || // Now required
+      !lastName ||
       !dateOfBirth ||
       !phoneNumber ||
       !gender ||
       !addedByAdminId
     ) {
-      return res.status(400).json({
-        message: "All fields are required (firstName, lastName are mandatory)",
-      });
-    }
-    
-    // Ensure password is a non-empty string
-    if (typeof password !== "string" || password.trim() === "") {
-      return res.status(400).json({
-        message: "Password must be a non-empty string",
-      });
-    }
-    
-    // Validate email format
-    const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        message: "Invalid email format",
-      });
-    }
-    
-    // Check if the email already exists for this admin
-    const emailExists = await Student.findOne({
-      where: { addedByAdminId, emailAddress: email },
-    });
-    if (emailExists) {
       return res
-        .status(409)
-        .json({ message: "Email already exists for this admin" });
+        .status(400)
+        .json({ message: "All required fields must be provided" });
     }
-    
-    // Check mobile uniqueness per admin
-    const mobileExists = await Student.findOne({
-      where: { addedByAdminId, mobileNumber: phoneNumber },
-    });
-    if (mobileExists) {
-      return res
-        .status(409)
-        .json({ message: "Mobile number already exists for this admin" });
-    }
-    
-    // Ensure password is a string and trim whitespace
+
+    // Ensure password is clean
     const passwordString = String(password).trim();
-    console.log("Processed password string:", passwordString);
-    console.log("Processed password type:", typeof passwordString);
-    
-    // Hash the password
+
+    // ✅ Hash password once
+    console.log("passwordString :", passwordString);
     const hashedPassword = await bcrypt.hash(passwordString, 10);
-    console.log("Hashed password:", hashedPassword);
-    
-    // Create a new student instance with the data
+    console.log("hashedPassword :", hashedPassword);
+
     const newStudent = await Student.create({
       emailAddress: email,
-      password: hashedPassword,
-      firstName: firstName,
-      middleName: middleName || null, // Optional field
-      lastName: lastName,
-      dateOfBirth: dateOfBirth,
+      password: hashedPassword, // only the hash stored
+      firstName,
+      middleName: middleName || null,
+      lastName,
+      dateOfBirth,
       mobileNumber: phoneNumber,
-      gender: gender,
-      addedByAdminId: addedByAdminId,
-      // ... (rest of the fields)
+      gender,
+      addedByAdminId,
     });
-    
-    // Verify the stored password immediately after creation
-    const createdStudent = await Student.findByPk(newStudent.id);
-    console.log("Stored password in DB:", createdStudent.password);
-    console.log(
-      "Hash matches stored hash:",
-      hashedPassword === createdStudent.password
-    );
-    
-    // Test the password verification immediately
-    const isMatch = await bcrypt.compare(
-      passwordString,
-      createdStudent.password
-    );
-    console.log("Password verification test:", isMatch);
-    console.log("=== END ACTUAL API DEBUG ===");
-    
-    // Return the created student data (excluding sensitive fields)
+
+    // Response without password
     const studentResponse = {
       id: newStudent.id,
       emailAddress: newStudent.emailAddress,
       firstName: newStudent.firstName,
-      middleName: newStudent.middleName,
       lastName: newStudent.lastName,
       dateOfBirth: newStudent.dateOfBirth,
       mobileNumber: newStudent.mobileNumber,
       gender: newStudent.gender,
     };
-    
-    // Send a success response with the created student data
+
     return res.status(201).json({
       message: "Student created successfully",
       student: studentResponse,
     });
   } catch (error) {
     console.error("Error saving student data:", error);
-    // Handle specific Sequelize errors
-    if (error.name === "SequelizeValidationError") {
-      return res.status(400).json({
-        message: error.errors.map((err) => err.message).join(", "),
-      });
-    }
-    if (error.name === "SequelizeUniqueConstraintError") {
-      return res.status(409).json({
-        message: error.errors.map((err) => err.message).join(", "),
-      });
-    }
-    return res.status(500).json({
-      message: "Internal Server Error",
-    });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
@@ -448,184 +371,114 @@ const updateBatchIdForUsers = async (req, res) => {
   try {
     const { emails, batchId } = req.body;
 
-    // Validate if emails and batchId are provided
     if (!emails || !Array.isArray(emails) || emails.length === 0) {
-      return res.status(400).json({
-        message: "Emails are required and should be an array",
-      });
+      return res
+        .status(400)
+        .json({ message: "Emails are required and should be an array" });
     }
 
     if (!batchId) {
-      return res.status(400).json({
-        message: "Batch ID is required",
-      });
+      return res.status(400).json({ message: "Batch ID is required" });
     }
 
-    // Loop through each email and update the corresponding user
-    const updatedStudents = [];
-    for (let email of emails) {
-      const student = await Student.findOne({
+    // Bulk update
+    const [affectedCount] = await Student.update(
+      { batchId },
+      {
         where: {
-          emailAddress: email,
+          emailAddress: emails,
         },
-      });
-
-      if (!student) {
-        // If student not found, skip to the next email
-        continue;
       }
+    );
 
-      // Update the batchId for the student
-      student.batchId = batchId;
-      await student.save();
-
-      updatedStudents.push(student); // Collect the updated student data
+    if (affectedCount === 0) {
+      return res
+        .status(404)
+        .json({ message: "No students found with the provided emails" });
     }
 
-    // If no students were updated, send an appropriate response
-    if (updatedStudents.length === 0) {
-      return res.status(404).json({
-        message: "No students found with the provided emails",
-      });
-    }
+    // Fetch updated students for response
+    const updatedStudents = await Student.findAll({
+      where: { emailAddress: emails },
+      attributes: ["id", "emailAddress", "firstName", "lastName", "batchId"], // return safe fields
+    });
 
-    // Send a success response
     return res.status(200).json({
-      message: `${updatedStudents.length} student(s) updated successfully`,
+      message: `${affectedCount} student(s) updated successfully`,
       updatedStudents,
     });
   } catch (error) {
     console.error("Error updating batchId:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-    });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
 const updateStudentData = async (req, res) => {
   try {
-    // Destructure the required data from the request body
-    const { email, firstName, dateOfBirth, phoneNumber, gender } = req.body;
-    const studentId = req.body.id;
-    console.log("=== ACTUAL API DEBUG ===");
-    console.log("Request body:", JSON.stringify(req.body, null, 2));
 
-    // Validate if all required fields are present
+
+    const {
+      id,
+      firstName,
+      lastName,
+      emailAddress,
+      dateOfBirth,
+      mobileNumber,
+      gender,
+    } = req.body;
+
+    // Validate required fields
+    if (!id) {
+      return res.status(400).json({ message: "Student ID is required" });
+    }
     if (
-      !studentId ||
-      !email ||
       !firstName ||
+      !lastName ||
+      !emailAddress ||
       !dateOfBirth ||
-      !phoneNumber ||
+      !mobileNumber ||
       !gender
     ) {
-      console.log(
-        studentId,
-        email,
-        firstName,
-        dateOfBirth,
-        phoneNumber,
-        gender
-      );
       return res.status(400).json({
-        message: "All fields are required",
+        message:
+          "All fields (firstName, lastName, emailAddress, dateOfBirth, mobileNumber, gender) are required",
       });
-    }
-
-    // Validate email format
-    const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        message: "Invalid email format",
-      });
-    }
-
-    // Check if the email already exists for this admin
-    const emailExists = await Student.findOne({
-      where: { emailAddress: email, id: { [Sequelize.Op.ne]: studentId } },
-    });
-    if (emailExists) {
-      return res.status(409).json({ message: "Email already exists" });
-    }
-
-    // Check mobile uniqueness
-    const mobileExists = await Student.findOne({
-      where: {
-        mobileNumber: phoneNumber,
-        id: { [Sequelize.Op.ne]: studentId },
-      },
-    });
-    if (mobileExists) {
-      return res.status(409).json({ message: "Mobile number already exists" });
     }
 
     // Find the student by ID
-    const student = await Student.findByPk(studentId);
-
+    const student = await Student.findByPk(id);
     if (!student) {
-      return res.status(404).json({
-        message: "Student not found",
-      });
+      return res.status(404).json({ message: "Student not found" });
     }
 
-    // Update the student's details (skip password and addedByAdminId update)
-    student.emailAddress = email;
+    // Update fields
     student.firstName = firstName;
+    student.lastName = lastName;
+    student.emailAddress = emailAddress;
     student.dateOfBirth = dateOfBirth;
-    student.mobileNumber = phoneNumber;
+    student.mobileNumber = mobileNumber;
     student.gender = gender;
 
-    // Save the updated student data
     await student.save();
 
-    // Return the updated student data (excluding sensitive fields)
-    const studentResponse = {
-      id: student.id,
-      emailAddress: student.emailAddress,
-      firstName: student.firstName,
-      dateOfBirth: student.dateOfBirth,
-      mobileNumber: student.mobileNumber,
-      gender: student.gender,
-    };
 
-    console.log("=== END ACTUAL API DEBUG ===");
-
-    // Send a success response with the updated student data
     return res.status(200).json({
       message: "Student updated successfully",
-      student: studentResponse,
+      student: {
+        id: student.id,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        emailAddress: student.emailAddress,
+        dateOfBirth: student.dateOfBirth,
+        mobileNumber: student.mobileNumber,
+        gender: student.gender,
+      },
     });
   } catch (error) {
     console.error("Error updating student data:", error);
-
-    // Handle specific Sequelize errors
-    if (error.name === "SequelizeValidationError") {
-      return res.status(400).json({
-        message: error.errors.map((err) => err.message).join(", "),
-      });
-    }
-
-    if (error.name === "SequelizeUniqueConstraintError") {
-      return res.status(409).json({
-        message: error.errors.map((err) => err.message).join(", "),
-      });
-    }
-
-    return res.status(500).json({
-      message: "Internal Server Error",
-    });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
-
-
-
-
-
-
-
-
-// batch realted controller
 
 // Controller to save new batch information
 const createBatch = async (req, res) => {
@@ -737,12 +590,14 @@ const updateBatch = async (req, res) => {
       include: {
         model: Student,
         through: { attributes: [] },
-        as: 'Students'  // This must match the alias in your association
-      }
+        as: "Students", // This must match the alias in your association
+      },
     });
 
     if (!batch) {
-      return res.status(404).json({ message: "Batch not found or unauthorized" });
+      return res
+        .status(404)
+        .json({ message: "Batch not found or unauthorized" });
     }
 
     // Update batch fields if provided
@@ -754,28 +609,36 @@ const updateBatch = async (req, res) => {
     if (studentIds !== undefined) {
       // Validate all student IDs exist
       const students = await Student.findAll({
-        where: { id: studentIds }
+        where: { id: studentIds },
       });
 
       if (students.length !== studentIds.length) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "One or more student IDs are invalid",
-          invalidIds: studentIds.filter(id => !students.some(s => s.id === id))
+          invalidIds: studentIds.filter(
+            (id) => !students.some((s) => s.id === id)
+          ),
         });
       }
 
       // Get current student IDs - use the correct alias
-      const currentStudentIds = batch.Students.map(student => student.id);
-      
+      const currentStudentIds = batch.Students.map((student) => student.id);
+
       // Find students to add (new IDs not in current list)
-      const studentsToAdd = studentIds.filter(id => !currentStudentIds.includes(id));
-      
+      const studentsToAdd = studentIds.filter(
+        (id) => !currentStudentIds.includes(id)
+      );
+
       // Find students to remove (current IDs not in new list)
-      const studentsToRemove = currentStudentIds.filter(id => !studentIds.includes(id));
+      const studentsToRemove = currentStudentIds.filter(
+        (id) => !studentIds.includes(id)
+      );
 
       // Add new students
       if (studentsToAdd.length > 0) {
-        const newStudents = students.filter(student => studentsToAdd.includes(student.id));
+        const newStudents = students.filter((student) =>
+          studentsToAdd.includes(student.id)
+        );
         await batch.addStudents(newStudents);
       }
 
@@ -799,19 +662,19 @@ const updateBatch = async (req, res) => {
       include: {
         model: Student,
         through: { attributes: [] },
-        as: 'Students'  // Use the same alias here
-      }
+        as: "Students", // Use the same alias here
+      },
     });
 
     res.status(200).json({
       message: "Batch updated successfully",
-      batch: updatedBatch
+      batch: updatedBatch,
     });
   } catch (error) {
     console.error("Error updating batch:", error);
-    res.status(500).json({ 
-      message: "Internal Server Error", 
-      error: error.message 
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
     });
   }
 };
@@ -850,9 +713,6 @@ const deleteBatch = async (req, res) => {
       .json({ message: "Internal Server Error", error: error.message });
   }
 };
-
-
-
 
 // controllers to get batch by ID
 const getBatchById = async (req, res) => {
@@ -952,7 +812,6 @@ const getBatchInfo = async (req, res) => {
     });
   }
 };
-
 
 export default getStudentInfo;
 export {

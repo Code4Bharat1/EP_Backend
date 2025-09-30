@@ -363,15 +363,8 @@ const login = async (req, res) => {
     console.log("Processed login password:", passwordString);
 
     // Compare the entered password with the hashed password
-    const isPasswordValid = await bcrypt.compare(
-      passwordString,
-      student.password
-    );
-
-    console.log("Password validation result:", isPasswordValid);
-
+    const isPasswordValid = await bcrypt.compare(password, student.password);
     if (!isPasswordValid) {
-      console.log("Password validation failed for email:", emailAddress);
       return res.status(400).json({ message: "Invalid email or password" });
     }
 

@@ -9,7 +9,8 @@ import {
   testBatchesInfo,
   assignBatchesToTest,
   getBatchesForAdmin,
-  removeBatchesFromTest
+  removeBatchesFromTest,
+  getBatchesByStudentId
 } from "../controller/batchesInfo.controller.js";
 import { verifyToken } from "../middleware/jwtDecoder.middleware.js";
 const router = express.Router();
@@ -22,5 +23,8 @@ router.post("/test-info", batchesAndTestInfo); // get test and batch info
 router.post("/batch-students", getStudentsByBatchId); // get batch student info
 router.post("/test-basic-info", getTestBasicInfo); // get batch info
 router.get("/:adminId", getBatchesForAdmin); // get batch details for admin
-router.delete('/test/:testId/remove-batches', removeBatchesFromTest);
+router.delete('/test/:testId/remove-batches', removeBatchesFromTest); // remove the batch from the test
+router.get("/student/:studentId", getBatchesByStudentId) // give the batch info by student id
+
+
 export default router;

@@ -494,7 +494,44 @@ export const removeBatchesFromTest = async (req, res) => {
   }
 };
 
+export const getBatchesByStudentId = async (req, res) => {
+  try {
+    const { studentId } = req.params;
 
+    if (!studentId) {
+      return res.status(400).json({ success: false, message: "Student ID is required" });
+    }
+
+    // Find student with related batches
+    const student = await Student.findByPk(studentId, {
+      include: [
+        {
+          model: Batch,
+          through: { attributes: [] }, // hide join table columns
+          attributes: ["batchId", "batchName", "no_of_students"],
+        },
+      ],
+    });
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      studentId: student.id,
+      studentName: student.fullName || `${student.firstName} ${student.lastName}`,
+      batches: student.Batches, // populated by association
+    });
+  } catch (error) {
+    console.error("Error fetching student batches:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
 
 export {
   batchesInfo,

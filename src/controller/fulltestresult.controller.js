@@ -18,19 +18,20 @@ const submitTest = async (req, res) => {
         .status(401)
         .json({ error: "Unauthorized: Invalid token format" });
     }
+
     // ✅ Verify and Decode Token
     const secret = config.get("jwtSecret");
     let studentId;
     try {
       const decoded = jwt.verify(token, secret);
-      studentId = decoded.id; // Extract student ID from token
+      studentId = decoded.id;
     } catch (err) {
       return res
         .status(403)
         .json({ error: "Unauthorized: Invalid or expired token" });
     }
-    // console.log("✅ Student ID extracted:", studentId); // Debugging log
-    // ✅ Extract test submission data from request body
+
+    // ✅ Extract test submission data
     const {
       correctAnswers = [],
       wrongAnswers = [],
@@ -38,6 +39,7 @@ const submitTest = async (req, res) => {
       startTime,
       endTime,
       total_marks,
+      testName, // <-- 👈 pick testName if provided
     } = req.body;
 
     if (!correctAnswers || !wrongAnswers || !notAttempted) {
@@ -54,142 +56,101 @@ const submitTest = async (req, res) => {
         .status(400)
         .json({ error: "Invalid start or end time format." });
     }
+
     const totalQuestions =
       correctAnswers.length + wrongAnswers.length + notAttempted.length;
     const correctAnswersCount = correctAnswers.length;
     const wrongAnswersCount = wrongAnswers.length;
     const notAttemptedCount = notAttempted.length;
-    // console.log("✅ Total Questions:", totalQuestions);
+
     let subjectWisePerformance = [];
     let chapterWisePerformance = [];
-    correctAnswers.forEach(
-      ([
-        questionId,
-        subject,
-        chapter,
-        selectedOption,
-        correctOption,
-        marks,
-        timeSpent,
-      ]) => {
-        if (!subject || !chapter) return;
 
-        // Update subject-wise performance
-        let existingSubject = subjectWisePerformance.find(
-          (s) => s[0] === subject
-        );
-        if (!existingSubject) {
-          existingSubject = [subject, 0, 0, 0, 0];
-          subjectWisePerformance.push(existingSubject);
-        }
-        existingSubject[1] += 1;
-        existingSubject[4] += marks || 0;
-        let existingChapter = chapterWisePerformance.find(
-          (c) => c[0] === chapter
-        );
-        if (!existingChapter) {
-          existingChapter = [chapter, 0, 0, 0]; // ["chapter", correct, incorrect, marks]
-          chapterWisePerformance.push(existingChapter);
-        }
-
-        existingChapter[1] += 1; // Increment correct
-        existingChapter[3] += marks || 0; // Increment marks
-      }
-    );
-
-    // ✅ Process incorrect answers
-    wrongAnswers.forEach(
-      ([
-        questionId,
-        subject,
-        chapter,
-        selectedOption,
-        correctOption,
-        marks,
-        timeSpent,
-      ]) => {
-        if (!subject || !chapter) return;
-
-        let existingSubject = subjectWisePerformance.find(
-          (s) => s[0] === subject
-        );
-        if (!existingSubject) {
-          existingSubject = [subject, 0, 0, 0, 0]; // ["subject", correct, incorrect, notAttempted, marks]
-          subjectWisePerformance.push(existingSubject);
-        }
-        existingSubject[2] += 1; // Increment incorrect
-        existingSubject[4] += marks || 0; // Increment marks
-
-        let existingChapter = chapterWisePerformance.find(
-          (c) => c[0] === chapter
-        );
-        if (!existingChapter) {
-          existingChapter = [chapter, 0, 0, 0]; // ["chapter", correct, incorrect, marks]
-          chapterWisePerformance.push(existingChapter);
-        }
-
-        existingChapter[2] += 1; // Increment incorrect
-        existingChapter[3] += marks || 0; // Increment marks
-      }
-    );
-
-    // ✅ Process unattempted questions
-    notAttempted.forEach(([questionId, subject, chapter]) => {
+    // ✅ Process correct, wrong, notAttempted (same as before)
+    correctAnswers.forEach(([qId, subject, chapter, , , marks]) => {
       if (!subject || !chapter) return;
-
-      let existingSubject = subjectWisePerformance.find(
-        (s) => s[0] === subject
-      );
-      if (!existingSubject) {
-        existingSubject = [subject, 0, 0, 0, 0];
-        subjectWisePerformance.push(existingSubject);
+      let subj = subjectWisePerformance.find((s) => s[0] === subject);
+      if (!subj) {
+        subj = [subject, 0, 0, 0, 0];
+        subjectWisePerformance.push(subj);
       }
-      existingSubject[3] += 1; // Increment notAttempted
-      let existingChapter = chapterWisePerformance.find(
-        (c) => c[0] === chapter
-      );
-      if (!existingChapter) {
-        existingChapter = [chapter, 0, 0, 0]; // ["chapter", correct, incorrect, marks]
-        chapterWisePerformance.push(existingChapter);
+      subj[1] += 1;
+      subj[4] += marks || 0;
+
+      let chap = chapterWisePerformance.find((c) => c[0] === chapter);
+      if (!chap) {
+        chap = [chapter, 0, 0, 0];
+        chapterWisePerformance.push(chap);
+      }
+      chap[1] += 1;
+      chap[3] += marks || 0;
+    });
+
+    wrongAnswers.forEach(([qId, subject, chapter, , , marks]) => {
+      if (!subject || !chapter) return;
+      let subj = subjectWisePerformance.find((s) => s[0] === subject);
+      if (!subj) {
+        subj = [subject, 0, 0, 0, 0];
+        subjectWisePerformance.push(subj);
+      }
+      subj[2] += 1;
+      subj[4] += marks || 0;
+
+      let chap = chapterWisePerformance.find((c) => c[0] === chapter);
+      if (!chap) {
+        chap = [chapter, 0, 0, 0];
+        chapterWisePerformance.push(chap);
+      }
+      chap[2] += 1;
+      chap[3] += marks || 0;
+    });
+
+    notAttempted.forEach(([qId, subject, chapter]) => {
+      if (!subject || !chapter) return;
+      let subj = subjectWisePerformance.find((s) => s[0] === subject);
+      if (!subj) {
+        subj = [subject, 0, 0, 0, 0];
+        subjectWisePerformance.push(subj);
+      }
+      subj[3] += 1;
+
+      let chap = chapterWisePerformance.find((c) => c[0] === chapter);
+      if (!chap) {
+        chap = [chapter, 0, 0, 0];
+        chapterWisePerformance.push(chap);
       }
     });
 
-    // ✅ Calculate marks obtained correctly
+    // ✅ Marks
     const marksObtained = parseFloat(total_marks) || 0;
-    const totalMarks = 720; // ✅ Always set Total Marks to 720
+    const totalMarks = 720;
 
-    // ✅ Fetch detailed answers from solutions table
+    // ✅ Fetch solutions
     const questionIds = [
-      ...correctAnswers.map((q) => q[0]), // Extract question_id from the new format
+      ...correctAnswers.map((q) => q[0]),
       ...wrongAnswers.map((q) => q[0]),
       ...notAttempted.map((q) => q[0]),
     ];
-
-    // ✅ Fetch solutions from the Solution table based on question IDs
     const solutions = await Solution.findAll({
       where: { question_id: questionIds },
       attributes: ["question_id", "solution_text"],
     });
-
-    // ✅ Map solutions to detailed answers correctly (convert to 2D array [questionId, solutionText])
-    const detailedAnswers = questionIds.map((question_id) => {
-      const solution = solutions.find((s) => s.question_id === question_id);
-      return [
-        question_id,
-        solution ? solution.solution_text : "Solution not available",
-      ];
+    const detailedAnswers = questionIds.map((qid) => {
+      const sol = solutions.find((s) => s.question_id === qid);
+      return [qid, sol ? sol.solution_text : "Solution not available"];
     });
-    // ✅ Store the test result in the database
+
+    // ✅ Save result with testName (default: "Full Test")
     const newTestResult = await fullTestResults.create({
       studentId,
-      testName: "Full Test",
+      testName: testName || "Full Test", // 👈 conditional here
       difficultyLevel: "Simple",
       recommendedBy: "Start Test",
       status: "Completed",
       createdAt: new Date(startTime),
       updatedAt: new Date(endTime),
       totalQuestions,
-      correctAnswers, // Store directly as array
+      correctAnswers,
       wrongAnswers,
       notAttempted,
       correctAnswersCount,
@@ -197,22 +158,17 @@ const submitTest = async (req, res) => {
       notAttemptedCount,
       marksObtained,
       totalMarks,
-      subjectWisePerformance: JSON.stringify(subjectWisePerformance), // Now in array format
-      chapterWisePerformance: JSON.stringify(chapterWisePerformance), // Now in array format
-      detailedAnswers: JSON.stringify(detailedAnswers), // Now in 2D array format [questionId, solutionText]
+      subjectWisePerformance: JSON.stringify(subjectWisePerformance),
+      chapterWisePerformance: JSON.stringify(chapterWisePerformance),
+      detailedAnswers: JSON.stringify(detailedAnswers),
     });
 
-    // console.log("Controller is running");
-    // 🔔 Update StudentAnalytics after saving the full-length test result
     await applyResultUpdate({
-      studentId, // from the decoded token
-      testType: "full", // "full" | "series" | "teacher" | "user"
-      testId: newTestResult.id, // your fullTestResults row id (OK to reuse)
-      resultId: newTestResult.id, // lets the aggregator fetch by PK reliably
+      studentId,
+      testType: "full",
+      testId: newTestResult.id,
+      resultId: newTestResult.id,
     });
-    // console.log("[AGG] start", { studentId, testType, testId, resultId });
-
-    console.log("student analytics added ");
 
     res.status(201).json({
       message: "✅ Test submitted successfully!",
@@ -429,6 +385,5 @@ const getReviewMistakes = async (req, res) => {
       .json({ error: "Internal Server Error", details: error.message });
   }
 };
-
 
 export { submitTest, getResults, getReviewMistakes };

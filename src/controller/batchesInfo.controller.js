@@ -564,21 +564,37 @@ export const getPendingTests = async (req, res) => {
   try {
     const { studentId } = req.params; // Get studentId from request params
 
-    // Fetch all the tests that the student has access to (i.e., tests assigned to the batch)
-    const tests = await Admintest.findAll()
+    // Step 1: Find the batch to which the student belongs using the StudentBatch model
+    const studentBatch = await StudentBatch.findOne({
+      where: { studentId }, // Find the student's batch association
+    });
+
+    if (!studentBatch) {
+      return res.status(404).json({
+        success: false,
+        message: "Student batch not found",
+      });
+    }
+
+    const batchId = studentBatch.batchId; // Get batchId from the student's batch association
+
+    // Step 2: Fetch all tests assigned to this batch
+    const tests = await BatchAdmintest.findAll({
+      where: { batchId }, // Fetch tests based on batchId
+    });
 
     const pendingTests = [];
 
-    // Loop through each test to check if the student has attempted it and if the status is "Pending"
+    // Step 3: Check for pending status for each test
     for (const test of tests) {
       const attempt = await GenerateTestResult.findOne({
-        where: { studentId, testid: test.id },
+        where: { studentId, testid: test.admintestId },
       });
 
       if (!attempt || attempt.status === "Pending") {
         // If no attempt or the test status is "Pending", add it to pendingTests
         pendingTests.push({
-          testId: test.id,
+          testId: test.admintestId,
           testname: test.testname,
           status: attempt ? attempt.status : "Not Attempted", // Show the status if available
         });
@@ -589,6 +605,7 @@ export const getPendingTests = async (req, res) => {
       return res.status(200).json({
         success: true,
         pendingTests,
+        count : pendingTests.length
       });
     } else {
       return res.status(200).json({

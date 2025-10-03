@@ -29,6 +29,6 @@ router.delete('/test/:testId/remove-batches', removeBatchesFromTest); // remove 
 router.get("/student/:studentId", getBatchesByStudentId) // give the batch info by student id
 
 router.get("/:testid/student/:studentId/status" , checkTestAttempt) // check stustus of the test
-router.get("/:studentId/pending-tests" , getPendingTests)
+// router.get("/:studentId/pending-tests" , getPendingTests)
 
 export default router;

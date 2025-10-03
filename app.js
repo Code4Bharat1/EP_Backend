@@ -40,7 +40,7 @@ import verifySubjectRouter from './src/routes/verifyrough.router.js'
 import topicWiseRouter from './src/routes/topicwise.router.js'
 import demoRoute from './src/routes/demo.route.js';
 import teacherRouter from './src/routes/teacher.router.js';
-import akashTest from "./src/routes/TestSeries.router.js"
+import TestSeries from "./src/routes/TestSeries.router.js"
 import r from './src/routes/coach.routes.js';
 import reviewTestRoute from './src/routes/reviewTest.route.js';
 import './src/models/ModelManager.js'
@@ -78,45 +78,45 @@ app.get('/', (req, res) => {
 
 
 app.use('/api/qr', qrTestRouter); // get student ids and verify them
-app.use('/api/students', studentRoutes);
-app.use("/api/question", questionRout);
-app.use("/api/metest", meTest);
-app.use("/api/recommendtest", recotest);
-app.use("/api/air-predictor", airPredictorRoutes);
+app.use('/api/students', studentRoutes); // student 
+app.use("/api/question", questionRout); 
+app.use("/api/metest", meTest); 
+app.use("/api/recommendtest", recotest); 
+app.use("/api/air-predictor", airPredictorRoutes); // student : 
 app.use("/api", startrecotestRoute);
-app.use("/api/admin", adminRoutes);
-app.use("/api/admintest", Admintest);
-app.use("/api/fulltest", FullTestRoute);
+app.use("/api/admin", adminRoutes); // admin
+app.use("/api/admintest", Admintest); // admin - user
+app.use("/api/fulltest", FullTestRoute); // user
 app.use("/api/createtest", createtestRoute); // test
 app.use("/api/test", pasttestRoute);
 app.use("/api/dashboard", dashboardRoute);
-app.use('/api/studentdata', studentviewRoute); // handle student and batch data
-app.use("/api/admintest", admingenerateRoute); // test
+app.use('/api/studentdata', studentviewRoute); // student : handle student and batch data
+app.use("/api/admintest", admingenerateRoute); // admin : test
 app.use("/api/newadmin", newAdminRoute); // test realted to admin
-app.use("/api/dashboard", dsb);
-app.use("/api/logout", studentslogged)
-app.use("/api/testresult", testresult)
-app.use("/api/spotlight", spotlight)
-app.use("/api/loginattendance", loginattendance)
-app.use("/api/practicetest", practice)
-app.use("/api/generatetest", customize);
-app.use('/api/user', userprofile);
-app.use('/api', sendEmailrouter);
-app.use("/api/superadmin", superAdminRouter);
-app.use("/api/batches", batchRouter)
-app.use("/api", fastquizquestion);
-app.use("/api", noticeRouter);
-app.use("/api", omrRouter);
-app.use('/api', questionInsertionRouter);
-app.use('/api', uploadImageRouter);
-app.use("/api", PreviousYearQuestionRouter);
-app.use("/api/verify", verifySubjectRouter);
-app.use("/api/topic-wise", topicWiseRouter);
-app.use("/api/demo", demoRoute);
-app.use("/api/teacher", teacherRouter);
-app.use("/api/test-series", akashTest)
-app.use("/api/coach", r)
-app.use("/api/review", reviewTestRoute)
+app.use("/api/dashboard", dsb); // admin NW
+app.use("/api/logout", studentslogged) 
+app.use("/api/testresult", testresult) //
+app.use("/api/spotlight", spotlight) 
+app.use("/api/loginattendance", loginattendance) 
+app.use("/api/practicetest", practice) // student
+app.use("/api/generatetest", customize); // admin
+app.use('/api/user', userprofile); 
+app.use('/api', sendEmailrouter); 
+app.use("/api/superadmin", superAdminRouter); //superadmin
+app.use("/api/batches", batchRouter) // admin
+app.use("/api", fastquizquestion); //student
+app.use("/api", noticeRouter); // stu and admin
+app.use("/api", omrRouter); // admin
+app.use('/api', questionInsertionRouter); // admin
+app.use('/api', uploadImageRouter); 
+app.use("/api", PreviousYearQuestionRouter); // stduent 
+app.use("/api/verify", verifySubjectRouter); 
+app.use("/api/topic-wise", topicWiseRouter); 
+app.use("/api/demo", demoRoute); 
+app.use("/api/teacher", teacherRouter); 
+app.use("/api/test-series", TestSeries) // admin and stud
+app.use("/api/coach", r) // student 
+app.use("/api/review", reviewTestRoute) 
 
 app.use("/api/review", reviewQuestion);
 // Start the server

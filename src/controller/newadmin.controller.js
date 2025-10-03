@@ -621,10 +621,34 @@ export const saveGenerateTestResult = async (req, res) => {
       subjectWiseMarks,
     } = req.body;
 
+    // ✅ Ensure that the student and test exist
+    const studentExists = await Student.findByPk(studentId);
+    if (!studentExists) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    const testExists = await Admintest.findByPk(testid);
+    if (!testExists) {
+      return res.status(404).json({ message: "Admin Test not found" });
+    }
+
+    // ✅ Check if student has already submitted this test (prevent duplicate submissions)
+    const alreadySubmitted = await generateTestResult.findOne({
+      where: { studentId, testid },
+    });
+
+    if (alreadySubmitted) {
+      return res.status(200).json({
+        message: "You have already submitted this test.",
+        data: alreadySubmitted,
+      });
+    }
+
+    // ✅ Save new result
     const newResult = await generateTestResult.create({
       studentId,
       testid,
-      testname,
+      testname: testExists.testname, // always use the official test name from Admintest
       selectedChapters,
       answers,
       score,
@@ -634,23 +658,27 @@ export const saveGenerateTestResult = async (req, res) => {
       totalquestions,
       overallmarks,
       subjectWiseMarks,
+      status: "Completed", // default when saved
     });
-    console.log("test submitted");
+
+    console.log("Test submitted");
+
+    // ✅ Update analytics
     await applyResultUpdate({
       studentId,
       testType: "teacher",
-      testId: testid, // Admintest.id (the test definition)
-      resultId: newResult.id, // this attempt's result row
+      testId: testid,
+      resultId: newResult.id,
     });
-    console.log("test submitted and analytics added");
+    console.log("Test submitted and analytics updated");
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Test result saved successfully.",
       data: newResult,
     });
   } catch (error) {
     console.error("Error saving test result:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Internal Server Error",
       error: error.message,
     });

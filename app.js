@@ -70,14 +70,14 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(logger);
-const limiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 100,
-  message: "Too many requests from this IP, please try again after a minute.",
-  standardHeaders: true, // Return rate limit info in headers
-  legacyHeaders: false, // Disable deprecated headers
-});
-app.use(limiter);
+// const limiter = rateLimit({
+//   windowMs: 60 * 1000, // 1 minute
+//   max: 100,
+//   message: "Too many requests from this IP, please try again after a minute.",
+//   standardHeaders: true, // Return rate limit info in headers
+//   legacyHeaders: false, // Disable deprecated headers
+// });
+// app.use(limiter);
 
 app.get("/", (req, res) => {
   res.status(200).json({

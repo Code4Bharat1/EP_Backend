@@ -6,97 +6,203 @@ import Otp from "../models/otp.model.js";
 import nodemailer from "nodemailer";
 import config from "config";
 import bcrypt from "bcrypt";
+import { sendWhatsAppMessage } from "../utils/sendWhatsapp.js"; 
 
-
-// --- Nodemailer setup ---
-const mailAuth = config.get('mailAuth');
+// --- Email Setup ---
+const mailAuth = config.get("mailAuth");
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  service: "gmail",
   auth: {
     user: mailAuth?.user,
     pass: mailAuth?.pass,
   },
 });
 
-// --- Send OTP to Email ---
-const sendOtp = async (req, res) => {
+// ============================================================
+// 🔹 Validate Email Format
+// ============================================================
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+/* ============================================================
+   🔹 SEND SIGNUP OTP (Email + WhatsApp)
+============================================================ */
+export const sendSignupOTP = async (req, res) => {
+  const { emailAddress, mobileNumber } = req.body;
+
+  if (!emailAddress || !mobileNumber) {
+    return res.status(400).json({ message: "Please enter both email and mobile number." });
+  }
+
+  if (!validateEmail(emailAddress)) {
+    return res.status(400).json({ message: "Invalid email address." });
+  }
+
+  if (!/^\d{10}$/.test(mobileNumber)) {
+    return res.status(400).json({ message: "Enter a valid 10-digit mobile number." });
+  }
+
   try {
-    Otp.sync({ alter: true }).then(() => console.log('Otp table synced.'));
-    const { emailAddress } = req.body;
-    if (!emailAddress) {
-      return res.status(400).json({ message: "Valid email address is required." });
-    }
-
-    const exists = await Student.findOne({ where: { emailAddress } });
-    if (exists) {
-      return res.status(409).json({ message: "Email already registered." });
-    }
-
-    // Generate and set OTP expiry (e.g. 5 min)
+    // Generate OTP and send it
     const otp = crypto.randomInt(100000, 999999).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // OTP valid for 5 minutes
 
-    // Upsert: If OTP exists for this email, update it
-    await Otp.upsert({ emailAddress, otp, expiresAt });
+    // Create a new OTP record or update if already exists
+    await Otp.upsert({
+      emailAddress,
+      otp,
+      expiresAt: otpExpiry,
+      verified: false,
+      purpose: "student_signup",
+    });
 
-    // Send OTP via email
-    const mailOptions = {
-      from: mailAuth.user,
-      to: emailAddress,
-      subject: "Your OTP Code",
-      text: `Your OTP code is: ${otp}\nThis code is valid for 5 minutes.`,
-    };
-    await transporter.sendMail(mailOptions);
+    // Send OTP via WhatsApp and Email
+    const sendTasks = [
+  sendWhatsAppMessage(mobileNumber, `
+    Your OTP for *Neet 720* signup is: ${otp}.
+    It is valid for the next 5 minutes.
+    Please use this code to complete your registration process.
+    If you did not initiate this request, please contact our support team immediately for assistance.
+    Thank you for using *Neet 720*.
+  `),
 
-    // For dev: also return OTP in response (remove in production)
-    return res.status(200).json({ message: "OTP sent to your email address.", demoOtp: otp });
-  } catch (e) {
-    console.error("Error in sendOtp:", e);
-    return res.status(500).json({ message: "Internal server error." });
+  transporter.sendMail({
+    from: `"Neet720" <${mailAuth.user}>`,
+    to: emailAddress,
+    subject: "Your OTP Code for Neet 720 Signup",
+    text: `
+      Dear User,
+
+      Your OTP for *Neet 720* signup is: ${otp}.
+      This OTP is valid for the next 5 minutes, so please use it promptly to complete your registration.
+
+      If you did not request this OTP, please get in touch with our support team right away to ensure the security of your account.
+
+      Thank you for using *Neet 720*.
+
+      Best Regards,
+      Neet 720 Support Team
+    `,
+  }),
+];
+
+
+    await Promise.all(sendTasks);
+
+    return res.status(200).json({
+      message: "OTP sent successfully to your Email & WhatsApp!",
+      expiresIn: "5 minutes",
+    });
+
+  } catch (err) {
+    console.error("Error in sendSignupOTP:", err);
+    return res.status(500).json({ message: "Failed to send OTP." });
   }
 };
 
-const verifyOtp = async (req, res) => {
+/* ============================================================
+   🔹 RESEND OTP (Email + WhatsApp)
+============================================================ */
+export const resendOtp = async (req, res) => {
+  const { emailAddress, mobileNumber } = req.body;
+
+  if (!emailAddress || !mobileNumber) {
+    return res.status(400).json({ message: "Please provide both email and mobile number." });
+  }
+
+  try {
+    // Check if an OTP already exists for this email and is not verified
+    const existingOtp = await Otp.findOne({ where: { emailAddress, verified: false } });
+
+    // If OTP exists and is expired, resend a new OTP
+    if (existingOtp && new Date(existingOtp.expiresAt) < new Date()) {
+      const otp = crypto.randomInt(100000, 999999).toString();
+      const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // OTP valid for 5 minutes
+
+      await Otp.update({ otp, expiresAt: otpExpiry }, { where: { emailAddress } });
+
+      // Send OTP via WhatsApp and email again
+      const sendTasks = [
+        sendWhatsAppMessage(mobileNumber, `Your OTP for signup is: ${otp}. Valid for 5 minutes.`),
+        transporter.sendMail({
+          from: `"Neet720" <${mailAuth.user}>`,
+          to: emailAddress,
+          subject: "Your Resent OTP Code",
+          text: `Your OTP code is: ${otp}. It will expire in 5 minutes.`,
+        }),
+      ];
+
+      await Promise.all(sendTasks);
+
+      return res.status(200).json({
+        message: "OTP resent successfully to your Email & WhatsApp!",
+        expiresIn: "5 minutes",
+      });
+    }
+
+    return res.status(400).json({ message: "No valid OTP found to resend." });
+
+  } catch (err) {
+    console.error("Error in resendOtp:", err);
+    return res.status(500).json({ message: "Failed to resend OTP." });
+  }
+};
+
+/* ============================================================
+   🔹 VERIFY SIGNUP OTP
+============================================================ */
+export const verifySignupOTP = async (req, res) => {
   try {
     const { emailAddress, otp } = req.body;
+
     if (!emailAddress || !otp) {
       return res.status(400).json({ message: "Email and OTP are required." });
     }
 
-    const record = await Otp.findOne({ where: { emailAddress, otp } });
+    const record = await Otp.findOne({
+      where: { emailAddress, otp, purpose: "student_signup" },
+    });
+
     if (!record) {
       return res.status(400).json({ message: "Invalid OTP." });
     }
+
     if (new Date() > new Date(record.expiresAt)) {
       return res.status(400).json({ message: "OTP expired." });
     }
 
-    await Otp.destroy({ where: { emailAddress } });
-    return res.status(200).json({ message: "OTP verified. You may now sign up." });
-  } catch (e) {
-    console.error("Error in verifyOtp:", e);
-    return res.status(500).json({ message: "Internal server error." });
+    await Otp.update({ verified: true }, { where: { emailAddress } });
+
+    return res.status(200).json({ message: "OTP verified successfully. You can now complete signup." });
+  } catch (error) {
+    console.error("Error in verifySignupOTP:", error);
+    return res.status(500).json({ message: "Internal server error while verifying OTP." });
   }
 };
 
-const demoSignup = async (req, res) => {
+/* ============================================================
+   🔹 COMPLETE SIGNUP AFTER OTP VERIFICATION
+============================================================ */
+export const completeSignup = async (req, res) => {
   try {
-    const {
-      firstName,
-      lastName,
-      fullName,
-      emailAddress,
-      password,
-      isDemo
-    } = req.body;
+    const { firstName, lastName, emailAddress, password, mobileNumber, isDemo } = req.body;
 
     if (!firstName || !emailAddress || !password) {
       return res.status(400).json({ message: "First name, email, and password are required." });
     }
 
+    const otpRecord = await Otp.findOne({
+      where: { emailAddress, verified: true, purpose: "student_signup" },
+    });
+
+    if (!otpRecord) {
+      return res.status(403).json({ message: "OTP not verified. Please verify OTP before signup." });
+    }
+
     const existingStudent = await Student.findOne({ where: { emailAddress } });
     if (existingStudent) {
-      return res.status(409).json({ message: "A student with this email already exists." });
+      return res.status(409).json({ message: "Student with this email already exists." });
     }
 
     let demoExpiry = null;
@@ -112,43 +218,38 @@ const demoSignup = async (req, res) => {
     const newStudent = await Student.create({
       firstName,
       lastName,
-      fullName: fullName || `${firstName} ${lastName || ""}`.trim(),
+      fullName: `${firstName} ${lastName || ""}`.trim(),
       emailAddress,
+      mobileNumber,
       password: hashedPassword,
-      isVerified: isDemoUser ? true : false,   // Demo users are verified by default
+      isVerified: true,
       demoExpiry: demoExpiry ? new Date(demoExpiry) : null,
-      isDemo: isDemoUser
+      isDemo: isDemoUser,
     });
 
-    // --- JWT Payload with Demo Info ---
     const JWT_SECRET = process.env.JWT_SECRET || config.get("jwtSecret") || "your-secret-key";
+
     const tokenPayload = {
       id: newStudent.id,
       email: newStudent.emailAddress,
       isDemo: isDemoUser,
     };
-    if (isDemoUser && demoExpiry) {
-      tokenPayload.demoExpiry = demoExpiry;
-    }
+    if (isDemoUser && demoExpiry) tokenPayload.demoExpiry = demoExpiry;
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "30d" });
+
+    await Otp.destroy({ where: { emailAddress } });
 
     const cleanStudent = { ...newStudent.get() };
     delete cleanStudent.password;
 
     return res.status(201).json({
-      message: isDemoUser
-        ? "Demo student account created successfully. Demo valid for 7 days."
-        : "Student account created successfully.",
+      message: "Student account created successfully.",
       user: cleanStudent,
-      token
+      token,
     });
-
   } catch (error) {
-    console.error("Error in signup:", error);
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    console.error("Error in completeSignup:", error);
+    return res.status(500).json({ message: "Internal server error during signup." });
   }
 };
-
-
-export { demoSignup, sendOtp, verifyOtp };

@@ -5,6 +5,7 @@ import config from "config";
 import Student from "../models/student.model.js";
 import { sendEmail } from "../service/nodeMailerConfig.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { sendWhatsAppMessage } from "../utils/sendWhatsapp.js";
 let otpStore = {};
 
 //register
@@ -396,36 +397,35 @@ const login = async (req, res) => {
 
 const forgotPassword = async (req, res) => {
   try {
-    const { emailAddress } = req.body;
+    const { mobileNumber } = req.body; // Take mobile number instead of email address
 
-    if (!emailAddress) {
-      return res.status(400).json({ message: "Email address is required" });
+    // Check if mobile number is provided
+    if (!mobileNumber) {
+      return res.status(400).json({ message: "Mobile number is required" });
     }
-    const student = await Student.findOne({ where: { emailAddress } });
+
+    // Find the user based on the provided mobile number
+    const student = await Student.findOne({ where: { mobileNumber } });
+
     if (!student) {
-      return res
-        .status(400)
-        .json({ message: "No user found with this email address" });
+      return res.status(400).json({ message: "No user found with this mobile number" });
     }
 
-    // Generate OTP and expiration time
-    const otp = crypto.randomInt(1000, 9999).toString();
-    const expirationTime = Date.now() + 10 * 60 * 1000; // 10 minutes
+    // Generate OTP and expiration time (valid for 10 minutes)
+    const otp = crypto.randomInt(1000, 9999).toString(); // 4-digit OTP
+    const expirationTime = Date.now() + 1 * 60 * 1000; // OTP expires in 10 minutes
 
-    otpStore[emailAddress] = { otp, expirationTime };
+    // Store OTP and expiration time in memory (use database for production)
+    otpStore[mobileNumber] = { otp, expirationTime };
 
-    // **Correct call** to sendEmail:
-    await sendEmail({
-      to: emailAddress,
-      subject: "Your OTP for Password Reset",
-      text: `Your OTP is ${otp}. It expires in 10 minutes.`,
-      // html is optional if you don’t need it:
-      html: `<p>Your OTP is <b>${otp}</b>. It expires in 10 minutes.</p>`,
-    });
+    // Send OTP via WhatsApp
+    await sendWhatsAppMessage(
+      mobileNumber,
+      `Your OTP for password reset is: ${otp}. It expires in 1 minutes.`
+    );
 
-    return res
-      .status(200)
-      .json({ message: "OTP sent to your email for password reset" });
+    // Respond with a success message
+    return res.status(200).json({ message: "OTP sent to your WhatsApp for password reset" });
   } catch (error) {
     console.error("Error in forgotPassword:", error);
     return res.status(500).json({ message: "Internal server error" });

@@ -45,6 +45,8 @@ import r from './src/routes/coach.routes.js';
 import reviewTestRoute from './src/routes/reviewTest.route.js';
 import './src/models/ModelManager.js'
 import { sequelizeCon } from './src/init/dbConnection.js';
+import sessionRoutes from "./src/routes/sessionRoutes.js";
+
 
 
 
@@ -117,6 +119,7 @@ app.use("/api/teacher", teacherRouter);
 app.use("/api/test-series", akashTest)
 app.use("/api/coach", r)
 app.use("/api/review", reviewTestRoute)
+app.use("/api/sessions", sessionRoutes);
 
 app.use("/api/review", reviewQuestion);
 // Start the server

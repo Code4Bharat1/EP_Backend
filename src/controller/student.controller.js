@@ -165,6 +165,8 @@ const savePersonalData = async (req, res) => {
 
 const newSavePersonalData = async (req, res) => {
   try {
+    console.log("📥 Incoming Request Body:", req.body); // 🧾 Debug log
+
     const {
       id,
       updatedImageUrl,
@@ -180,33 +182,53 @@ const newSavePersonalData = async (req, res) => {
       fullAddress,
     } = req.body;
 
+    // 🔹 Step 1: Validate that 'id' is provided
+    if (!id) {
+      console.log("❌ ID is missing in request body");
+      return res.status(400).json({ message: "Student ID is required" });
+    }
+
+    // 🔹 Step 2: Find student by ID
     const student = await Student.findOne({ where: { id } });
-
-    // console.log("student : ", student);
-
-    const findEmail = await Student.findOne({
-      where: {
-        emailAddress: emailAddress,
-        addedByAdminId: student.addedByAdminId,
-      },
-    });
-    if (findEmail.id !== student.id) {
-      return res.status(409).json({ message: "Email address already exists." });
-    }
-    const findPhone = await Student.findOne({
-      where: {
-        mobileNumber: mobileNumber,
-        addedByAdminId: student.addedByAdminId,
-      },
-    });
-    if (findPhone.id !== student.id) {
-      return res.status(409).json({ message: "Phone number already exists." });
-    }
+    console.log("👀 Found Student:", student ? student.toJSON() : "No record found");
 
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
 
+    // 🔹 Step 3: Check duplicate email (if email is provided)
+    if (emailAddress) {
+      const findEmail = await Student.findOne({
+        where: {
+          emailAddress,
+          addedByAdminId: student.addedByAdminId,
+        },
+      });
+
+      console.log("📧 findEmail:", findEmail ? findEmail.id : "None");
+
+      if (findEmail && findEmail.id !== student.id) {
+        return res.status(409).json({ message: "Email address already exists." });
+      }
+    }
+
+    // 🔹 Step 4: Check duplicate phone (if phone is provided)
+    if (mobileNumber) {
+      const findPhone = await Student.findOne({
+        where: {
+          mobileNumber,
+          addedByAdminId: student.addedByAdminId,
+        },
+      });
+
+      console.log("📞 findPhone:", findPhone ? findPhone.id : "None");
+
+      if (findPhone && findPhone.id !== student.id) {
+        return res.status(409).json({ message: "Phone number already exists." });
+      }
+    }
+
+    // 🔹 Step 5: Prepare update data (keep old if not provided)
     const updateData = {
       firstName: firstName || student.firstName,
       lastName: lastName || student.lastName,
@@ -218,23 +240,31 @@ const newSavePersonalData = async (req, res) => {
       gender: gender || student.gender,
       emailAddress: emailAddress || student.emailAddress,
       fullAddress: fullAddress || student.fullAddress,
-      profileImage: updatedImageUrl || student.profileImage, // Fixed variable name
+      profileImage: updatedImageUrl || student.profileImage,
     };
 
+    console.log("🛠️ Update Data:", updateData);
+
+    // 🔹 Step 6: Update student record
     await student.update(updateData);
 
+    console.log("✅ Updated Student Successfully");
+
+    // 🔹 Step 7: Send success response
     return res.status(200).json({
       message: "Personal Data Updated Successfully",
-      student,
+      updatedData: updateData,
     });
+
   } catch (error) {
-    console.error("Error saving personal Data: ", error);
+    console.error("🔥 Error saving personal Data:", error);
     return res.status(500).json({
       message: "Internal Server Error",
       error: error.message,
     });
   }
 };
+
 
 // OTP Verification Controller
 const verifyOtp = async (req, res) => {

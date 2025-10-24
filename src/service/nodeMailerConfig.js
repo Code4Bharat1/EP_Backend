@@ -13,7 +13,7 @@ export async function sendEmail({ to, subject, text, html }) {
   if (!to || !subject || (!text && !html)) {
     throw new Error('sendEmail missing required arguments');
   }
-  const mailOptions = { from: user, to, subject, text, html };
+  const mailOptions = { from: `"Neet720 Admin" ${user}`, to, subject, text, html };
   const info = await transporter.sendMail(mailOptions);
   console.log('Email sent:', info.response);
   return info;

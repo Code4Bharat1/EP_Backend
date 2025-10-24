@@ -1,12 +1,15 @@
 import express from "express";
 import config from "config";
+import helmet from "helmet";
+import cors from "cors";
+import { logger } from "./src/middleware/logger.js";
+import { sequelizeCon } from "./src/init/dbConnection.js";
+
+// --- Import all your route files ---
 import studentRoutes from "./src/routes/student.router.js";
 import recotest from "./src/routes/recommendedtest.router.js";
 import questionRout from "./src/routes/question.router.js";
 import meTest from "./src/routes/metest.route.js";
-import { logger } from "./src/middleware/logger.js";
-import startrecotestRoute from "./src/routes/startrecotest.route.js";
-import cors from "cors";
 import airPredictorRoutes from "./src/routes/airPredictor.router.js";
 import adminRoutes from "./src/routes/admin.router.js";
 import Admintest from "./src/routes/admintest.router.js";
@@ -43,15 +46,15 @@ import teacherRouter from "./src/routes/teacher.router.js";
 import TestSeries from "./src/routes/TestSeries.router.js";
 import r from "./src/routes/coach.routes.js";
 import reviewTestRoute from "./src/routes/reviewTest.route.js";
-import "./src/models/ModelManager.js";
-import { sequelizeCon } from "./src/init/dbConnection.js";
-import helmet from "helmet";
 
+// --- Initialize database connection ---
 await sequelizeCon.authenticate();
-await sequelizeCon.sync({ alter: false }); // ONE place only
-const app = express();
+await sequelizeCon.sync({ alter: false });
 
+const app = express();
 const port = 3085;
+
+// --- Secure CORS ---
 const corsOptions = {
   origin: [
     "https://neet720.com",
@@ -65,76 +68,84 @@ const corsOptions = {
   credentials: true,
 };
 
-app.use(helmet());
-app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(logger);
-// const limiter = rateLimit({
-//   windowMs: 60 * 1000, // 1 minute
-//   max: 100,
-//   message: "Too many requests from this IP, please try again after a minute.",
-//   standardHeaders: true, // Return rate limit info in headers
-//   legacyHeaders: false, // Disable deprecated headers
-// });
-// app.use(limiter);
+// --- ✅ Helmet setup for best security ---
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "default-src": ["'self'"],
+        "script-src": ["'self'", "'unsafe-inline'", "https:"],
+        "img-src": ["'self'", "data:", "https:"],
+        "style-src": ["'self'", "'unsafe-inline'", "https:"],
+        "font-src": ["'self'", "https:", "data:"],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // important for Next.js images & analytics
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+    frameguard: { action: "deny" }, // blocks clickjacking
+  })
+);
 
+// --- Other middlewares ---
+app.use(cors(corsOptions));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(logger);
+
+// --- Root health check ---
 app.get("/", (req, res) => {
   res.status(200).json({
-    message: "👁️ Hello, developer. You've reached the API. It’s been waiting.",
+    message: "👁️ Hello, developer. You've reached the NEET720 API.",
     status: "online-ish",
-    warnings: [
-      "Do not feed the endpoints after midnight.",
-      "Avoid /deleteAll unless you're feeling brave.",
-      "Some routes are... haunted.",
-    ],
-    tip: "The real bug was inside you all along.",
+    warnings: ["Don't feed the endpoints after midnight 😈"],
   });
 });
 
-app.use("/api/qr", qrTestRouter); // get student ids and verify them
-app.use("/api/students", studentRoutes); // student
+// --- Route mounts ---
+app.use("/api/qr", qrTestRouter);
+app.use("/api/students", studentRoutes);
 app.use("/api/question", questionRout);
 app.use("/api/metest", meTest);
 app.use("/api/recommendtest", recotest);
-app.use("/api/air-predictor", airPredictorRoutes); // student :
-app.use("/api", startrecotestRoute);
-app.use("/api/admin", adminRoutes); // admin
-app.use("/api/admintest", Admintest); // admin - user
-app.use("/api/fulltest", FullTestRoute); // user
-app.use("/api/createtest", createtestRoute); // test
+app.use("/api/air-predictor", airPredictorRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/admintest", Admintest);
+app.use("/api/fulltest", FullTestRoute);
+app.use("/api/createtest", createtestRoute);
 app.use("/api/test", pasttestRoute);
 app.use("/api/dashboard", dashboardRoute);
-app.use("/api/studentdata", studentviewRoute); // student : handle student and batch data
-app.use("/api/admintest", admingenerateRoute); // admin : test
-app.use("/api/newadmin", newAdminRoute); // test realted to admin
-app.use("/api/dashboard", dsb); // admin NW
+app.use("/api/studentdata", studentviewRoute);
+app.use("/api/admintest", admingenerateRoute);
+app.use("/api/newadmin", newAdminRoute);
+app.use("/api/dashboard", dsb);
 app.use("/api/logout", studentslogged);
-app.use("/api/testresult", testresult); //
+app.use("/api/testresult", testresult);
 app.use("/api/spotlight", spotlight);
 app.use("/api/loginattendance", loginattendance);
-app.use("/api/practicetest", practice); // student
-app.use("/api/generatetest", customize); // admin
+app.use("/api/practicetest", practice);
+app.use("/api/generatetest", customize);
 app.use("/api/user", userprofile);
 app.use("/api", sendEmailrouter);
-app.use("/api/superadmin", superAdminRouter); //superadmin
-app.use("/api/batches", batchRouter); // admin
-app.use("/api", fastquizquestion); //student
-app.use("/api", noticeRouter); // stu and admin
-app.use("/api", omrRouter); // admin
-app.use("/api", questionInsertionRouter); // admin
+app.use("/api/superadmin", superAdminRouter);
+app.use("/api/batches", batchRouter);
+app.use("/api", fastquizquestion);
+app.use("/api", noticeRouter);
+app.use("/api", omrRouter);
+app.use("/api", questionInsertionRouter);
 app.use("/api", uploadImageRouter);
-app.use("/api", PreviousYearQuestionRouter); // stduent
+app.use("/api", PreviousYearQuestionRouter);
 app.use("/api/verify", verifySubjectRouter);
 app.use("/api/topic-wise", topicWiseRouter);
 app.use("/api/demo", demoRoute);
 app.use("/api/teacher", teacherRouter);
-app.use("/api/test-series", TestSeries); // admin and stud
-app.use("/api/coach", r); // student
+app.use("/api/test-series", TestSeries);
+app.use("/api/coach", r);
 app.use("/api/review", reviewTestRoute);
-
 app.use("/api/review", reviewQuestion);
-// Start the server
+
+// --- Start server ---
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`🚀 Server running securely on port ${port}`);
 });

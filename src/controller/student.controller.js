@@ -3,17 +3,19 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import config from "config";
 import Student from "../models/student.model.js";
-import { sendEmail } from "../service/nodeMailerConfig.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { sendWhatsAppMessage } from "../utils/sendWhatsapp.js";
+
 let otpStore = {};
 
-//register
+//register - NOW SENDS OTP VIA WHATSAPP ONLY
 const register = async (req, res) => {
   try {
-    const { name, emailAddress, password, confirmPassword } = req.body;
-    if (!name || !emailAddress || !password || !confirmPassword) {
+    const { name, emailAddress, password, confirmPassword, mobileNumber } = req.body;
+    
+    if (!name || !emailAddress || !password || !confirmPassword || !mobileNumber) {
       return res.status(400).json({
-        message: "Name, email, password, and confirm password are required",
+        message: "Name, email, password, confirm password, and mobile number are required",
       });
     }
 
@@ -21,6 +23,11 @@ const register = async (req, res) => {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(emailAddress)) {
       return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    // Validate mobile number (10 digits)
+    if (!/^\d{10}$/.test(mobileNumber)) {
+      return res.status(400).json({ message: "Enter a valid 10-digit mobile number" });
     }
 
     // Password match check
@@ -34,38 +41,52 @@ const register = async (req, res) => {
       return res.status(400).json({ message: "Email already registered" });
     }
 
-    // Generate a random 4-digit OTP
-    const otp = crypto.randomInt(1000, 9999).toString();
-    console.log("otp", otp);
+    // Generate a random 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+    console.log("📱 Generated OTP:", otp);
 
     const expirationTime = Date.now() + 10 * 60 * 1000; // OTP expires in 10 minutes
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    // Store OTP in the in-memory store (or use a database for production)
-    otpStore[emailAddress] = { otp, expirationTime };
+    
+    // Store OTP in the in-memory store (use database for production)
+    otpStore[emailAddress] = { otp, expirationTime, mobileNumber };
 
     // Create the new student in DB with isVerified=false
     await Student.create({
       name,
       emailAddress,
+      mobileNumber,
       password: hashedPassword,
-      isVerified: false, // Verification will happen later with OTP
+      isVerified: false,
     });
 
-    // Send OTP via email
-    await sendEmail(
-      emailAddress,
-      "Your OTP Code for ExamPortal Registration",
-      `Your OTP is ${otp}. It expires in 10 minutes.`,
-      `<p>Your OTP is <b>${otp}</b>. It expires in 10 minutes.</p>`
+    // ✅ SEND OTP VIA WHATSAPP ONLY - NO EMAIL
+    const whatsappResult = await sendWhatsAppMessage(
+      mobileNumber,
+      `Your OTP for *ExamPortal Registration* is: *${otp}*
+
+This OTP is valid for 10 minutes only.
+
+Please use this code to complete your registration.
+
+If you did not request this, please contact support immediately.
+
+Thank you for using *ExamPortal*!`
     );
-    console.log("SMTP Details:", process.env.SMTP_HOST);
+
+    if (!whatsappResult) {
+      return res.status(500).json({ message: "Failed to send OTP via WhatsApp" });
+    }
+
+    console.log("✅ OTP sent successfully via WhatsApp");
+
     return res.status(201).json({
-      message: "Registration successful. OTP has been sent to your email.",
+      message: "Registration successful. OTP has been sent to your WhatsApp.",
       expiresAt: new Date(expirationTime).toISOString(),
     });
   } catch (error) {
-    console.error("Error in registerStudent:", error);
+    console.error("❌ Error in registerStudent:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -87,18 +108,6 @@ const savePersonalData = async (req, res) => {
       emailAddress,
       fullAddress,
     } = req.body;
-
-    console.log(
-      firstName,
-      lastName,
-      examType,
-      dateOfBirth,
-      state,
-      country,
-      language,
-      email,
-      fullAddress
-    );
 
     // Validate required fields
     if (!firstName || !lastName || !emailAddress) {
@@ -127,10 +136,8 @@ const savePersonalData = async (req, res) => {
       }
     }
 
-    // Convert targetYear to number if needed
-    const targetYearValue = country ? parseInt(country) : null;
+    const targetYearValue = targetYear ? parseInt(targetYear) : null;
 
-    // Update with proper field mappings
     const updateData = {
       firstName,
       lastName,
@@ -164,6 +171,8 @@ const savePersonalData = async (req, res) => {
 
 const newSavePersonalData = async (req, res) => {
   try {
+    console.log("📥 Incoming Request Body:", req.body);
+
     const {
       id,
       updatedImageUrl,
@@ -179,31 +188,46 @@ const newSavePersonalData = async (req, res) => {
       fullAddress,
     } = req.body;
 
+    if (!id) {
+      console.log("❌ ID is missing in request body");
+      return res.status(400).json({ message: "Student ID is required" });
+    }
+
     const student = await Student.findOne({ where: { id } });
-
-    // console.log("student : ", student);
-
-    const findEmail = await Student.findOne({
-      where: {
-        emailAddress: emailAddress,
-        addedByAdminId: student.addedByAdminId,
-      },
-    });
-    if (findEmail.id !== student.id) {
-      return res.status(409).json({ message: "Email address already exists." });
-    }
-    const findPhone = await Student.findOne({
-      where: {
-        mobileNumber: mobileNumber,
-        addedByAdminId: student.addedByAdminId,
-      },
-    });
-    if (findPhone.id !== student.id) {
-      return res.status(409).json({ message: "Phone number already exists." });
-    }
+    console.log("👀 Found Student:", student ? student.toJSON() : "No record found");
 
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
+    }
+
+    if (emailAddress) {
+      const findEmail = await Student.findOne({
+        where: {
+          emailAddress,
+          addedByAdminId: student.addedByAdminId,
+        },
+      });
+
+      console.log("📧 findEmail:", findEmail ? findEmail.id : "None");
+
+      if (findEmail && findEmail.id !== student.id) {
+        return res.status(409).json({ message: "Email address already exists." });
+      }
+    }
+
+    if (mobileNumber) {
+      const findPhone = await Student.findOne({
+        where: {
+          mobileNumber,
+          addedByAdminId: student.addedByAdminId,
+        },
+      });
+
+      console.log("📞 findPhone:", findPhone ? findPhone.id : "None");
+
+      if (findPhone && findPhone.id !== student.id) {
+        return res.status(409).json({ message: "Phone number already exists." });
+      }
     }
 
     const updateData = {
@@ -217,17 +241,22 @@ const newSavePersonalData = async (req, res) => {
       gender: gender || student.gender,
       emailAddress: emailAddress || student.emailAddress,
       fullAddress: fullAddress || student.fullAddress,
-      profileImage: updatedImageUrl || student.profileImage, // Fixed variable name
+      profileImage: updatedImageUrl || student.profileImage,
     };
+
+    console.log("🛠️ Update Data:", updateData);
 
     await student.update(updateData);
 
+    console.log("✅ Updated Student Successfully");
+
     return res.status(200).json({
       message: "Personal Data Updated Successfully",
-      student,
+      updatedData: updateData,
     });
+
   } catch (error) {
-    console.error("Error saving personal Data: ", error);
+    console.error("🔥 Error saving personal Data:", error);
     return res.status(500).json({
       message: "Internal Server Error",
       error: error.message,
@@ -283,7 +312,7 @@ const verifyOtp = async (req, res) => {
     const token = jwt.sign(
       { id: student.id, email: student.emailAddress },
       config.get("jwtSecret"),
-      { expiresIn: "1h" } // Token expires in 1 hour
+      { expiresIn: "30d" }
     );
 
     return res.json({
@@ -296,7 +325,7 @@ const verifyOtp = async (req, res) => {
   }
 };
 
-// Resend OTP Controller
+// Resend OTP Controller - NOW SENDS VIA WHATSAPP ONLY
 const resendOtp = async (req, res) => {
   try {
     const { emailAddress } = req.body;
@@ -306,26 +335,46 @@ const resendOtp = async (req, res) => {
     }
 
     const storedOtpEntry = otpStore[emailAddress];
-    if (storedOtpEntry && Date.now() < storedOtpEntry.expirationTime) {
-      return res
-        .status(400)
-        .json({ message: "OTP is still valid. Please check your email." });
+    if (!storedOtpEntry) {
+      return res.status(400).json({ message: "No OTP request found for this email" });
     }
 
-    const otp = crypto.randomInt(1000, 9999).toString();
+    const { mobileNumber } = storedOtpEntry;
+
+    if (!mobileNumber) {
+      return res.status(400).json({ message: "Mobile number not found. Please register again." });
+    }
+
+    // Generate new OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
     const expirationTime = Date.now() + 10 * 60 * 1000;
-    otpStore[emailAddress] = { otp, expirationTime };
-    // Send OTP via email
-    await sendEmail(
-      emailAddress,
-      "Your OTP Code for ExamPortal Registration",
-      `Your new OTP is ${otp}. It expires in 10 minutes.`,
-      `<p>Your new OTP is <b>${otp}</b>. It expires in 10 minutes.</p>`
+    
+    otpStore[emailAddress] = { otp, expirationTime, mobileNumber };
+
+    // ✅ SEND OTP VIA WHATSAPP ONLY - NO EMAIL
+    const whatsappResult = await sendWhatsAppMessage(
+      mobileNumber,
+      `Your NEW OTP for *ExamPortal Registration* is: *${otp}*
+
+This OTP is valid for 10 minutes only.
+
+If you did not request this, please contact support.
+
+Thank you for using *ExamPortal*!`
     );
 
-    return res.status(200).json({ message: "New OTP sent successfully." });
+    if (!whatsappResult) {
+      return res.status(500).json({ message: "Failed to send OTP via WhatsApp" });
+    }
+
+    console.log("✅ OTP resent successfully via WhatsApp");
+
+    return res.status(200).json({ 
+      message: "New OTP sent successfully to your WhatsApp.",
+      expiresAt: new Date(expirationTime).toISOString(),
+    });
   } catch (error) {
-    console.error("Error in resendOtp:", error);
+    console.error("❌ Error in resendOtp:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -333,51 +382,49 @@ const resendOtp = async (req, res) => {
 // Login Controller
 const login = async (req, res) => {
   try {
-    const { emailAddress, password } = req.body;
+    const { emailAddress, mobileNumber, password } = req.body;
 
     console.log("=== LOGIN DEBUG ===");
-    console.log("Login attempt for email:", emailAddress);
-    console.log("Password type:", typeof password);
-    console.log("Password length:", password.length);
+    console.log("Login attempt:", { emailAddress, mobileNumber });
 
-    // Basic validation
-    if (!emailAddress || !password) {
-      return res
-        .status(400)
-        .json({ message: "Email and password are required" });
+    if ((!emailAddress && !mobileNumber) || !password) {
+      return res.status(400).json({
+        message: "Please provide either Email or Mobile number and password",
+      });
     }
 
-    // Find student in the database
-    const student = await Student.findOne({ where: { emailAddress } });
+    // Find student by email OR mobile number
+    const student = await Student.findOne({
+      where: {
+        ...(emailAddress
+          ? { emailAddress }
+          : { mobileNumber }),
+      },
+    });
 
     if (!student) {
-      console.log("No student found with email:", emailAddress);
-      return res.status(400).json({ message: "Invalid email or password" });
+      console.log("No student found for given credentials");
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    console.log("Student found:", student.id, student.emailAddress);
-    console.log("Password hash from DB:", student.password);
+    console.log("Student found:", student.id, student.emailAddress || student.mobileNumber);
 
-    // Ensure password is a string
-    const passwordString = String(password).trim();
-    console.log("Processed login password:", passwordString);
-
-    // Compare the entered password with the hashed password
+    // Compare password
     const isPasswordValid = await bcrypt.compare(password, student.password);
     if (!isPasswordValid) {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Check if the student is verified
+    // Check verification
     if (!student.isVerified) {
       return res
         .status(400)
-        .json({ message: "Please verify your email before logging in" });
+        .json({ message: "Please verify your account before logging in" });
     }
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: student.id, email: student.emailAddress },
+      { id: student.id, email: student.emailAddress, mobile: student.mobileNumber },
       config.get("jwtSecret"),
       { expiresIn: "30d" }
     );
@@ -394,126 +441,132 @@ const login = async (req, res) => {
   }
 };
 
+
+// Forgot Password - ALREADY USES WHATSAPP ONLY ✅
 const forgotPassword = async (req, res) => {
   try {
-    const { emailAddress } = req.body;
+    const { mobileNumber } = req.body;
 
-    if (!emailAddress) {
-      return res.status(400).json({ message: "Email address is required" });
+    if (!mobileNumber) {
+      return res.status(400).json({ message: "Mobile number is required" });
     }
-    const student = await Student.findOne({ where: { emailAddress } });
+
+    const student = await Student.findOne({ where: { mobileNumber } });
+
     if (!student) {
-      return res
-        .status(400)
-        .json({ message: "No user found with this email address" });
+      return res.status(400).json({ message: "No user found with this mobile number" });
     }
 
-    // Generate OTP and expiration time
-    const otp = crypto.randomInt(1000, 9999).toString();
+    // Generate 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
     const expirationTime = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    otpStore[emailAddress] = { otp, expirationTime };
+    // Store OTP with mobile number as key for password reset
+    otpStore[mobileNumber] = { otp, expirationTime, emailAddress: student.emailAddress };
 
-    // **Correct call** to sendEmail:
-    await sendEmail({
-      to: emailAddress,
-      subject: "Your OTP for Password Reset",
-      text: `Your OTP is ${otp}. It expires in 10 minutes.`,
-      // html is optional if you don’t need it:
-      html: `<p>Your OTP is <b>${otp}</b>. It expires in 10 minutes.</p>`,
+    // ✅ SEND OTP VIA WHATSAPP ONLY
+    const whatsappResult = await sendWhatsAppMessage(
+      mobileNumber,
+      `Your OTP for *ExamPortal Password Reset* is: *${otp}*
+
+This OTP is valid for 10 minutes only.
+
+If you did not request this password reset, please contact support immediately.
+
+Thank you for using *ExamPortal*!`
+    );
+
+    if (!whatsappResult) {
+      return res.status(500).json({ message: "Failed to send OTP via WhatsApp" });
+    }
+
+    console.log("✅ Password reset OTP sent via WhatsApp");
+
+    return res.status(200).json({ 
+      message: "OTP sent to your WhatsApp for password reset",
+      expiresAt: new Date(expirationTime).toISOString(),
     });
-
-    return res
-      .status(200)
-      .json({ message: "OTP sent to your email for password reset" });
   } catch (error) {
-    console.error("Error in forgotPassword:", error);
+    console.error("❌ Error in forgotPassword:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// Reset Password Controller
+// Reset Password Controller - UPDATED TO USE MOBILE NUMBER
 const resetPassword = async (req, res) => {
   try {
-    const { emailAddress, otp, newPassword } = req.body;
+    const { mobileNumber, otp, newPassword } = req.body;
 
-    if (!emailAddress || !otp || !newPassword) {
+    if (!mobileNumber || !otp || !newPassword) {
       return res
         .status(400)
-        .json({ message: "Email, OTP, and new password are required" });
+        .json({ message: "Mobile number, OTP, and new password are required" });
     }
 
-    const storedOtpEntry = otpStore[emailAddress];
+    // Validate mobile number format
+    if (!/^\d{10}$/.test(mobileNumber)) {
+      return res.status(400).json({ message: "Please enter a valid 10-digit mobile number" });
+    }
+
+    // Validate OTP format (6 digits)
+    if (!/^\d{6}$/.test(otp)) {
+      return res.status(400).json({ message: "Please enter a valid 6-digit OTP" });
+    }
+
+    const storedOtpEntry = otpStore[mobileNumber];
     if (!storedOtpEntry) {
       return res
         .status(400)
-        .json({ message: "No OTP found for this email address" });
+        .json({ message: "No OTP found for this mobile number. Please request a new OTP." });
     }
 
     const { otp: storedOtp, expirationTime } = storedOtpEntry;
 
+    // Check if OTP expired
     if (Date.now() > expirationTime) {
-      delete otpStore[emailAddress];
+      delete otpStore[mobileNumber];
       return res
         .status(400)
-        .json({ message: "OTP expired, please request a new one" });
+        .json({ message: "OTP expired. Please request a new one." });
     }
 
+    // Verify OTP matches
     if (otp !== storedOtp) {
-      return res.status(400).json({ message: "Invalid OTP" });
+      return res.status(400).json({ message: "Invalid OTP. Please check and try again." });
     }
 
+    // Validate password length
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters long" });
+    }
+
+    // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    const student = await Student.findOne({ where: { emailAddress } });
+    
+    // Find student by mobile number
+    const student = await Student.findOne({ where: { mobileNumber } });
+    
     if (!student) {
-      return res.status(400).json({ message: "Student not found" });
+      return res.status(400).json({ message: "Student not found with this mobile number" });
     }
 
+    // Update password
     student.password = hashedPassword;
     await student.save();
 
-    delete otpStore[emailAddress];
+    // Clear OTP from store
+    delete otpStore[mobileNumber];
 
-    return res.status(200).json({ message: "Password reset successfully" });
-  } catch (error) {
-    console.error("Error in resetPassword:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
+    console.log("✅ Password reset successfully for mobile:", mobileNumber);
 
-// Delete student account (self-deletion)
-const deleteStudentAccount = async (req, res) => {
-  try {
-    const studentId = req.user.id;
-    console.log(`Attempting to delete student with ID: ${studentId}`);
-
-    if (!studentId) {
-      return res.status(400).json({ message: "Student ID missing" });
-    }
-
-    const student = await Student.findByPk(studentId);
-
-    if (!student) {
-      return res.status(404).json({ message: "Student not found" });
-    }
-
-    console.log(`Deleting student: ${student.email} (ID: ${student.id})`);
-
-    await student.destroy(); // ✅ This removes the record safely
-
-    return res.status(200).json({
-      message: "Student deleted successfully",
-      deletedStudentId: student.id,
+    return res.status(200).json({ 
+      message: "Password reset successfully! You can now log in with your new password." 
     });
   } catch (error) {
-    console.error("Error deleting student account:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    console.error("❌ Error in resetPassword:", error);
+    return res.status(500).json({ message: "Internal server error. Please try again." });
   }
 };
-
 
 const getPersonalData = async (req, res) => {
   try {
@@ -568,12 +621,10 @@ const getPersonalData = async (req, res) => {
       ],
     });
 
-    // If student not found
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    // Return student data
     return res.status(200).json(student);
   } catch (error) {
     console.error("Error fetching student data:", error);
@@ -581,7 +632,6 @@ const getPersonalData = async (req, res) => {
   }
 };
 
-// testing
 export {
   register,
   verifyOtp,

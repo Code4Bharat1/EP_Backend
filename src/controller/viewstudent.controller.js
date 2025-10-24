@@ -280,21 +280,24 @@ const bulkSaveStudents = async (req, res) => {
     const { students } = req.body;
 
     if (!students || !Array.isArray(students) || students.length === 0) {
+      console.error("Invalid students array:", students);
       return res.status(400).json({
-        message: "Students array is required",
+        message: "Students array is required and must be a non-empty array",
       });
     }
 
     const studentData = [];
     const existingEmails = [];
     const existingPhones = [];
-    const whatsappMessages = []; // Store WhatsApp sending tasks
+    const whatsappMessages = [];
 
-    for (const student of students) {
+    for (let i = 0; i < students.length; i++) {
+      const student = students[i];
       const {
         emailAddress,
-        password,
+        password: providedPassword,
         firstName,
+        lastName,
         dateOfBirth,
         mobileNumber,
         gender,
@@ -302,27 +305,61 @@ const bulkSaveStudents = async (req, res) => {
       } = student;
 
       // Validate required fields
-      if (
-        !emailAddress ||
-        !password ||
-        !firstName ||
-        !dateOfBirth ||
-        !mobileNumber ||
-        !gender
-      ) {
+      if (!emailAddress) {
+        console.error(`Missing emailAddress for student at index ${i + 1}:`, student);
         return res.status(400).json({
-          message: "All fields are required for all students",
+          message: `Missing EMAIL for student at index ${i + 1}`,
+        });
+      }
+      if (!firstName) {
+        console.error(`Missing firstName for student at index ${i + 1}:`, student);
+        return res.status(400).json({
+          message: `Missing FIRST NAME for student at index ${i + 1}`,
+        });
+      }
+      if (!dateOfBirth) {
+        console.error(`Missing dateOfBirth for student at index ${i + 1}:`, student);
+        return res.status(400).json({
+          message: `Missing DOB for student at index ${i + 1}`,
+        });
+      }
+      if (!mobileNumber) {
+        console.error(`Missing mobileNumber for student at index ${i + 1}:`, student);
+        return res.status(400).json({
+          message: `Missing PHONE NUMBER for student at index ${i + 1}`,
+        });
+      }
+      if (!gender) {
+        console.error(`Missing gender for student at index ${i + 1}:`, student);
+        return res.status(400).json({
+          message: `Missing GENDER for student at index ${i + 1}`,
+        });
+      }
+      if (!addedByAdminId) {
+        console.error(`Missing addedByAdminId for student at index ${i + 1}:`, student);
+        return res.status(400).json({
+          message: `Missing addedByAdminId for student at index ${i + 1}`,
+        });
+      }
+
+      // Validate email format
+      const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
+      if (!emailRegex.test(emailAddress)) {
+        console.error(`Invalid email format for student at index ${i + 1}:`, emailAddress);
+        return res.status(400).json({
+          message: `Invalid EMAIL format for student at index ${i + 1}: ${emailAddress}`,
         });
       }
 
       // Validate mobile number
-      if (!/^\d{10}$/.test(mobileNumber)) {
+      if (!/^[6-9]\d{9}$/.test(mobileNumber)) {
+        console.error(`Invalid mobile number for student at index ${i + 1}:`, mobileNumber);
         return res.status(400).json({
-          message: `Invalid mobile number: ${mobileNumber}. Must be 10 digits.`,
+          message: `Invalid PHONE NUMBER for student at index ${i + 1}: ${mobileNumber}. Must be 10 digits starting with 6-9.`,
         });
       }
 
-      // Check if email already exists
+      // Check for duplicates
       const existingStudent = await Student.findOne({
         where: { emailAddress },
       });
@@ -331,7 +368,6 @@ const bulkSaveStudents = async (req, res) => {
         continue;
       }
 
-      // Check if phone already exists
       const existingPhone = await Student.findOne({
         where: { mobileNumber },
       });
@@ -340,8 +376,9 @@ const bulkSaveStudents = async (req, res) => {
         continue;
       }
 
-      // Store original password for WhatsApp
-      const originalPassword = String(password).trim();
+      // Generate password if not provided
+      const birthYear = new Date(dateOfBirth).getFullYear();
+      const originalPassword = providedPassword || `${firstName.charAt(0).toUpperCase()}${birthYear}${Math.floor(1000 + Math.random() * 9000)}`;
 
       // Hash password
       const hashedPassword = await bcrypt.hash(originalPassword, 10);
@@ -351,17 +388,17 @@ const bulkSaveStudents = async (req, res) => {
         emailAddress,
         password: hashedPassword,
         firstName,
+        lastName: lastName || null,
         dateOfBirth,
         mobileNumber,
         gender,
         addedByAdminId,
         isVerified: true,
         batchId: null,
-        lastName: null,
         examType: null,
         studentClass: null,
         targetYear: null,
-        fullName: null,
+        fullName: `${firstName} ${lastName || ""}`.trim() || null,
         fullAddress: null,
         domicileState: null,
         parentName: null,
@@ -395,7 +432,7 @@ const bulkSaveStudents = async (req, res) => {
         profileImage: null,
       });
 
-      // Prepare WhatsApp message task
+      // Prepare WhatsApp message
       whatsappMessages.push({
         phone: mobileNumber,
         message: `Welcome to *ExamPortal*, ${firstName}!
@@ -418,11 +455,9 @@ Thank you for joining *ExamPortal*!`,
       // Save students to database
       const savedStudents = await Student.bulkCreate(studentData);
 
-      // ✅ SEND CREDENTIALS VIA WHATSAPP TO ALL STUDENTS
+      // Send WhatsApp messages
       const whatsappResults = await Promise.allSettled(
-        whatsappMessages.map((msg) =>
-          sendWhatsAppMessage(msg.phone, msg.message)
-        )
+        whatsappMessages.map((msg) => sendWhatsAppMessage(msg.phone, msg.message))
       );
 
       const successfulWhatsApp = whatsappResults.filter(
@@ -432,6 +467,17 @@ Thank you for joining *ExamPortal*!`,
       console.log(
         `✅ Sent login credentials via WhatsApp to ${successfulWhatsApp}/${whatsappMessages.length} students`
       );
+
+      // Trim savedStudents for response
+      const savedStudentsTrimmed = savedStudents.map((s) => ({
+        id: s.id,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        emailAddress: s.emailAddress,
+        mobileNumber: s.mobileNumber,
+        gender: s.gender,
+        dateOfBirth: s.dateOfBirth,
+      }));
 
       // Prepare response message
       let responseMessage = `${savedStudents.length} student(s) added successfully. Login credentials sent via WhatsApp.`;
@@ -450,7 +496,7 @@ Thank you for joining *ExamPortal*!`,
         whatsappSentCount: successfulWhatsApp,
         existingEmails,
         existingPhones,
-        students: savedStudents,
+        savedStudents: savedStudentsTrimmed,
       });
     } else {
       return res.status(400).json({

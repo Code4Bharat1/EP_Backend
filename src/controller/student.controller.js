@@ -571,7 +571,7 @@ const resetPassword = async (req, res) => {
 const getPersonalData = async (req, res) => {
   try {
     const studentId = req.user.id;
-    const student = await Student.findOne({
+    const student = await Student.findOne({ 
       where: { id: studentId },
       attributes: [
         "firstName",
@@ -642,4 +642,5 @@ export {
   savePersonalData,
   getPersonalData,
   newSavePersonalData,
+  deleteStudentAccount,
 };

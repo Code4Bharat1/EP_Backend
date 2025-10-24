@@ -46,10 +46,35 @@ import reviewTestRoute from './src/routes/reviewTest.route.js';
 import './src/models/ModelManager.js'
 import { sequelizeCon } from './src/init/dbConnection.js';
 
+import sessionRoutes from "./src/routes/sessionRoutes.js";
+
+import mysql from "mysql2/promise";
+
+// ✅ MySQL Database Connection
+let db;
+
+const connectDB = async () => {
+  try {
+    db = await mysql.createConnection({
+      host: "localhost",   // ya tu kaunsa host use kar raha hai (phpMyAdmin to localhost)
+      user: "root",        // apna username
+      password: "",        // apna MySQL password (agar blank hai to blank hi rehne de)
+      database: "neet720", // apna database name
+    });
+
+    console.log("✅ MySQL Connected Successfully!");
+    global.db = db; // global variable for controllers
+  } catch (err) {
+    console.error("❌ MySQL Connection Failed:", err.message);
+  }
+};
+
+// call it
+connectDB();
 
 
 await sequelizeCon.authenticate();
-await sequelizeCon.sync({ alter: false });
+await sequelizeCon.sync({ alter: false }); // ONE place only
 
 const app = express();
 const port = 3085;
@@ -90,16 +115,21 @@ app.use(
 
 // --- Other middlewares ---
 app.use(cors(corsOptions));
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(logger);
 
 // --- Root health check ---
-app.get("/", (req, res) => {
+app.get('/', (req, res) => {
   res.status(200).json({
-    message: "👁️ Hello, developer. You've reached the NEET720 API.",
+    message: "👁️ Hello, developer. You've reached the API. It’s been waiting.",
     status: "online-ish",
-    warnings: ["Don't feed the endpoints after midnight 😈"],
+    warnings: [
+      "Do not feed the endpoints after midnight.",
+      "Avoid /deleteAll unless you're feeling brave.",
+      "Some routes are... haunted."
+    ],
+    tip: "The real bug was inside you all along."
   });
 });
 
@@ -145,6 +175,7 @@ app.use("/api/coach", r)
 app.use("/api/review", reviewTestRoute)
 
 app.use("/api/review", reviewQuestion);
+app.use("/api/sessions", sessionRoutes);
 
 // --- Start server ---
 app.listen(port, () => {

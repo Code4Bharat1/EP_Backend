@@ -1,4 +1,5 @@
 import express from "express";
+import { Op } from "sequelize";
 import {
   register,
   verifyOtp,
@@ -9,6 +10,7 @@ import {
   savePersonalData,
   getPersonalData,
   newSavePersonalData,
+  deleteStudentAccount,
 } from "../controller/student.controller.js";
 import { studentAuth } from "../middleware/studentAuth.js"; // Authentication middleware
 import { otpRateLimiter } from "../middleware/rateLimiter.js";
@@ -46,8 +48,14 @@ router.post(
   savePersonalData
 );
 
-router.post("/newdata", newSavePersonalData)
+router.post("/newdata", newSavePersonalData);
 
 router.get("/getdata", studentAuth, getPersonalData);
+
+// Route for student to delete their own account
+router.delete("/delete-account", studentAuth, deleteStudentAccount);
+
+console.log("✅ student.router.js loaded");
+
 
 export default router;

@@ -481,10 +481,44 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// Delete student account (self-deletion)
+const deleteStudentAccount = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    console.log(`Attempting to delete student with ID: ${studentId}`);
+
+    if (!studentId) {
+      return res.status(400).json({ message: "Student ID missing" });
+    }
+
+    const student = await Student.findByPk(studentId);
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    console.log(`Deleting student: ${student.email} (ID: ${student.id})`);
+
+    await student.destroy(); // ✅ This removes the record safely
+
+    return res.status(200).json({
+      message: "Student deleted successfully",
+      deletedStudentId: student.id,
+    });
+  } catch (error) {
+    console.error("Error deleting student account:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+
 const getPersonalData = async (req, res) => {
   try {
     const studentId = req.user.id;
-    const student = await Student.findOne({
+    const student = await Student.findOne({ 
       where: { id: studentId },
       attributes: [
         "firstName",
@@ -558,4 +592,5 @@ export {
   savePersonalData,
   getPersonalData,
   newSavePersonalData,
+  deleteStudentAccount,
 };

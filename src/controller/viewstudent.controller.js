@@ -4,6 +4,7 @@ import { Batch } from "../models/admin.model.js";
 import Sequelize from "sequelize";
 import { StudentBatch } from "../models/ModelManager.js";
 import { Op } from "sequelize";
+import { sendWhatsAppMessage } from "../utils/sendWhatsapp.js";
 
 // Controller to fetch student information
 const getStudentInfo = async (req, res) => {
@@ -72,11 +73,11 @@ const getStudentInfoByBatch = async (req, res) => {
     }
 
     const batch = await Batch.findOne({
-      where: { batchId }, // use the attribute name
+      where: { batchId },
       include: [
         {
           model: Student,
-          as: "Students", // must match the `as` above
+          as: "Students",
           attributes: [
             "id",
             "firstName",
@@ -121,7 +122,7 @@ const getStudentInfoByBatch = async (req, res) => {
   }
 };
 
-// Controller to save student information with specific fields
+// Controller to save student information - NOW SENDS PASSWORD VIA WHATSAPP
 const saveBasicStudentData = async (req, res) => {
   try {
     const {
@@ -151,17 +152,34 @@ const saveBasicStudentData = async (req, res) => {
         .json({ message: "All required fields must be provided" });
     }
 
-    // Ensure password is clean
-    const passwordString = String(password).trim();
+    // Validate mobile number (10 digits)
+    if (!/^\d{10}$/.test(phoneNumber)) {
+      return res.status(400).json({ message: "Enter a valid 10-digit mobile number" });
+    }
 
-    // ✅ Hash password once
-    console.log("passwordString :", passwordString);
-    const hashedPassword = await bcrypt.hash(passwordString, 10);
-    console.log("hashedPassword :", hashedPassword);
+    // Check if email already exists
+    const existingStudent = await Student.findOne({ where: { emailAddress: email } });
+    if (existingStudent) {
+      return res.status(409).json({ message: "Email already registered" });
+    }
+
+    // Check if mobile number already exists
+    const existingPhone = await Student.findOne({ where: { mobileNumber: phoneNumber } });
+    if (existingPhone) {
+      return res.status(409).json({ message: "Mobile number already registered" });
+    }
+
+    // Store original password to send via WhatsApp
+    const originalPassword = String(password).trim();
+
+    // Hash password for database
+    console.log("Original password:", originalPassword);
+    const hashedPassword = await bcrypt.hash(originalPassword, 10);
+    console.log("Hashed password:", hashedPassword);
 
     const newStudent = await Student.create({
       emailAddress: email,
-      password: hashedPassword, // only the hash stored
+      password: hashedPassword,
       firstName,
       middleName: middleName || null,
       lastName,
@@ -169,7 +187,38 @@ const saveBasicStudentData = async (req, res) => {
       mobileNumber: phoneNumber,
       gender,
       addedByAdminId,
+      isVerified: true, // Auto-verify since admin is creating
     });
+
+    // ✅ SEND LOGIN CREDENTIALS VIA WHATSAPP - NO EMAIL
+    try {
+      const whatsappResult = await sendWhatsAppMessage(
+        phoneNumber,
+        `Welcome to *ExamPortal*, ${firstName}!
+
+Your account has been created successfully.
+
+*Login Credentials:*
+📧 Email: ${email}
+🔐 Password: ${originalPassword}
+
+Please keep this information secure and change your password after first login.
+
+You can now login to your account.
+
+Thank you for joining *ExamPortal*!`
+      );
+
+      if (!whatsappResult) {
+        console.error("⚠️ Failed to send credentials via WhatsApp");
+        // Don't fail the request, but log the error
+      } else {
+        console.log("✅ Login credentials sent via WhatsApp to:", phoneNumber);
+      }
+    } catch (whatsappError) {
+      console.error("❌ WhatsApp error:", whatsappError);
+      // Continue even if WhatsApp fails
+    }
 
     // Response without password
     const studentResponse = {
@@ -183,23 +232,17 @@ const saveBasicStudentData = async (req, res) => {
     };
 
     return res.status(201).json({
-      message: "Student created successfully",
+      message: "Student created successfully. Login credentials sent to WhatsApp.",
       student: studentResponse,
     });
   } catch (error) {
-    console.error("Error saving student data:", error);
+    console.error("❌ Error saving student data:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
 const deleteStudentById = async (req, res) => {
   try {
-    /*-----------------------------------------------------------
-      1.  Get the student-ID
-          – prefer URL param  /students/:id
-          – fallback to body - so your existing front-end call
-            (axios .delete … { data:{ id } }) still works
-    -----------------------------------------------------------*/
     const studentId = req.params.id || req.body.id;
 
     if (!studentId) {
@@ -208,9 +251,6 @@ const deleteStudentById = async (req, res) => {
       });
     }
 
-    /*-----------------------------------------------------------
-      2.  Find the student
-    -----------------------------------------------------------*/
     const student = await Student.findByPk(studentId);
 
     if (!student) {
@@ -219,10 +259,7 @@ const deleteStudentById = async (req, res) => {
       });
     }
 
-    /*-----------------------------------------------------------
-      3.  Delete and confirm
-    -----------------------------------------------------------*/
-    await student.destroy(); // or  Student.destroy({ where:{ id:studentId } })
+    await student.destroy();
 
     return res.status(200).json({
       message: "Student deleted successfully",
@@ -237,68 +274,131 @@ const deleteStudentById = async (req, res) => {
   }
 };
 
+// Bulk save students - NOW SENDS PASSWORDS VIA WHATSAPP
 const bulkSaveStudents = async (req, res) => {
   try {
-    // Destructure the student data array from the request body
     const { students } = req.body;
 
-    // Arrays to hold valid student data and existing emails
+    if (!students || !Array.isArray(students) || students.length === 0) {
+      console.error("Invalid students array:", students);
+      return res.status(400).json({
+        message: "Students array is required and must be a non-empty array",
+      });
+    }
+
     const studentData = [];
     const existingEmails = [];
+    const existingPhones = [];
+    const whatsappMessages = [];
 
-    // Loop through each student and perform the necessary operations
-    for (const student of students) {
+    for (let i = 0; i < students.length; i++) {
+      const student = students[i];
       const {
         emailAddress,
-        password,
+        password: providedPassword,
         firstName,
+        lastName,
         dateOfBirth,
         mobileNumber,
         gender,
         addedByAdminId,
       } = student;
 
-      // Validate if all required fields are present
-      if (
-        !emailAddress ||
-        !password ||
-        !firstName ||
-        !dateOfBirth ||
-        !mobileNumber ||
-        !gender
-      ) {
+      // Validate required fields
+      if (!emailAddress) {
+        console.error(`Missing emailAddress for student at index ${i + 1}:`, student);
         return res.status(400).json({
-          message: "All fields are required for all students",
+          message: `Missing EMAIL for student at index ${i + 1}`,
+        });
+      }
+      if (!firstName) {
+        console.error(`Missing firstName for student at index ${i + 1}:`, student);
+        return res.status(400).json({
+          message: `Missing FIRST NAME for student at index ${i + 1}`,
+        });
+      }
+      if (!dateOfBirth) {
+        console.error(`Missing dateOfBirth for student at index ${i + 1}:`, student);
+        return res.status(400).json({
+          message: `Missing DOB for student at index ${i + 1}`,
+        });
+      }
+      if (!mobileNumber) {
+        console.error(`Missing mobileNumber for student at index ${i + 1}:`, student);
+        return res.status(400).json({
+          message: `Missing PHONE NUMBER for student at index ${i + 1}`,
+        });
+      }
+      if (!gender) {
+        console.error(`Missing gender for student at index ${i + 1}:`, student);
+        return res.status(400).json({
+          message: `Missing GENDER for student at index ${i + 1}`,
+        });
+      }
+      if (!addedByAdminId) {
+        console.error(`Missing addedByAdminId for student at index ${i + 1}:`, student);
+        return res.status(400).json({
+          message: `Missing addedByAdminId for student at index ${i + 1}`,
         });
       }
 
-      // Check if the email already exists
+      // Validate email format
+      const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
+      if (!emailRegex.test(emailAddress)) {
+        console.error(`Invalid email format for student at index ${i + 1}:`, emailAddress);
+        return res.status(400).json({
+          message: `Invalid EMAIL format for student at index ${i + 1}: ${emailAddress}`,
+        });
+      }
+
+      // Validate mobile number
+      if (!/^[6-9]\d{9}$/.test(mobileNumber)) {
+        console.error(`Invalid mobile number for student at index ${i + 1}:`, mobileNumber);
+        return res.status(400).json({
+          message: `Invalid PHONE NUMBER for student at index ${i + 1}: ${mobileNumber}. Must be 10 digits starting with 6-9.`,
+        });
+      }
+
+      // Check for duplicates
       const existingStudent = await Student.findOne({
         where: { emailAddress },
       });
       if (existingStudent) {
-        existingEmails.push(emailAddress); // Collect existing emails to report later
-        continue; // Skip adding this student to the database
+        existingEmails.push(emailAddress);
+        continue;
       }
 
-      // Hash the password before saving (uncomment if using bcrypt)
-      // const hashedPassword = await bcrypt.hash(password, 10);
+      const existingPhone = await Student.findOne({
+        where: { mobileNumber },
+      });
+      if (existingPhone) {
+        existingPhones.push(mobileNumber);
+        continue;
+      }
 
-      // Create the student object for bulk insertion
+      // Generate password if not provided
+      const birthYear = new Date(dateOfBirth).getFullYear();
+      const originalPassword = providedPassword || `${firstName.charAt(0).toUpperCase()}${birthYear}${Math.floor(1000 + Math.random() * 9000)}`;
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(originalPassword, 10);
+
+      // Prepare student data
       studentData.push({
         emailAddress,
-        password, // Save hashed password if needed
+        password: hashedPassword,
         firstName,
+        lastName: lastName || null,
         dateOfBirth,
         mobileNumber,
         gender,
         addedByAdminId,
+        isVerified: true,
         batchId: null,
-        lastName: null,
         examType: null,
         studentClass: null,
         targetYear: null,
-        fullName: null,
+        fullName: `${firstName} ${lastName || ""}`.trim() || null,
         fullAddress: null,
         domicileState: null,
         parentName: null,
@@ -331,35 +431,83 @@ const bulkSaveStudents = async (req, res) => {
         weakAreas: null,
         profileImage: null,
       });
+
+      // Prepare WhatsApp message
+      whatsappMessages.push({
+        phone: mobileNumber,
+        message: `Welcome to *ExamPortal*, ${firstName}!
+
+Your account has been created successfully.
+
+*Login Credentials:*
+📧 Email: ${emailAddress}
+🔐 Password: ${originalPassword}
+
+Please keep this information secure and change your password after first login.
+
+You can now login to your account.
+
+Thank you for joining *ExamPortal*!`,
+      });
     }
 
-    // If there are valid students, save them to the database
     if (studentData.length > 0) {
-      // Use Sequelize's bulkCreate method to insert valid students into the database
+      // Save students to database
       const savedStudents = await Student.bulkCreate(studentData);
 
-      // If there were any email conflicts, return the existing emails along with saved students
+      // Send WhatsApp messages
+      const whatsappResults = await Promise.allSettled(
+        whatsappMessages.map((msg) => sendWhatsAppMessage(msg.phone, msg.message))
+      );
+
+      const successfulWhatsApp = whatsappResults.filter(
+        (result) => result.status === "fulfilled" && result.value
+      ).length;
+
+      console.log(
+        `✅ Sent login credentials via WhatsApp to ${successfulWhatsApp}/${whatsappMessages.length} students`
+      );
+
+      // Trim savedStudents for response
+      const savedStudentsTrimmed = savedStudents.map((s) => ({
+        id: s.id,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        emailAddress: s.emailAddress,
+        mobileNumber: s.mobileNumber,
+        gender: s.gender,
+        dateOfBirth: s.dateOfBirth,
+      }));
+
+      // Prepare response message
+      let responseMessage = `${savedStudents.length} student(s) added successfully. Login credentials sent via WhatsApp.`;
+
       if (existingEmails.length > 0) {
-        return res.status(409).json({
-          message: "Emails already exist for some students.",
-          existingEmails,
-          savedStudents,
-        });
+        responseMessage += ` ${existingEmails.length} email(s) already exist.`;
       }
 
-      // Respond with the saved students
-      res.status(201).json({
-        message: "Students added successfully",
-        students: savedStudents,
+      if (existingPhones.length > 0) {
+        responseMessage += ` ${existingPhones.length} phone number(s) already exist.`;
+      }
+
+      return res.status(201).json({
+        message: responseMessage,
+        savedCount: savedStudents.length,
+        whatsappSentCount: successfulWhatsApp,
+        existingEmails,
+        existingPhones,
+        savedStudents: savedStudentsTrimmed,
       });
     } else {
-      res.status(400).json({
+      return res.status(400).json({
         message: "No valid students to add",
+        existingEmails,
+        existingPhones,
       });
     }
   } catch (error) {
-    console.error("Error saving student data:", error);
-    res.status(500).json({
+    console.error("❌ Error saving student data:", error);
+    return res.status(500).json({
       message: "Internal Server Error",
       error: error.message,
     });
@@ -381,7 +529,6 @@ const updateBatchIdForUsers = async (req, res) => {
       return res.status(400).json({ message: "Batch ID is required" });
     }
 
-    // Bulk update
     const [affectedCount] = await Student.update(
       { batchId },
       {
@@ -397,10 +544,9 @@ const updateBatchIdForUsers = async (req, res) => {
         .json({ message: "No students found with the provided emails" });
     }
 
-    // Fetch updated students for response
     const updatedStudents = await Student.findAll({
       where: { emailAddress: emails },
-      attributes: ["id", "emailAddress", "firstName", "lastName", "batchId"], // return safe fields
+      attributes: ["id", "emailAddress", "firstName", "lastName", "batchId"],
     });
 
     return res.status(200).json({
@@ -415,8 +561,6 @@ const updateBatchIdForUsers = async (req, res) => {
 
 const updateStudentData = async (req, res) => {
   try {
-
-
     const {
       id,
       firstName,
@@ -427,10 +571,10 @@ const updateStudentData = async (req, res) => {
       gender,
     } = req.body;
 
-    // Validate required fields
     if (!id) {
       return res.status(400).json({ message: "Student ID is required" });
     }
+    
     if (
       !firstName ||
       !lastName ||
@@ -445,13 +589,36 @@ const updateStudentData = async (req, res) => {
       });
     }
 
-    // Find the student by ID
+    // Validate mobile number
+    if (!/^\d{10}$/.test(mobileNumber)) {
+      return res.status(400).json({ message: "Enter a valid 10-digit mobile number" });
+    }
+
     const student = await Student.findByPk(id);
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    // Update fields
+    // Check if email is being changed and if new email exists
+    if (emailAddress !== student.emailAddress) {
+      const existingEmail = await Student.findOne({
+        where: { emailAddress, id: { [Op.ne]: id } },
+      });
+      if (existingEmail) {
+        return res.status(409).json({ message: "Email already exists" });
+      }
+    }
+
+    // Check if phone is being changed and if new phone exists
+    if (mobileNumber !== student.mobileNumber) {
+      const existingPhone = await Student.findOne({
+        where: { mobileNumber, id: { [Op.ne]: id } },
+      });
+      if (existingPhone) {
+        return res.status(409).json({ message: "Mobile number already exists" });
+      }
+    }
+
     student.firstName = firstName;
     student.lastName = lastName;
     student.emailAddress = emailAddress;
@@ -460,7 +627,6 @@ const updateStudentData = async (req, res) => {
     student.gender = gender;
 
     await student.save();
-
 
     return res.status(200).json({
       message: "Student updated successfully",
@@ -486,7 +652,6 @@ const createBatch = async (req, res) => {
     const { batchName, no_of_students, studentIds, status } = req.body;
     const adminId = req.adminId;
 
-    // Validation (unchanged)
     if (!adminId) {
       return res.status(400).json({ message: "Admin ID is required" });
     }
@@ -503,7 +668,6 @@ const createBatch = async (req, res) => {
       });
     }
 
-    // Generate batch ID (unchanged)
     const year = new Date().getFullYear();
     const month = (new Date().getMonth() + 1).toString().padStart(2, "0");
 
@@ -517,7 +681,6 @@ const createBatch = async (req, res) => {
       : 1;
     const batchId = `BATCH-${year}-${month}-${sequenceNumber.toString().padStart(3, "0")}`;
 
-    // Check for existing batch (unchanged)
     const existingBatchById = await Batch.findOne({ where: { batchId } });
     if (existingBatchById) {
       return res.status(409).json({ message: "Batch ID already exists" });
@@ -532,7 +695,6 @@ const createBatch = async (req, res) => {
         .json({ message: "You already have a batch with this name" });
     }
 
-    // Create batch without students initially
     const newBatch = await Batch.create({
       batchId,
       batchName,
@@ -541,7 +703,6 @@ const createBatch = async (req, res) => {
       admin_id: adminId,
     });
 
-    // Add students only if provided
     if (studentIds && studentIds.length > 0) {
       const students = await Student.findAll({
         where: { id: studentIds },
@@ -553,7 +714,6 @@ const createBatch = async (req, res) => {
           .json({ message: "One or more student IDs are invalid" });
       }
 
-      // Create junction table entries
       const studentBatchAssociations = students.map((student) => ({
         studentId: student.id,
         batchId: newBatch.batchId,
@@ -573,6 +733,7 @@ const createBatch = async (req, res) => {
       .json({ message: "Internal Server Error", error: error.message });
   }
 };
+
 // Controller to update an existing batch
 const updateBatch = async (req, res) => {
   try {
@@ -584,13 +745,12 @@ const updateBatch = async (req, res) => {
       return res.status(400).json({ message: "Admin ID is required" });
     }
 
-    // Find batch with current students - use the correct alias
     const batch = await Batch.findOne({
       where: { batchId, admin_id: adminId },
       include: {
         model: Student,
         through: { attributes: [] },
-        as: "Students", // This must match the alias in your association
+        as: "Students",
       },
     });
 
@@ -600,14 +760,11 @@ const updateBatch = async (req, res) => {
         .json({ message: "Batch not found or unauthorized" });
     }
 
-    // Update batch fields if provided
     if (batchName !== undefined) batch.batchName = batchName;
     if (no_of_students !== undefined) batch.no_of_students = no_of_students;
     if (status !== undefined) batch.status = status;
 
-    // Handle student updates if studentIds is provided
     if (studentIds !== undefined) {
-      // Validate all student IDs exist
       const students = await Student.findAll({
         where: { id: studentIds },
       });
@@ -621,20 +778,16 @@ const updateBatch = async (req, res) => {
         });
       }
 
-      // Get current student IDs - use the correct alias
       const currentStudentIds = batch.Students.map((student) => student.id);
 
-      // Find students to add (new IDs not in current list)
       const studentsToAdd = studentIds.filter(
         (id) => !currentStudentIds.includes(id)
       );
 
-      // Find students to remove (current IDs not in new list)
       const studentsToRemove = currentStudentIds.filter(
         (id) => !studentIds.includes(id)
       );
 
-      // Add new students
       if (studentsToAdd.length > 0) {
         const newStudents = students.filter((student) =>
           studentsToAdd.includes(student.id)
@@ -642,27 +795,23 @@ const updateBatch = async (req, res) => {
         await batch.addStudents(newStudents);
       }
 
-      // Remove students
       if (studentsToRemove.length > 0) {
         await batch.removeStudents(studentsToRemove);
       }
 
-      // Update student count if no_of_students wasn't explicitly provided
       if (no_of_students === undefined) {
         batch.no_of_students = studentIds.length;
       }
     }
 
-    // Save all changes
     await batch.save();
 
-    // Return updated batch with fresh student data
     const updatedBatch = await Batch.findOne({
       where: { batchId },
       include: {
         model: Student,
         through: { attributes: [] },
-        as: "Students", // Use the same alias here
+        as: "Students",
       },
     });
 
@@ -678,17 +827,17 @@ const updateBatch = async (req, res) => {
     });
   }
 };
+
 //controller to delete the batches from the batches table
 const deleteBatch = async (req, res) => {
   try {
-    const { batchId } = req.params; // use `batchId` for consistency
+    const { batchId } = req.params;
     const adminId = req.adminId;
 
     if (!adminId) {
       return res.status(400).json({ message: "Admin ID is required" });
     }
 
-    // Find the batch by batchId and admin_id
     const batch = await Batch.findOne({
       where: { batchId, admin_id: adminId },
     });
@@ -699,10 +848,7 @@ const deleteBatch = async (req, res) => {
         .json({ message: "Batch not found or unauthorized" });
     }
 
-    // Optionally remove student associations before deleting (if many-to-many)
-    await batch.setStudents([]); // Clears associated students
-
-    // Delete the batch
+    await batch.setStudents([]);
     await batch.destroy();
 
     res.status(200).json({ message: "Batch deleted successfully" });
@@ -761,7 +907,7 @@ const getBatchNames = async (req, res) => {
 
     const batchData = await Batch.findAll({
       where: { admin_id: adminId },
-      attributes: ["batch_id", "batchName"], // 👈 include batchId (id)
+      attributes: ["batch_id", "batchName"],
     });
 
     if (batchData.length === 0) {
@@ -782,14 +928,13 @@ const getBatchNames = async (req, res) => {
 
 const getBatchInfo = async (req, res) => {
   try {
-    const adminId = req.adminId; // Assuming adminId is sent in the request body
+    const adminId = req.adminId;
     if (!adminId) {
       return res.status(400).json({
         message: "Admin ID is required",
       });
     }
 
-    // Fetching batch information from the Batches table
     const batchData = await Batch.findAll({
       attributes: ["batchId", "batchName", "no_of_students"],
       where: {
@@ -797,13 +942,12 @@ const getBatchInfo = async (req, res) => {
       },
     });
 
-    // If no batch data found, return an error response
     if (batchData.length === 0) {
       return res.status(404).json({
         message: "No batches found",
       });
     }
-    // Return the retrieved batch data in the response
+
     res.status(200).json({ batchData });
   } catch (error) {
     console.error("Error fetching batch data:", error);

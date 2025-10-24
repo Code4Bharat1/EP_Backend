@@ -3,6 +3,7 @@ import { StudentBatch } from "../models/BatchStudent.model.js";
 import Admintest from "../models/admintest.model.js";
 import Student from "../models/student.model.js";
 import BatchAdmintest from "../models/BatchAdmintest.model.js";
+import GenerateTestResult from "../models/generateTestresult.model.js";
 // get the test info of that batch
 const batchesInfo = async (req, res) => {
   try {
@@ -530,6 +531,91 @@ export const getBatchesByStudentId = async (req, res) => {
       message: "Internal server error",
       error: error.message,
     });
+  }
+};
+
+export const checkTestAttempt = async (req, res) => {
+  try {
+    const { studentId, testid } = req.params;
+
+    const attempt = await GenerateTestResult.findOne({
+      where: { studentId, testid },
+    });
+
+    if (attempt) {
+      return res.status(200).json({
+        attempted: true,
+        status: attempt.status,   // "Pending", "Completed", etc.
+        result: attempt,
+      });
+    } else {
+      return res.status(200).json({
+        attempted: false,
+        status: "Not Attempted",
+      });
+    }
+  } catch (error) {
+    console.error("Error checking attempt:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const getPendingTests = async (req, res) => {
+  try {
+    const { studentId } = req.params; // Get studentId from request params
+
+    // Step 1: Find the batch to which the student belongs using the StudentBatch model
+    const studentBatch = await StudentBatch.findOne({
+      where: { studentId }, // Find the student's batch association
+    });
+
+    if (!studentBatch) {
+      return res.status(404).json({
+        success: false,
+        message: "Student batch not found",
+      });
+    }
+
+    const batchId = studentBatch.batchId; // Get batchId from the student's batch association
+
+    // Step 2: Fetch all tests assigned to this batch
+    const tests = await BatchAdmintest.findAll({
+      where: { batchId }, // Fetch tests based on batchId
+    });
+
+    const pendingTests = [];
+
+    // Step 3: Check for pending status for each test
+    for (const test of tests) {
+      const attempt = await GenerateTestResult.findOne({
+        where: { studentId, testid: test.admintestId },
+      });
+
+      if (!attempt || attempt.status === "Pending") {
+        // If no attempt or the test status is "Pending", add it to pendingTests
+        pendingTests.push({
+          testId: test.admintestId,
+          testname: test.testname,
+          status: attempt ? attempt.status : "Not Attempted", // Show the status if available
+        });
+      }
+    }
+
+    if (pendingTests.length > 0) {
+      return res.status(200).json({
+        success: true,
+        pendingTests,
+        count : pendingTests.length
+      });
+    } else {
+      return res.status(200).json({
+        success: false,
+        message: "No pending tests found.",
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching pending tests:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 

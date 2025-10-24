@@ -6,6 +6,10 @@ import FullTestResults from "../models/fullTestResults.model.js";
 import { Op, fn, col, where } from "sequelize";
 import generateTestresult from "../models/generateTestresult.model.js";
 import { RecommendedTest } from "../models/recommendedtest.model.js";
+import generateTestresult from "../models/generateTestresult.model.js";
+import { Op } from "sequelize";
+import { StudentBatch } from "../models/BatchStudent.model.js";
+import BatchAdmintest from "../models/BatchAdmintest.model.js";
 
 const getStudentName = async (req, res) => {
   try {
@@ -50,9 +54,10 @@ const getStudentName = async (req, res) => {
   }
 };
 
+
 const getTestStatistics = async (req, res) => {
   try {
-    // ✅ Extract token from header
+    // Extract token from the Authorization header
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) {
       return res.status(401).json({ error: "Unauthorized: No token provided" });
@@ -60,54 +65,47 @@ const getTestStatistics = async (req, res) => {
 
     const secret = config.get("jwtSecret");
     let decoded;
+
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(token, secret); // Verify the JWT token
     } catch (err) {
-      return res
-        .status(403)
-        .json({ error: "Unauthorized: Invalid or expired token" });
+      return res.status(403).json({ error: "Unauthorized: Invalid or expired token" });
     }
 
     const userId = decoded.id;
 
-    // ---------- COUNT QUERIES ----------
+    // Function to get statistics from a table
+    const getStats = async (model, tableName, statusField = "status", completedValue = "completed") => {
+      try {
+        const totalTests = await model.count({ where: { studentId: userId } });
+        const completedTests = await model.count({ where: { studentId: userId, [statusField]: completedValue } });
 
-    const adminTests = await generateTestresult.count({
-      where: {  studentId: userId }   // assuming you have a createdBy field
-    });
+        // Get the most recent update date
+        const latestTest = await model.findOne({
+          where: { studentId: userId },
+          order: [["updatedAt", "DESC"]],
+          attributes: ["updatedAt"],
+        });
 
-    let userTests = 0;
-    if (MeTest.rawAttributes.hasOwnProperty("createdBy")) {
-      userTests = await MeTest.count({
-        where: { createdBy: userId },
-      });
-    } else if (MeTest.rawAttributes.hasOwnProperty("studentId")) {
-      userTests = await MeTest.count({
-        where: { studentId: userId },
-      });
-    }
-// yahan pe hum status add karenge in the  generateTestresult model kyuki wahan pe bata nhi rha h ki student ne test complete kiya ya nhi
-    const examPlanTests = await FullTestResults.count({
-      where: {
-        studentId: userId,
-        testName: { [Op.like]: "System Test%" }, // Matches testName starting with 'SystemTest'
-      },
-    });
+        const updatedAt = latestTest ? latestTest.updatedAt : "N/A";
 
-    const fullTests = await FullTestResults.count({
-      where: { studentId: userId,
-         testName: { [Op.like]:"Full Test" }},
-    });
+        return { tableName, totalTests, completedTests, updatedAt };
+      } catch (error) {
+        console.error(`Error fetching stats for table ${tableName}:`, error);
+        return { tableName, totalTests: 0, completedTests: 0, updatedAt: "N/A" }; // Return default values on error
+      }
+    };
 
-    const totalTests = adminTests+ userTests + examPlanTests + fullTests;
+    // Fetch statistics from each table
+    const fullTestStats = await getStats(FullTestResults, "FullTestResults", "status", "Completed");
+    const recommendedTestStats = await getStats(RecommendedTest, "RecommendedTest", "status", "completed");
+    const meTestStats = await getStats(MeTest, "MeTest", "status", "completed");
 
-    // ---------- RESPONSE ----------
+    // Consolidate results
     const result = {
-      totalTests,
-      adminTests,
-      userTests,
-      examPlanTests,
-      fullTests,
+      fullTestResults: fullTestStats,
+      recommendedTests: recommendedTestStats,
+      meTests: meTestStats,
     };
 
     res.status(200).json(result);
@@ -116,200 +114,6 @@ const getTestStatistics = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
-const getRecentTests = async (req, res) => {
-  try {
-    // ✅ Extract token from header
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ error: "Unauthorized: No token provided" });
-    }
-
-    const secret = config.get("jwtSecret");
-    let decoded;
-    try {
-      decoded = jwt.verify(token, secret);
-    } catch (err) {
-      return res
-        .status(403)
-        .json({ error: "Unauthorized: Invalid or expired token" });
-    }
-
-    const userId = decoded.id;
-
-    // ---------- QUERY: Recent Admin Tests ----------
-    const adminTests = await generateTestresult.findAll({
-      where: { studentId: userId },
-      order: [['createdAt', 'DESC']],  // Sort by most recent
-      limit: 5,  // Fetch the most recent 5 admin tests
-      attributes: ['testname', 'score', 'createdAt', ]  // You can customize the fields as needed
-    });
-
-    // ---------- QUERY: Recent User Tests ----------
-    const userTests = await MeTest.findAll({
-      where: { studentId: userId },
-      order: [['createdAt', 'DESC']],  // Sort by most recent
-      limit: 5,  // Fetch the most recent 5 user tests
-      attributes: ['testname', 'score', 'createdAt']  // Customize the fields as needed
-    });
-
-    // ---------- QUERY: Recent Exam Plan Tests ----------
-    const examPlanTests = await FullTestResults.findAll({
-      where: {
-        studentId: userId,
-        testName: { [Op.like]: "System Test%" },  // Matches tests starting with 'System Test'
-      },
-      order: [['createdAt', 'DESC']],  // Sort by most recent
-      limit: 5,  // Fetch the most recent 5 exam plan tests
-      attributes: ['testname','correctAnswersCount','createdAt', ]  // Customize the fields as needed
-    });
-
-    // ---------- QUERY: Recent Full Tests ----------
-    const fullTests = await FullTestResults.findAll({
-      where: {
-        studentId: userId,
-        testName: { [Op.like]: "Full Test%" },  // Matches tests starting with 'Full Test'
-      },
-      order: [['createdAt', 'DESC']],  // Sort by most recent
-      limit: 5,  // Fetch the most recent 5 full tests
-      attributes: ['testname','correctAnswersCount', 'createdAt',]  // Customize the fields as needed
-    });
-
-    // Combine the results
-    const result = {
-      adminTests,
-      userTests,
-      examPlanTests,
-      fullTests,
-    };
-
-    res.status(200).json(result);
-  } catch (error) {
-    console.error("Error fetching recent test statistics:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-};
-
-const getTestAccuracy = async (req, res) => {
-  try {
-    // ✅ Extract token from header
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ error: "Unauthorized: No token provided" });
-    }
-
-    const secret = config.get("jwtSecret");
-    let decoded;
-    try {
-      decoded = jwt.verify(token, secret);
-    } catch (err) {
-      return res.status(403).json({ error: "Unauthorized: Invalid or expired token" });
-    }
-
-    const userId = decoded.id;
-
-    // Function to calculate accuracy
-    const calculateAccuracy = (correctAnswers, totalQuestions) => {
-      return totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
-    };
-
-    // ---------- Admin Tests Accuracy ----------
-    const adminTests = await generateTestresult.findAll({
-      where: { studentId: userId },
-      order: [['createdAt', 'DESC']],  // Sort by most recent
-      limit: 5,
-      attributes: ['testname', 'correctAnswers', 'totalquestions', 'subjectWiseMarks']
-    });
-
-    // ---------- User Tests Accuracy ----------
-    const userTests = await MeTest.findAll({
-      where: { studentId: userId },
-      order: [['createdAt', 'DESC']],
-      limit: 5,
-      attributes: ['testname', 'score', 'totalQuestions', 'subjectWiseMarks']
-    });
-
-    // ---------- Exam Plan Tests Accuracy ----------
-    const examPlanTests = await FullTestResults.findAll({
-      where: {
-        studentId: userId,
-        testName: { [Op.like]: "System Test%" }
-      },
-      order: [['createdAt', 'DESC']],
-      limit: 5,
-      attributes: ['testname', 'correctAnswers', 'totalquestions', 'subjectWisePerformance']
-    });
-
-    // ---------- Full Tests Accuracy ----------
-    const fullTests = await FullTestResults.findAll({
-      where: {
-        studentId: userId,
-        testName: { [Op.like]: "Full Test%" }
-      },
-      order: [['createdAt', 'DESC']],
-      limit: 5,
-      attributes: ['testname', 'correctAnswers', 'totalquestions', 'subjectWisePerformance']
-    });
-
-    // Calculate accuracy for all tests
-    const calculateSubjectAccuracy = (subjectWiseMarks, subject) => {
-      return subjectWiseMarks && subjectWiseMarks[subject] 
-        ? (subjectWiseMarks[subject] / subjectWiseMarks.total) * 100 
-        : 0;
-    };
-
-    // ---------- Result Preparation ----------
-    const result = {
-      adminTests: adminTests.map(test => {
-        const accuracy = calculateAccuracy(test.correctAnswers, test.totalquestions);
-        return {
-          testname: test.testname,
-          accuracy,
-          phy: calculateSubjectAccuracy(test.subjectWiseMarks, "phy"),
-          chem: calculateSubjectAccuracy(test.subjectWiseMarks, "chem"),
-          bio: calculateSubjectAccuracy(test.subjectWiseMarks, "bio")
-        };
-      }),
-      userTests: userTests.map(test => {
-        const accuracy = calculateAccuracy(test.correctAnswers, test.totalquestions);
-        return {
-          testname: test.testname,
-          accuracy,
-          phy: calculateSubjectAccuracy(test.subjectWiseMarks, "phy"),
-          chem: calculateSubjectAccuracy(test.subjectWiseMarks, "chem"),
-          bio: calculateSubjectAccuracy(test.subjectWiseMarks, "bio")
-        };
-      }),
-      examPlanTests: examPlanTests.map(test => {
-        const accuracy = calculateAccuracy(test.correctAnswers, test.totalquestions);
-        return {
-          testname: test.testname,
-          accuracy,
-          phy: calculateSubjectAccuracy(test.subjectWiseMarks, "phy"),
-          chem: calculateSubjectAccuracy(test.subjectWiseMarks, "chem"),
-          bio: calculateSubjectAccuracy(test.subjectWiseMarks, "bio")
-        };
-      }),
-      fullTests: fullTests.map(test => {
-        const accuracy = calculateAccuracy(test.correctAnswers, test.totalquestions);
-        return {
-          testname: test.testname,
-          accuracy,
-          phy: calculateSubjectAccuracy(test.subjectWiseMarks, "phy"),
-          chem: calculateSubjectAccuracy(test.subjectWiseMarks, "chem"),
-          bio: calculateSubjectAccuracy(test.subjectWiseMarks, "bio")
-        };
-      })
-    };
-
-    res.status(200).json(result);
-
-  } catch (error) {
-    console.error("Error fetching accuracy of tests:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-};
-
 
 const getSubjectWiseMarks = async (req, res) => {
   try {
@@ -522,13 +326,6 @@ const getSubjectWiseAverageMarks = async (req, res) => {
   }
 };
 
-export {
-  getStudentName,
-  getTestStatistics,
-  getSubjectWiseMarks,
-  getpendingTest,
-  getVerifiedUser,
-  getSubjectWiseAverageMarks,
-  getRecentTests,
-  getTestAccuracy,
-};
+
+
+export { getStudentName, getTestStatistics,getSubjectWiseMarks, getpendingTest, getVerifiedUser, getSubjectWiseAverageMarks};

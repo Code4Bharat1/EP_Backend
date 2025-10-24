@@ -45,96 +45,96 @@ import r from './src/routes/coach.routes.js';
 import reviewTestRoute from './src/routes/reviewTest.route.js';
 import './src/models/ModelManager.js'
 import { sequelizeCon } from './src/init/dbConnection.js';
-import sessionRoutes from "./src/routes/sessionRoutes.js";
-
-import mysql from "mysql2/promise";
-// ✅ MySQL Database Connection
-let db;
-
-const connectDB = async () => {
-  try {
-    db = await mysql.createConnection({
-      host: "localhost",   // ya tu kaunsa host use kar raha hai (phpMyAdmin to localhost)
-      user: "root",        // apna username
-      password: "",        // apna MySQL password (agar blank hai to blank hi rehne de)
-      database: "neet720", // apna database name
-    });
-
-    console.log("✅ MySQL Connected Successfully!");
-    global.db = db; // global variable for controllers
-  } catch (err) {
-    console.error("❌ MySQL Connection Failed:", err.message);
-  }
-};
-
-// call it
-connectDB();
-
-
 
 
 
 await sequelizeCon.authenticate();
-await sequelizeCon.sync({ alter: false }); // ONE place only
+await sequelizeCon.sync({ alter: false });
+
 const app = express();
 const port = 3085;
+
+// --- Secure CORS ---
 const corsOptions = {
-  origin: ["https://neet720.com", "https://admin.neet720.com", "https://superadmin.neet720.com", "http://localhost:3000", "http://localhost:3001"],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: [
+    "https://neet720.com",
+    "https://admin.neet720.com",
+    "https://superadmin.neet720.com",
+    "http://localhost:3000",
+    "http://localhost:3001",
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
 };
+
+// --- ✅ Helmet setup for best security ---
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "default-src": ["'self'"],
+        "script-src": ["'self'", "'unsafe-inline'", "https:"],
+        "img-src": ["'self'", "data:", "https:"],
+        "style-src": ["'self'", "'unsafe-inline'", "https:"],
+        "font-src": ["'self'", "https:", "data:"],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // important for Next.js images & analytics
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+    frameguard: { action: "deny" }, // blocks clickjacking
+  })
+);
+
+// --- Other middlewares ---
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(logger);
 
-app.get('/', (req, res) => {
+// --- Root health check ---
+app.get("/", (req, res) => {
   res.status(200).json({
-    message: "👁️ Hello, developer. You've reached the API. It’s been waiting.",
+    message: "👁️ Hello, developer. You've reached the NEET720 API.",
     status: "online-ish",
-    warnings: [
-      "Do not feed the endpoints after midnight.",
-      "Avoid /deleteAll unless you're feeling brave.",
-      "Some routes are... haunted."
-    ],
-    tip: "The real bug was inside you all along."
+    warnings: ["Don't feed the endpoints after midnight 😈"],
   });
 });
 
-
-app.use('/api/qr', qrTestRouter); // get student ids and verify them
-app.use('/api/students', studentRoutes);
+// --- Route mounts ---
+app.use("/api/qr", qrTestRouter);
+app.use("/api/students", studentRoutes);
 app.use("/api/question", questionRout);
 app.use("/api/metest", meTest);
 app.use("/api/recommendtest", recotest);
 app.use("/api/air-predictor", airPredictorRoutes);
-app.use("/api", startrecotestRoute);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admintest", Admintest);
 app.use("/api/fulltest", FullTestRoute);
-app.use("/api/createtest", createtestRoute); // test
+app.use("/api/createtest", createtestRoute);
 app.use("/api/test", pasttestRoute);
 app.use("/api/dashboard", dashboardRoute);
-app.use('/api/studentdata', studentviewRoute); // handle student and batch data
-app.use("/api/admintest", admingenerateRoute); // test
-app.use("/api/newadmin", newAdminRoute); // test realted to admin
+app.use("/api/studentdata", studentviewRoute);
+app.use("/api/admintest", admingenerateRoute);
+app.use("/api/newadmin", newAdminRoute);
 app.use("/api/dashboard", dsb);
-app.use("/api/logout", studentslogged)
-app.use("/api/testresult", testresult)
-app.use("/api/spotlight", spotlight)
-app.use("/api/loginattendance", loginattendance)
-app.use("/api/practicetest", practice)
+app.use("/api/logout", studentslogged);
+app.use("/api/testresult", testresult);
+app.use("/api/spotlight", spotlight);
+app.use("/api/loginattendance", loginattendance);
+app.use("/api/practicetest", practice);
 app.use("/api/generatetest", customize);
-app.use('/api/user', userprofile);
-app.use('/api', sendEmailrouter);
+app.use("/api/user", userprofile);
+app.use("/api", sendEmailrouter);
 app.use("/api/superadmin", superAdminRouter);
-app.use("/api/batches", batchRouter)
+app.use("/api/batches", batchRouter);
 app.use("/api", fastquizquestion);
 app.use("/api", noticeRouter);
 app.use("/api", omrRouter);
-app.use('/api', questionInsertionRouter);
-app.use('/api', uploadImageRouter);
+app.use("/api", questionInsertionRouter);
+app.use("/api", uploadImageRouter);
 app.use("/api", PreviousYearQuestionRouter);
 app.use("/api/verify", verifySubjectRouter);
 app.use("/api/topic-wise", topicWiseRouter);
@@ -143,14 +143,10 @@ app.use("/api/teacher", teacherRouter);
 app.use("/api/test-series", akashTest)
 app.use("/api/coach", r)
 app.use("/api/review", reviewTestRoute)
-app.use("/api/sessions", sessionRoutes);
 
 app.use("/api/review", reviewQuestion);
-// Start the server
+
+// --- Start server ---
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`🚀 Server running securely on port ${port}`);
 });
-
-
-
-

@@ -2,18 +2,15 @@ import express from "express";
 import {getpendingTest, getStudentName, getSubjectWiseAverageMarks, getSubjectWiseMarks, getVerifiedUser,getRecentTests,getTestAccuracy} from '../controller/dashboard.controller.js'
 import { getTestStatistics } from "../controller/dashboard.controller.js";
 import { verifyToken } from "../middleware/jwtDecoder.middleware.js";
-
+import { getPendingTests } from "../controller/dashboard.controller.js";
 const router = express.Router();
 
-router.get("/name", getStudentName);// ye  rakhna h 
-
-router.get('/testcount', getTestStatistics);// isko test count karna h  ismein dikhna chahiye total no of test taken by student ,test created by admins, user created tests.
-router.get('/success', getSubjectWiseMarks);// Total tests milake ek subject mein kitne marks aaye uski accuracy 
-router.get('/pending', verifyToken, getpendingTest);// 
+router.get("/name", getStudentName);
+router.get('/testcount', getTestStatistics);
+router.get('/success', getSubjectWiseMarks);
+router.get('/pending', verifyToken, getpendingTest);
 router.get('/users', getVerifiedUser)
 router.get("/average", getSubjectWiseAverageMarks);
-router.get("/recent-tests", getRecentTests); // New route for recent tests
-router.get("/accuracy", getTestAccuracy); // New route for test accuracy
 
 export default router;
 // total test count ,/ isko test count karna h  ismein dikhna chahiye total no of test taken by student ,test created by admins, user created tests.

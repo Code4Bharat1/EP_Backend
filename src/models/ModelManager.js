@@ -12,6 +12,8 @@ import StudentAnalytics from "./studentAnalytics.model.js";
 import Admintest from "./admintest.model.js";
 import BatchAdmintest from "./BatchAdmintest.model.js";
 
+import GenerateTestResult from "./generateTestresult.model.js";
+
 /* ----------------------- TestSeries <-> TestSeriesTest ----------------------- */
 
 TestSeries.hasMany(TestSeriesTest, {
@@ -106,6 +108,14 @@ Admintest.belongsToMany(Batch, {
   otherKey: "batchId",
   as: "batches", // now you can do admintest.getBatches()
 });
+
+// ✅ Each test result belongs to one student
+GenerateTestResult.belongsTo(Student, { foreignKey: "studentId" });
+Student.hasMany(GenerateTestResult, { foreignKey: "studentId" });
+
+// ✅ Each test result belongs to one admin-created test
+GenerateTestResult.belongsTo(Admintest, { foreignKey: "testid" });
+Admintest.hasMany(GenerateTestResult, { foreignKey: "testid" });
 
 // ✅ EXPORT all
 export {

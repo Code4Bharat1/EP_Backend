@@ -10,7 +10,9 @@ import {
   assignBatchesToTest,
   getBatchesForAdmin,
   removeBatchesFromTest,
-  getBatchesByStudentId
+  getBatchesByStudentId,
+  checkTestAttempt,
+  getPendingTests
 } from "../controller/batchesInfo.controller.js";
 import { verifyToken } from "../middleware/jwtDecoder.middleware.js";
 const router = express.Router();
@@ -26,5 +28,7 @@ router.get("/:adminId", getBatchesForAdmin); // get batch details for admin
 router.delete('/test/:testId/remove-batches', removeBatchesFromTest); // remove the batch from the test
 router.get("/student/:studentId", getBatchesByStudentId) // give the batch info by student id
 
+router.get("/:testid/student/:studentId/status" , checkTestAttempt) // check stustus of the test
+// router.get("/:studentId/pending-tests" , getPendingTests)
 
 export default router;

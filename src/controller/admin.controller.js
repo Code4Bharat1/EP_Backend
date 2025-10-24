@@ -35,15 +35,15 @@ const createAdmin = async (req, res) => {
           HodName,
       });
 
-      const emailSubject = "Welcome to Our Exam Portal!";
-      const emailText = `Dear ${name},\n\nYour Application has been submitted successfully.\n\nOnce your account get verified you will get your creedentials at your mail\n\nBest Regards,\nExam Portal Team`;
+      const emailSubject = "Welcome to Our Neet 720!";
+      const emailText = `Dear ${name},\n\nYour Application has been submitted successfully.\n\nOnce your account get verified you will get your creedentials at your mail\n\nBest Regards,\nNeet 720 Team`;
   
       const emailHtml = `
         <p>Dear <strong>${name}</strong>,</p>
-        <p>Welcome to our Exam Portal! Your account form submit request  has been created successfully.</p>
+        <p>Welcome to our Neet 720! Your account form submit request  has been created successfully.</p>
         
         <p>Wait for your application to be approved</p>
-        <p>Best Regards,<br>Exam Portal Team</p>
+        <p>Best Regards,<br>Neet 720 Team</p>
       `;
   
       await sendEmail(Email, emailSubject, emailText, emailHtml);
@@ -290,19 +290,19 @@ const addStudent = async (req, res) => {
     });
 
     // Send Email with credentials
-    const emailSubject = "Welcome to Our Exam Portal!";
-    const emailText = `Dear ${firstName},\n\nWelcome to our Exam Portal! Your account has been created successfully.\n\nHere are your login credentials:\n\nEmail: ${emailAddress}\nPassword: ${unhashedPassword}\n\nPlease log in and change your password for security purposes.\n\nBest Regards,\nExam Portal Team`;
+    const emailSubject = "Welcome to Our Neet 720!";
+    const emailText = `Dear ${firstName},\n\nWelcome to our Neet 720! Your account has been created successfully.\n\nHere are your login credentials:\n\nEmail: ${emailAddress}\nPassword: ${unhashedPassword}\n\nPlease log in and change your password for security purposes.\n\nBest Regards,\nNeet 720 Team`;
 
     const emailHtml = `
       <p>Dear <strong>${firstName}</strong>,</p>
-      <p>Welcome to our Exam Portal! Your account has been created successfully.</p>
+      <p>Welcome to our Neet 720! Your account has been created successfully.</p>
       <p><strong>Here are your login credentials:</strong></p>
       <ul>
         <li><strong>Email:</strong> ${emailAddress}</li>
         <li><strong>Password:</strong> ${unhashedPassword}</li>
       </ul>
       <p>Please log in and change your password for security purposes.</p>
-      <p>Best Regards,<br>Exam Portal Team</p>
+      <p>Best Regards,<br>Neet 720 Team</p>
     `;
 
     await sendEmail(emailAddress, emailSubject, emailText, emailHtml);
@@ -495,19 +495,19 @@ const bulkStudentUpload = async (req, res) => {
         });
 
         // Send email notification
-        const emailSubject = "Welcome to Our Exam Portal!";
-        const emailText = `Dear ${firstName},\n\nWelcome to our Exam Portal! Your account has been created successfully.\n\nHere are your login credentials:\n\nEmail: ${emailAddress}\nPassword: ${unhashedPassword}\n\nPlease log in and change your password for security purposes.\n\nBest Regards,\nExam Portal Team`;
+        const emailSubject = "Welcome to Our Neet 720!";
+        const emailText = `Dear ${firstName},\n\nWelcome to our Neet 720! Your account has been created successfully.\n\nHere are your login credentials:\n\nEmail: ${emailAddress}\nPassword: ${unhashedPassword}\n\nPlease log in and change your password for security purposes.\n\nBest Regards,\nNeet 720 Team`;
 
         const emailHtml = `
           <p>Dear <strong>${firstName}</strong>,</p>
-          <p>Welcome to our Exam Portal! Your account has been created successfully.</p>
+          <p>Welcome to our Neet 720! Your account has been created successfully.</p>
           <p><strong>Here are your login credentials:</strong></p>
           <ul>
             <li><strong>Email:</strong> ${emailAddress}</li>
             <li><strong>Password:</strong> ${unhashedPassword}</li>
           </ul>
           <p>Please log in and change your password for security purposes.</p>
-          <p>Best Regards,<br>Exam Portal Team</p>
+          <p>Best Regards,<br>Neet 720 Team</p>
         `;
 
         try {

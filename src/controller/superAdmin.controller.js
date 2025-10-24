@@ -380,8 +380,8 @@ const updateAdmin = async (req, res) => {
 
 // Fixed super admin credentials (in production, use environment variables)
 const FIXED_SUPER_ADMIN = {
-  username: "rishi",
-  passkey: "rishi",
+  username: "yogu",
+  passkey: "yogu",
 };
 
 const superAdminLogin = async (req, res) => {

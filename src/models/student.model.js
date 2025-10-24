@@ -345,8 +345,8 @@ const Student = sequelizeCon.define(
 //   }
 // });
 
-Student.sync({ alter: true })
-  .then(() => console.log("Student table synced successfully"))
-  .catch((err) => console.error("Error syncing Student table:", err));
+// Student.sync({ alter: true })
+//   .then(() => console.log("Student table synced successfully"))
+//   .catch((err) => console.error("Error syncing Student table:", err));
 
 export default Student;

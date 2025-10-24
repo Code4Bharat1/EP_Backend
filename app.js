@@ -47,6 +47,30 @@ import './src/models/ModelManager.js'
 import { sequelizeCon } from './src/init/dbConnection.js';
 import sessionRoutes from "./src/routes/sessionRoutes.js";
 
+import mysql from "mysql2/promise";
+// ✅ MySQL Database Connection
+let db;
+
+const connectDB = async () => {
+  try {
+    db = await mysql.createConnection({
+      host: "localhost",   // ya tu kaunsa host use kar raha hai (phpMyAdmin to localhost)
+      user: "root",        // apna username
+      password: "",        // apna MySQL password (agar blank hai to blank hi rehne de)
+      database: "neet720", // apna database name
+    });
+
+    console.log("✅ MySQL Connected Successfully!");
+    global.db = db; // global variable for controllers
+  } catch (err) {
+    console.error("❌ MySQL Connection Failed:", err.message);
+  }
+};
+
+// call it
+connectDB();
+
+
 
 
 

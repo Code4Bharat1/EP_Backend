@@ -1,32 +1,39 @@
 import Session from "../models/sessionModel.js";
 
-// 🟢 Create a new session
 export const createSession = async (req, res) => {
   try {
-    const session = await Session.create(req.body);
-    res.status(201).json(session);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+    const { title } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ message: "Title is required" });
+    }
+
+    await global.db.execute("INSERT INTO sessions (title) VALUES (?)", [title]);
+    res.status(201).json({ message: "Session created successfully" });
+  } catch (err) {
+    console.error("❌ Error creating session:", err);
+    res.status(500).json({ message: err.message });
   }
 };
 
-// 🟣 Get all sessions
 export const getSessions = async (req, res) => {
   try {
-    const sessions = await Session.find().sort({ date: 1 });
-    res.json(sessions);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const [rows] = await global.db.execute("SELECT * FROM sessions");
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ Error getting sessions:", err);
+    res.status(500).json({ message: err.message });
   }
 };
 
-// 🔵 Get single session by ID
 export const getSessionById = async (req, res) => {
   try {
-    const session = await Session.findById(req.params.id);
-    if (!session) return res.status(404).json({ message: "Session not found" });
-    res.json(session);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const [rows] = await global.db.execute("SELECT * FROM sessions WHERE id = ?", [req.params.id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Session not found" });
+    }
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

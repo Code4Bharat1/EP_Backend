@@ -268,70 +268,69 @@ const getSubjectWiseAverageMarks = async (req, res) => {
 // updated controller
 const getTestStatistics = async (req, res) => {
   try {
-    // ✅ Extract token from header
+    // 1️⃣ Verify Token
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) {
-      return res.status(401).json({ error: "Unauthorized: No token provided" });
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
     const secret = config.get("jwtSecret");
-    let decoded;
-    try {
-      decoded = jwt.verify(token, secret);
-    } catch (err) {
-      return res
-        .status(403)
-        .json({ error: "Unauthorized: Invalid or expired token" });
-    }
-
+    const decoded = jwt.verify(token, secret);
     const userId = decoded.id;
 
-    // ---------- COUNT QUERIES ----------
-
-    const adminTests = await generateTestresult.count({
-      where: {  studentId: userId }   // assuming you have a createdBy field
+    // 2️⃣ Count total tests per category
+    const adminTests = await generateTestresult.count({ where: { studentId: userId } });
+    const userTests = await MeTest.count({ where: { studentId: userId } });
+    const examPlanTests = await FullTestResults.count({
+      where: { studentId: userId, testName: { [Op.like]: "System Test%" } },
+    });
+    const fullTests = await FullTestResults.count({
+      where: { studentId: userId, testName: { [Op.like]: "Full Test%" } },
     });
 
-    let userTests = 0;
-    if (MeTest.rawAttributes.hasOwnProperty("createdBy")) {
-      userTests = await MeTest.count({
-        where: { createdBy: userId },
-      });
-    } else if (MeTest.rawAttributes.hasOwnProperty("studentId")) {
-      userTests = await MeTest.count({
-        where: { studentId: userId },
-      });
-    }
-// yahan pe hum status add karenge in the  generateTestresult model kyuki wahan pe bata nhi rha h ki student ne test complete kiya ya nhi
-    const examPlanTests = await FullTestResults.count({
-      where: {
-        studentId: userId,
-        testName: { [Op.like]: "System Test%" }, // Matches testName starting with 'SystemTest'
+    // 3️⃣ Fetch latest updatedAt timestamps for each category
+    const latestFull = await FullTestResults.findOne({
+      where: { studentId: userId, testName: { [Op.like]: "Full Test%" } },
+      order: [["updatedAt", "DESC"]],
+      attributes: ["updatedAt"],
+    });
+
+    const latestRecommended = await FullTestResults.findOne({
+      where: { studentId: userId, testName: { [Op.like]: "System Test%" } },
+      order: [["updatedAt", "DESC"]],
+      attributes: ["updatedAt"],
+    });
+
+    const latestME = await MeTest.findOne({
+      where: { studentId: userId },
+      order: [["updatedAt", "DESC"]],
+      attributes: ["updatedAt"],
+    });
+
+    // 4️⃣ Prepare final response
+    res.status(200).json({
+      fullTestResults: {
+        totalTests: fullTests,
+        updatedAt: latestFull?.updatedAt || new Date(),
+      },
+      recommendedTests: {
+        totalTests: examPlanTests,
+        updatedAt: latestRecommended?.updatedAt || new Date(),
+      },
+      meTests: {
+        totalTests: userTests,
+        updatedAt: latestME?.updatedAt || new Date(),
+      },
+      adminTests: {
+        totalTests: adminTests,
       },
     });
-
-    const fullTests = await FullTestResults.count({
-      where: { studentId: userId,
-         testName: { [Op.like]:"Full Test" }},
-    });
-
-    const totalTests = adminTests+ userTests + examPlanTests + fullTests;
-
-    // ---------- RESPONSE ----------
-    const result = {
-      totalTests,
-      adminTests,
-      userTests,
-      examPlanTests,
-      fullTests,
-    };
-
-    res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching test statistics:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 
 export const getPendingTests = async (req, res) => {
   try {

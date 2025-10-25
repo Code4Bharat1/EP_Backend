@@ -55,7 +55,7 @@ router.get("/getdata", studentAuth, getPersonalData);
 // Route for student to delete their own account
 router.delete("/delete-account", studentAuth, deleteStudentAccount);
 
-console.log("✅ student.router.js loaded");
+// console.log("✅ student.router.js loaded");
 
 
 export default router;

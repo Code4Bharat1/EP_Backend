@@ -55,65 +55,65 @@ const getStudentName = async (req, res) => {
 };
 
 
-const getTestStatistics = async (req, res) => {
-  try {
-    // Extract token from the Authorization header
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ error: "Unauthorized: No token provided" });
-    }
+// const getTestStatistics = async (req, res) => {
+//   try {
+//     // Extract token from the Authorization header
+//     const token = req.headers.authorization?.split(" ")[1];
+//     if (!token) {
+//       return res.status(401).json({ error: "Unauthorized: No token provided" });
+//     }
 
-    const secret = config.get("jwtSecret");
-    let decoded;
+//     const secret = config.get("jwtSecret");
+//     let decoded;
 
-    try {
-      decoded = jwt.verify(token, secret); // Verify the JWT token
-    } catch (err) {
-      return res.status(403).json({ error: "Unauthorized: Invalid or expired token" });
-    }
+//     try {
+//       decoded = jwt.verify(token, secret); // Verify the JWT token
+//     } catch (err) {
+//       return res.status(403).json({ error: "Unauthorized: Invalid or expired token" });
+//     }
 
-    const userId = decoded.id;
+//     const userId = decoded.id;
 
-    // Function to get statistics from a table
-    const getStats = async (model, tableName, statusField = "status", completedValue = "completed") => {
-      try {
-        const totalTests = await model.count({ where: { studentId: userId } });
-        const completedTests = await model.count({ where: { studentId: userId, [statusField]: completedValue } });
+//     // Function to get statistics from a table
+//     const getStats = async (model, tableName, statusField = "status", completedValue = "completed") => {
+//       try {
+//         const totalTests = await model.count({ where: { studentId: userId } });
+//         const completedTests = await model.count({ where: { studentId: userId, [statusField]: completedValue } });
 
-        // Get the most recent update date
-        const latestTest = await model.findOne({
-          where: { studentId: userId },
-          order: [["updatedAt", "DESC"]],
-          attributes: ["updatedAt"],
-        });
+//         // Get the most recent update date
+//         const latestTest = await model.findOne({
+//           where: { studentId: userId },
+//           order: [["updatedAt", "DESC"]],
+//           attributes: ["updatedAt"],
+//         });
 
-        const updatedAt = latestTest ? latestTest.updatedAt : "N/A";
+//         const updatedAt = latestTest ? latestTest.updatedAt : "N/A";
 
-        return { tableName, totalTests, completedTests, updatedAt };
-      } catch (error) {
-        console.error(`Error fetching stats for table ${tableName}:`, error);
-        return { tableName, totalTests: 0, completedTests: 0, updatedAt: "N/A" }; // Return default values on error
-      }
-    };
+//         return { tableName, totalTests, completedTests, updatedAt };
+//       } catch (error) {
+//         console.error(`Error fetching stats for table ${tableName}:`, error);
+//         return { tableName, totalTests: 0, completedTests: 0, updatedAt: "N/A" }; // Return default values on error
+//       }
+//     };
 
-    // Fetch statistics from each table
-    const fullTestStats = await getStats(FullTestResults, "FullTestResults", "status", "Completed");
-    const recommendedTestStats = await getStats(RecommendedTest, "RecommendedTest", "status", "completed");
-    const meTestStats = await getStats(MeTest, "MeTest", "status", "completed");
+//     // Fetch statistics from each table
+//     const fullTestStats = await getStats(FullTestResults, "FullTestResults", "status", "Completed");
+//     const recommendedTestStats = await getStats(RecommendedTest, "RecommendedTest", "status", "completed");
+//     const meTestStats = await getStats(MeTest, "MeTest", "status", "completed");
 
-    // Consolidate results
-    const result = {
-      fullTestResults: fullTestStats,
-      recommendedTests: recommendedTestStats,
-      meTests: meTestStats,
-    };
+//     // Consolidate results
+//     const result = {
+//       fullTestResults: fullTestStats,
+//       recommendedTests: recommendedTestStats,
+//       meTests: meTestStats,
+//     };
 
-    res.status(200).json(result);
-  } catch (error) {
-    console.error("Error fetching test statistics:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-};
+//     res.status(200).json(result);
+//   } catch (error) {
+//     console.error("Error fetching test statistics:", error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// };
 
 const getSubjectWiseMarks = async (req, res) => {
   try {

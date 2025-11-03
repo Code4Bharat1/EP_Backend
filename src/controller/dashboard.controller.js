@@ -175,45 +175,45 @@ const getSubjectWiseMarks = async (req, res) => {
   }
 };
 
-const getpendingTest = async (req, res) => {
-  try {
-    // Extract the token from the Authorization header
-    // const token = req.headers.authorization?.split(" ")[1];
-    // if (!token) {
-    //   return res.status(401).json({ error: "Unauthorized: No token provided" });
-    // }
+// const getpendingTest = async (req, res) => {
+//   try {
+//     // Extract the token from the Authorization header
+//     // const token = req.headers.authorization?.split(" ")[1];
+//     // if (!token) {
+//     //   return res.status(401).json({ error: "Unauthorized: No token provided" });
+//     // }
 
-    // const secret = config.get("jwtSecret");
-    // let decoded;
+//     // const secret = config.get("jwtSecret");
+//     // let decoded;
 
-    // try {
-    //   decoded = jwt.verify(token, secret); // Verify the JWT token
-    // } catch (err) {
-    //   return res.status(403).json({ error: "Unauthorized: Invalid or expired token" });
-    // }
+//     // try {
+//     //   decoded = jwt.verify(token, secret); // Verify the JWT token
+//     // } catch (err) {
+//     //   return res.status(403).json({ error: "Unauthorized: Invalid or expired token" });
+//     // }
 
-    const userId = req.adminId; // Extract userId from the decoded token
+//     const userId = req.adminId; // Extract userId from the decoded token
 
-    // Fetch the recommended tests data based on userId
-    const recommendedTests = await RecommendedTest.findAll({
-      where: { studentId: userId },
-      attributes: ["testName", "status", "updatedAt"],
-      order: [["updatedAt", "DESC"]], // Optional: to order by latest updatedAt
-    });
+//     // Fetch the recommended tests data based on userId
+//     const recommendedTests = await RecommendedTest.findAll({
+//       where: { studentId: userId },
+//       attributes: ["testName", "status", "updatedAt"],
+//       order: [["updatedAt", "DESC"]], // Optional: to order by latest updatedAt
+//     });
 
-    if (!recommendedTests || recommendedTests.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No recommended tests found for this user" });
-    }
+//     if (!recommendedTests || recommendedTests.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: "No recommended tests found for this user" });
+//     }
 
-    // Return the fetched data
-    res.status(200).json(recommendedTests);
-  } catch (error) {
-    console.error("Error fetching recommended tests:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-};
+//     // Return the fetched data
+//     res.status(200).json(recommendedTests);
+//   } catch (error) {
+//     console.error("Error fetching recommended tests:", error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// };
 
 const getVerifiedUser = async (req, res) => {
   try {
@@ -394,7 +394,7 @@ const getTestStatistics = async (req, res) => {
 };
 
 
-export const getPendingTests = async (req, res) => {
+ const getpendingTest = async (req, res) => {
   try {
     const { studentId } = req.params; // Get studentId from request params
 

@@ -426,7 +426,7 @@ const login = async (req, res) => {
     const token = jwt.sign(
       { id: student.id, email: student.emailAddress, mobile: student.mobileNumber },
       config.get("jwtSecret"),
-      { expiresIn: "30d" }
+      { expiresIn: "6h" }
     );
 
     console.log("=== END LOGIN DEBUG ===");

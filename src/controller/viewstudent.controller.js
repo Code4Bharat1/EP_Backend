@@ -435,7 +435,7 @@ const bulkSaveStudents = async (req, res) => {
       // Prepare WhatsApp message
       whatsappMessages.push({
         phone: mobileNumber,
-        message: `Welcome to *ExamPortal*, ${firstName}!
+        message: `Welcome to *Neet-720*, ${firstName}!
 
 Your account has been created successfully.
 

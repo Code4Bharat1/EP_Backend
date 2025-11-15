@@ -83,18 +83,31 @@ const app = express();
 const port = 3085;
 
 // --- Secure CORS ---
+const allowedOrigins = [
+  "https://neet720.com",
+  "https://www.neet720.com",
+  "https://admin.neet720.com",
+  "https://www.admin.neet720.com",
+  "https://superadmin.neet720.com",
+  "http://localhost:3000",
+  "http://localhost:3001",
+];
+
 const corsOptions = {
-  origin: [
-    "https://neet720.com",
-    "https://admin.neet720.com",
-    "https://superadmin.neet720.com",
-    "http://localhost:3000",
-    "http://localhost:3001",
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS policy: Origin not allowed"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
+  optionsSuccessStatus: 200, // for legacy browsers
 };
+
 
 // --- ✅ Helmet setup for best security ---
 app.use(

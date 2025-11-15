@@ -426,7 +426,7 @@ const login = async (req, res) => {
     const token = jwt.sign(
       { id: student.id, email: student.emailAddress, mobile: student.mobileNumber },
       config.get("jwtSecret"),
-      { expiresIn: "30d" }
+      { expiresIn: "6h" }
     );
 
     console.log("=== END LOGIN DEBUG ===");
@@ -467,7 +467,7 @@ const forgotPassword = async (req, res) => {
     // ✅ SEND OTP VIA WHATSAPP ONLY
     const whatsappResult = await sendWhatsAppMessage(
       mobileNumber,
-      `Your OTP for *ExamPortal Password Reset* is: *${otp}*
+      `Your OTP for *Neet720 Password Reset* is: *${otp}*
 
 This OTP is valid for 10 minutes only.
 

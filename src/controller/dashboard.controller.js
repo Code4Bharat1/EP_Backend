@@ -3,461 +3,437 @@ import config from "config";
 import Student from "../models/student.model.js";
 import MeTest from "../models/saved.js";
 import FullTestResults from "../models/fullTestResults.model.js";
-// import { Op, fn, col, where } from "sequelize";
 import generateTestresult from "../models/generateTestresult.model.js";
 import { RecommendedTest } from "../models/recommendedtest.model.js";
 import { Op } from "sequelize";
 import { StudentBatch } from "../models/BatchStudent.model.js";
 import BatchAdmintest from "../models/BatchAdmintest.model.js";
 
+/**
+ * Utility function to verify JWT token
+ * @param {string} token - JWT token from header
+ * @returns {object} Decoded token payload
+ * @throws {Error} If token is invalid or expired
+ */
+const verifyStudentToken = (token) => {
+  if (!token) {
+    throw new Error("No token provided");
+  }
+  const secret = config.get("jwtSecret");
+  return jwt.verify(token, secret);
+};
+
+/**
+ * Normalizes subject marks to ensure consistent response format
+ * @param {object|string} rawMarks - Raw marks data from database
+ * @returns {object} Normalized marks with all required subjects
+ */
+const normalizeSubjectMarks = (rawMarks) => {
+  let subjectMarks;
+  
+  try {
+    subjectMarks = typeof rawMarks === "string" ? JSON.parse(rawMarks) : rawMarks;
+  } catch (error) {
+    console.error("Error parsing subject marks:", error);
+    subjectMarks = {};
+  }
+
+  // Return consistent format with default values
+  return {
+    Physics: subjectMarks.Physics || 0,
+    Chemistry: subjectMarks.Chemistry || 0,
+    Biology: subjectMarks.Biology || 0,
+    Botany: subjectMarks.Botany || 0,
+    Zoology: subjectMarks.Zoology || 0,
+  };
+};
+
+/**
+ * Calculates trend percentage between current and previous values
+ * @param {number} current - Current value
+ * @param {number} previous - Previous value
+ * @returns {number} Percentage change
+ */
+const calculateTrendPercentage = (current, previous) => {
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return Number(((current - previous) / previous * 100).toFixed(2));
+};
+
+/**
+ * Fetches student's first and last name
+ */
 const getStudentName = async (req, res) => {
   try {
-    // Extract token from the Authorization header
-    const token = req.headers.authorization?.split(" ")[1]; // Optional chaining to handle missing token
+    const token = req.headers.authorization?.split(" ")[1];
+    const decoded = verifyStudentToken(token);
+    const userId = decoded.id;
 
-    if (!token) {
-      return res.status(401).json({ error: "Unauthorized: No token provided" });
-    }
-
-    const secret = config.get("jwtSecret");
-    let decoded;
-
-    try {
-      decoded = jwt.verify(token, secret); // Verify the JWT token
-    } catch (err) {
-      return res
-        .status(403)
-        .json({ error: "Unauthorized: Invalid or expired token" });
-    }
-
-    const userId = decoded.id; // Extract userId from the decoded token
-
-    // Fetch student data from the Student model based on studentId
     const student = await Student.findOne({
-      where: { id: userId }, // Match the student with the userId
-      attributes: ["firstName", "lastName"], // Only fetch firstName and lastName
+      where: { id: userId },
+      attributes: ["firstName", "lastName"],
     });
 
     if (!student) {
-      return res.status(404).json({ error: "Student not found" });
+      return res.status(404).json({ 
+        error: "Student not found", 
+        code: "STUDENT_NOT_FOUND" 
+      });
     }
 
-    // Return the student data (firstName and lastName)
-    res
-      .status(200)
-      .json({ firstName: student.firstName, lastName: student.lastName });
+    res.status(200).json({ 
+      firstName: student.firstName, 
+      lastName: student.lastName 
+    });
   } catch (error) {
-    // Handle any other unexpected errors
     console.error("Error fetching student name:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-};
-
-
-// const getTestStatistics = async (req, res) => {
-//   try {
-//     // Extract token from the Authorization header
-//     const token = req.headers.authorization?.split(" ")[1];
-//     if (!token) {
-//       return res.status(401).json({ error: "Unauthorized: No token provided" });
-//     }
-
-//     const secret = config.get("jwtSecret");
-//     let decoded;
-
-//     try {
-//       decoded = jwt.verify(token, secret); // Verify the JWT token
-//     } catch (err) {
-//       return res.status(403).json({ error: "Unauthorized: Invalid or expired token" });
-//     }
-
-//     const userId = decoded.id;
-
-//     // Function to get statistics from a table
-//     const getStats = async (model, tableName, statusField = "status", completedValue = "completed") => {
-//       try {
-//         const totalTests = await model.count({ where: { studentId: userId } });
-//         const completedTests = await model.count({ where: { studentId: userId, [statusField]: completedValue } });
-
-//         // Get the most recent update date
-//         const latestTest = await model.findOne({
-//           where: { studentId: userId },
-//           order: [["updatedAt", "DESC"]],
-//           attributes: ["updatedAt"],
-//         });
-
-//         const updatedAt = latestTest ? latestTest.updatedAt : "N/A";
-
-//         return { tableName, totalTests, completedTests, updatedAt };
-//       } catch (error) {
-//         console.error(`Error fetching stats for table ${tableName}:`, error);
-//         return { tableName, totalTests: 0, completedTests: 0, updatedAt: "N/A" }; // Return default values on error
-//       }
-//     };
-
-//     // Fetch statistics from each table
-//     const fullTestStats = await getStats(FullTestResults, "FullTestResults", "status", "Completed");
-//     const recommendedTestStats = await getStats(RecommendedTest, "RecommendedTest", "status", "completed");
-//     const meTestStats = await getStats(MeTest, "MeTest", "status", "completed");
-
-//     // Consolidate results
-//     const result = {
-//       fullTestResults: fullTestStats,
-//       recommendedTests: recommendedTestStats,
-//       meTests: meTestStats,
-//     };
-
-//     res.status(200).json(result);
-//   } catch (error) {
-//     console.error("Error fetching test statistics:", error);
-//     res.status(500).json({ error: "Internal Server Error" });
-//   }
-// };
-
-const getSubjectWiseMarks = async (req, res) => {
-  try {
-    // Extract token from the Authorization header
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ error: "Unauthorized: No token provided" });
-    }
-
-    const secret = config.get("jwtSecret");
-    let decoded;
-
-    try {
-      decoded = jwt.verify(token, secret); // Verify the JWT token
-    } catch (err) {
-      return res
-        .status(403)
-        .json({ error: "Unauthorized: Invalid or expired token" });
-    }
-
-    const userId = decoded.id;
-
-    // Fetch data from MeTest
-    const meTestData = await MeTest.findAll({
-      where: { studentId: userId },
-      attributes: ["subjectWiseMarks", "updatedAt"],
-    });
-
-    // Process the data and log the result
-    const result = meTestData.map((test) => {
-      let subjectMarks;
-      try {
-        // Parse the JSON string from the database
-        subjectMarks =
-          typeof test.subjectWiseMarks === "string"
-            ? JSON.parse(test.subjectWiseMarks)
-            : test.subjectWiseMarks;
-      } catch (error) {
-        console.error("Error parsing subjectWiseMarks:", error);
-        subjectMarks = { Physics: 0, Chemistry: 0, Biology: 0 };
-      }
-
-      const formattedResult = {
-        Physics: subjectMarks.Physics || 0,
-        Chemistry: subjectMarks.Chemistry || 0,
-        Biology: subjectMarks.Biology || 0,
-        updatedAt: test.updatedAt,
-      };
-
-      // Log in the desired format
-
-      return formattedResult;
-    });
-
-    // Send the data as JSON response
-    res.status(200).json(result);
-  } catch (error) {
-    console.error("Error fetching subject-wise marks:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-};
-
-// const getpendingTest = async (req, res) => {
-//   try {
-//     // Extract the token from the Authorization header
-//     // const token = req.headers.authorization?.split(" ")[1];
-//     // if (!token) {
-//     //   return res.status(401).json({ error: "Unauthorized: No token provided" });
-//     // }
-
-//     // const secret = config.get("jwtSecret");
-//     // let decoded;
-
-//     // try {
-//     //   decoded = jwt.verify(token, secret); // Verify the JWT token
-//     // } catch (err) {
-//     //   return res.status(403).json({ error: "Unauthorized: Invalid or expired token" });
-//     // }
-
-//     const userId = req.adminId; // Extract userId from the decoded token
-
-//     // Fetch the recommended tests data based on userId
-//     const recommendedTests = await RecommendedTest.findAll({
-//       where: { studentId: userId },
-//       attributes: ["testName", "status", "updatedAt"],
-//       order: [["updatedAt", "DESC"]], // Optional: to order by latest updatedAt
-//     });
-
-//     if (!recommendedTests || recommendedTests.length === 0) {
-//       return res
-//         .status(404)
-//         .json({ message: "No recommended tests found for this user" });
-//     }
-
-//     // Return the fetched data
-//     res.status(200).json(recommendedTests);
-//   } catch (error) {
-//     console.error("Error fetching recommended tests:", error);
-//     res.status(500).json({ error: "Internal Server Error" });
-//   }
-// };
-
-const getVerifiedUser = async (req, res) => {
-  try {
-    // Step 1: Fetch users with isVerified = 1 (true)
-    const users = await Student.findAll({
-      where: { isVerified: true },
-      attributes: ["id", "firstName", "lastName", "profileImage"], // Only fetch required fields
-    });
-
-    // If no verified users are found
-    if (!users || users.length === 0) {
-      return res.status(404).json({ message: "No verified users found." });
-    }
-
-    // Step 2: For each verified user, fetch their test results
-    const userData = [];
-
-    for (const user of users) {
-      const userId = user.id;
-
-      // Fetch FullTestResults based on studentId (userId)
-      const testResults = await FullTestResults.findAll({
-        where: { studentId: userId },
-        attributes: ["correctAnswers", "wrongAnswers", "notAttempted"],
-      });
-
-      // Prepare the result for the user
-      const testData = testResults.map((result) => ({
-        correctAnswers: result.correctAnswers,
-        wrongAnswers: result.wrongAnswers,
-        notAttempted: result.notAttempted,
-      }));
-
-      // Add user and their test data to the response
-      userData.push({
-        firstName: user.firstName,
-        lastName: user.lastName,
-        profileImage: user.profileImage,
-        testResults: testData,
+    
+    if (error.message === "No token provided" || error.name === "JsonWebTokenError") {
+      return res.status(401).json({ 
+        error: "Unauthorized", 
+        code: "INVALID_TOKEN",
+        message: "Invalid or expired token" 
       });
     }
-
-    // Step 3: Return the combined data (user and test results)
-    res.status(200).json(userData);
-  } catch (error) {
-    console.error("Error fetching user data and test results:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    
+    res.status(500).json({ 
+      error: "Internal Server Error", 
+      code: "SERVER_ERROR",
+      message: "Failed to fetch student data" 
+    });
   }
 };
 
-const getSubjectWiseAverageMarks = async (req, res) => {
-  try {
-    // Extract token from the Authorization header
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ error: "Unauthorized: No token provided" });
-    }
-
-    const secret = config.get("jwtSecret");
-    let decoded;
-
-    try {
-      decoded = jwt.verify(token, secret); // Verify the JWT token
-    } catch (err) {
-      return res
-        .status(403)
-        .json({ error: "Unauthorized: Invalid or expired token" });
-    }
-
-    const userId = decoded.id;
-
-    // Fetch data from MeTest
-    const meTestData = await MeTest.findAll({
-      where: { studentId: userId },
-      attributes: ["subjectWiseMarks", "updatedAt"],
-    });
-
-    // Process the data and log the result
-    const result = meTestData.map((test) => {
-      let subjectMarks;
-      try {
-        // Parse the JSON string from the database
-        subjectMarks =
-          typeof test.subjectWiseMarks === "string"
-            ? JSON.parse(test.subjectWiseMarks)
-            : test.subjectWiseMarks;
-      } catch (error) {
-        console.error("Error parsing subjectWiseMarks:", error);
-        subjectMarks = { Physics: 0, Chemistry: 0, Biology: 0 };
-      }
-
-      const formattedResult = {
-        Physics: subjectMarks.Physics || 0,
-        Chemistry: subjectMarks.Chemistry || 0,
-        Biology: subjectMarks.Biology || 0,
-        updatedAt: test.updatedAt,
-      };
-
-      // Log in the desired format
-
-      return formattedResult;
-    });
-
-    // Send the data as JSON response
-    res.status(200).json(result);
-  } catch (error) {
-    console.error("Error fetching subject-wise marks:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-};
-
-
-
-// updated controller
+/**
+ * Fetches comprehensive test statistics for dashboard
+ */
 const getTestStatistics = async (req, res) => {
   try {
-    // 1️⃣ Verify Token
     const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const secret = config.get("jwtSecret");
-    const decoded = jwt.verify(token, secret);
+    const decoded = verifyStudentToken(token);
     const userId = decoded.id;
 
-    // 2️⃣ Count total tests per category
-    const adminTests = await generateTestresult.count({ where: { studentId: userId } });
-    const userTests = await MeTest.count({ where: { studentId: userId } });
-    const examPlanTests = await FullTestResults.count({
-      where: { studentId: userId, testName: { [Op.like]: "System Test%" } },
-    });
-    const fullTests = await FullTestResults.count({
-      where: { studentId: userId, testName: { [Op.like]: "Full Test%" } },
-    });
+    // Execute all count queries in parallel
+    const [
+      adminTestsCount,
+      userTestsCount,
+      examPlanTestsCount,
+      fullTestsCount,
+      latestFull,
+      latestRecommended,
+      latestME,
+      pendingFullTests,
+      pendingRecommendedTests,
+      pendingMETests
+    ] = await Promise.all([
+      // Count queries
+      generateTestresult.count({ where: { studentId: userId } }),
+      MeTest.count({ where: { studentId: userId } }),
+      FullTestResults.count({
+        where: { 
+          studentId: userId, 
+          testName: { [Op.like]: "System Test%" } 
+        }
+      }),
+      FullTestResults.count({
+        where: { 
+          studentId: userId, 
+          testName: { [Op.like]: "Full Test%" } 
+        }
+      }),
+      
+      // Latest timestamp queries
+      FullTestResults.findOne({
+        where: { 
+          studentId: userId, 
+          testName: { [Op.like]: "Full Test%" } 
+        },
+        order: [["updatedAt", "DESC"]],
+        attributes: ["updatedAt"],
+      }),
+      FullTestResults.findOne({
+        where: { 
+          studentId: userId, 
+          testName: { [Op.like]: "System Test%" } 
+        },
+        order: [["updatedAt", "DESC"]],
+        attributes: ["updatedAt"],
+      }),
+      MeTest.findOne({
+        where: { studentId: userId },
+        order: [["updatedAt", "DESC"]],
+        attributes: ["updatedAt"],
+      }),
+      
+      // Pending counts
+      FullTestResults.count({
+        where: { 
+          studentId: userId, 
+          testName: { [Op.like]: "Full Test%" },
+          status: { [Op.ne]: "Completed" }
+        }
+      }),
+      FullTestResults.count({
+        where: { 
+          studentId: userId, 
+          testName: { [Op.like]: "System Test%" },
+          status: { [Op.ne]: "Completed" }
+        }
+      }),
+      MeTest.count({
+        where: { 
+          studentId: userId,
+          status: { [Op.ne]: "completed" }
+        }
+      })
+    ]);
 
-    // 3️⃣ Fetch latest updatedAt timestamps for each category
-    const latestFull = await FullTestResults.findOne({
-      where: { studentId: userId, testName: { [Op.like]: "Full Test%" } },
-      order: [["updatedAt", "DESC"]],
-      attributes: ["updatedAt"],
-    });
-
-    const latestRecommended = await FullTestResults.findOne({
-      where: { studentId: userId, testName: { [Op.like]: "System Test%" } },
-      order: [["updatedAt", "DESC"]],
-      attributes: ["updatedAt"],
-    });
-
-    const latestME = await MeTest.findOne({
-      where: { studentId: userId },
-      order: [["updatedAt", "DESC"]],
-      attributes: ["updatedAt"],
-    });
-
-    // 4️⃣ Prepare final response
     res.status(200).json({
       fullTestResults: {
-        totalTests: fullTests,
-        updatedAt: latestFull?.updatedAt || new Date(),
+        totalTests: fullTestsCount,
+        completedTests: fullTestsCount - pendingFullTests,
+        pendingCount: pendingFullTests,
+        updatedAt: latestFull?.updatedAt || null
       },
       recommendedTests: {
-        totalTests: examPlanTests,
-        updatedAt: latestRecommended?.updatedAt || new Date(),
+        totalTests: examPlanTestsCount,
+        completedTests: examPlanTestsCount - pendingRecommendedTests,
+        pendingCount: pendingRecommendedTests,
+        updatedAt: latestRecommended?.updatedAt || null
       },
       meTests: {
-        totalTests: userTests,
-        updatedAt: latestME?.updatedAt || new Date(),
+        totalTests: userTestsCount,
+        completedTests: userTestsCount - pendingMETests,
+        pendingCount: pendingMETests,
+        updatedAt: latestME?.updatedAt || null
       },
       adminTests: {
-        totalTests: adminTests,
-      },
+        totalTests: adminTestsCount
+      }
     });
   } catch (error) {
     console.error("Error fetching test statistics:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    
+    if (error.message === "No token provided" || error.name === "JsonWebTokenError") {
+      return res.status(401).json({ 
+        error: "Unauthorized", 
+        code: "INVALID_TOKEN",
+        message: "Invalid or expired token" 
+      });
+    }
+    
+    res.status(500).json({ 
+      error: "Internal Server Error", 
+      code: "SERVER_ERROR",
+      message: "Failed to fetch test statistics" 
+    });
   }
 };
 
-
- const getpendingTest = async (req, res) => {
+/**
+ * Fetches subject-wise average marks for a student
+ */
+const getSubjectWiseAverageMarks = async (req, res) => {
   try {
-    const { studentId } = req.params; // Get studentId from request params
+    const token = req.headers.authorization?.split(" ")[1];
+    const decoded = verifyStudentToken(token);
+    const userId = decoded.id;
 
-    // Step 1: Find the batch to which the student belongs using the StudentBatch model
+    const meTestData = await MeTest.findAll({
+      where: { studentId: userId },
+      attributes: ["id", "subjectWiseMarks", "updatedAt"],
+    });
+
+    const result = meTestData.map((test) => {
+      const normalizedMarks = normalizeSubjectMarks(test.subjectWiseMarks);
+      
+      return {
+        ...normalizedMarks,
+        updatedAt: test.updatedAt,
+        testId: test.id
+      };
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error fetching subject-wise marks:", error);
+    
+    if (error.message === "No token provided" || error.name === "JsonWebTokenError") {
+      return res.status(401).json({ 
+        error: "Unauthorized", 
+        code: "INVALID_TOKEN",
+        message: "Invalid or expired token" 
+      });
+    }
+    
+    res.status(500).json({ 
+      error: "Internal Server Error", 
+      code: "SERVER_ERROR",
+      message: "Failed to fetch subject-wise marks" 
+    });
+  }
+};
+
+/**
+ * Fetches pending tests for a student with batch optimization
+ */
+const getpendingTest = async (req, res) => {
+  try {
+    // Validate studentId
+    const studentId = parseInt(req.params.studentId);
+    if (!studentId || isNaN(studentId)) {
+      return res.status(400).json({ 
+        error: "Invalid student ID", 
+        code: "INVALID_STUDENT_ID",
+        message: "Student ID must be a valid number" 
+      });
+    }
+
+    // Find student's batch in a single query
     const studentBatch = await StudentBatch.findOne({
-      where: { studentId }, // Find the student's batch association
+      where: { studentId },
+      attributes: ["batchId"]
     });
 
     if (!studentBatch) {
       return res.status(404).json({
         success: false,
-        message: "Student batch not found",
+        error: "Student batch not found",
+        code: "BATCH_NOT_FOUND",
+        message: "Student is not assigned to any batch"
       });
     }
 
-    const batchId = studentBatch.batchId; // Get batchId from the student's batch association
+    const batchId = studentBatch.batchId;
 
-    // Step 2: Fetch all tests assigned to this batch
-    const tests = await BatchAdmintest.findAll({
-      where: { batchId }, // Fetch tests based on batchId
+    // Fetch all tests for the batch and student attempts in parallel
+    const [batchTests, attemptedTests] = await Promise.all([
+      BatchAdmintest.findAll({
+        where: { batchId },
+        attributes: ["admintestId", "testname"]
+      }),
+      generateTestresult.findAll({
+        where: { studentId },
+        attributes: ["testid", "status"]
+      })
+    ]);
+
+    // Create a map of attempted tests for quick lookup
+    const attemptedTestMap = new Map(
+      attemptedTests.map(attempt => [attempt.testid, attempt.status])
+    );
+
+    // Filter pending tests in memory (no N+1 queries)
+    const pendingTests = batchTests
+      .filter(test => {
+        const status = attemptedTestMap.get(test.admintestId);
+        return !status || status === "Pending";
+      })
+      .map(test => ({
+        testId: test.admintestId,
+        testName: test.testname,
+        status: attemptedTestMap.get(test.admintestId) || "Not Attempted"
+      }));
+
+    res.status(200).json({
+      success: true,
+      data: pendingTests,
+      count: pendingTests.length,
+      message: pendingTests.length > 0 
+        ? "Pending tests retrieved successfully" 
+        : "No pending tests found"
     });
-
-    const pendingTests = [];
-
-    // Step 3: Check for pending status for each test
-    for (const test of tests) {
-      const attempt = await generateTestresult.findOne({
-        where: { studentId, testid: test.admintestId },
-      });
-
-      if (!attempt || attempt.status === "Pending") {
-        // If no attempt or the test status is "Pending", add it to pendingTests
-        pendingTests.push({
-          testId: test.admintestId,
-          testname: test.testname,
-          status: attempt ? attempt.status : "Not Attempted", // Show the status if available
-        });
-      }
-    }
-
-    if (pendingTests.length > 0) {
-      return res.status(200).json({
-        success: true,
-        pendingTests,
-        count: pendingTests.length,
-      });
-    } else {
-      return res.status(200).json({
-        success: false,
-        message: "No pending tests found.",
-      });
-    }
   } catch (error) {
     console.error("Error fetching pending tests:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ 
+      error: "Internal Server Error", 
+      code: "SERVER_ERROR",
+      message: "Failed to fetch pending tests" 
+    });
   }
 };
 
+/**
+ * Fetches verified users with pagination and their test results
+ */
+const getVerifiedUser = async (req, res) => {
+  try {
+    // Parse pagination parameters with defaults
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
+
+    // Get total count and paginated users in parallel
+    const [totalCount, users] = await Promise.all([
+      Student.count({ where: { isVerified: true } }),
+      Student.findAll({
+        where: { isVerified: true },
+        attributes: ["id", "firstName", "lastName", "profileImage"],
+        limit,
+        offset,
+        order: [["createdAt", "DESC"]]
+      })
+    ]);
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({ 
+        message: "No verified users found.",
+        data: { users: [], total: 0, page, totalPages: 0 }
+      });
+    }
+
+    // Fetch test results for all users in batch
+    const userIds = users.map(user => user.id);
+    const testResults = await FullTestResults.findAll({
+      where: { studentId: { [Op.in]: userIds } },
+      attributes: ["studentId", "correctAnswers", "wrongAnswers", "notAttempted"]
+    });
+
+    // Group test results by studentId for efficient lookup
+    const testResultsByStudent = testResults.reduce((acc, result) => {
+      if (!acc[result.studentId]) {
+        acc[result.studentId] = [];
+      }
+      acc[result.studentId].push({
+        correctAnswers: result.correctAnswers,
+        wrongAnswers: result.wrongAnswers,
+        notAttempted: result.notAttempted
+      });
+      return acc;
+    }, {});
+
+    // Map users with their test results
+    const userData = users.map(user => ({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profileImage: user.profileImage,
+      testResults: testResultsByStudent[user.id] || []
+    }));
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    res.status(200).json({
+      users: userData,
+      total: totalCount,
+      page,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1
+    });
+  } catch (error) {
+    console.error("Error fetching user data and test results:", error);
+    res.status(500).json({ 
+      error: "Internal Server Error", 
+      code: "SERVER_ERROR",
+      message: "Failed to fetch verified users" 
+    });
+  }
+};
+
+// Export functions (removed duplicate getSubjectWiseMarks)
 export {
   getStudentName,
   getTestStatistics,
-  getSubjectWiseMarks,
-  getpendingTest,
-  getVerifiedUser,
   getSubjectWiseAverageMarks,
+  getpendingTest,
+  getVerifiedUser
 };

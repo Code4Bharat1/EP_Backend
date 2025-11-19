@@ -58,6 +58,7 @@ const createAdmin = async (req, res) => {
 
 
 const login = async (req, res) => {
+  console.log("🔥 Admin login attempt");  // CHECKPOINT 1
   const { AdminId, PassKey } = req.body;
 
   if (!AdminId || !PassKey) {
@@ -65,42 +66,46 @@ const login = async (req, res) => {
   }
 
   try {
-    // Fetch admin from the database
+    // Find admin
     const admin = await Admin.findOne({ where: { AdminId } });
 
     if (!admin) {
-      console.error("Admin not found");
       return res.status(404).json({ message: "Admin not found" });
     }
 
-    // Compare the entered password with the stored hashed password
+    // Check password
     const isMatch = await bcrypt.compare(PassKey, admin.PassKey);
-
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // // Generate JWT Token
-    // const token = jwt.sign(
-    //   { id: admin.id, AdminId: admin.AdminId },
-    //   process.env.JWT_SECRET || "your_secret_key",
-    //   { expiresIn: "1h" } 
-    // );
+    // ⭐ FIXED: USE admin.AdminId for filtering students
+    const token = jwt.sign(
+      {
+        adminId: admin.id,     // 👈 use this, not admin.id
+        email: admin.Email
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     return res.status(200).json({
       message: "Login successful",
-      token, // Send JWT token
+      token,
       admin: {
         AdminId: admin.AdminId,
         name: admin.name,
         email: admin.Email,
       },
     });
+
   } catch (error) {
     console.error("Error during login:", error.message);
     return res.status(500).json({ message: "Server error during login" });
   }
 };
+
+
 
 
 const generateCredential = async (req, res) => {

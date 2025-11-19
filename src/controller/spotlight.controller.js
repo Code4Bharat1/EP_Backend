@@ -5,24 +5,40 @@ import Student from "../models/student.model.js";
 // Controller to get selected fields of FullTestResults for all students based on test count (ascending)
 export const getLastTestResultsPerformanceForAllStudents = async (req, res) => {
   try {
-    // Step 1: Get all students along with their full names (firstName, lastName)
+    // ✔ GET NUMERIC ADMIN ID (same as your working functions)
+    const adminId = req.user?.adminId;
+    console.log("🔥 Controller: Admin ID =", adminId);
+
+    if (!adminId) {
+      return res.status(401).json({ message: "Unauthorized - Missing Admin ID" });
+    }
+
+    const adminIdStr = String(adminId);
+
+    // ✔ Step 1: Get only this admin's students
     const students = await Student.findAll({
-      attributes: ["id", "firstName", "lastName"], // Fetch id, firstName, and lastName
+      where: { addedByAdminId: adminIdStr },
+      attributes: ["id", "firstName", "lastName"],
     });
 
     if (!students || students.length === 0) {
-      return res.status(404).json({ message: "No students found." });
+      return res.status(200).json({ 
+        message: "No students found for this admin.",
+        results: [] 
+      });
     }
 
-    // Step 2: Get only selected test result fields for matching student IDs and include studentId
+    const studentIds = students.map((student) => student.id);
+
+    // ✔ Step 2: Get test results only for this admin's students
     const testResults = await FullTestResults.findAll({
       where: {
         studentId: {
-          [Op.in]: students.map((student) => student.id), // Match student IDs
+          [Op.in]: studentIds,
         },
       },
       attributes: [
-        "studentId", // Include the studentId to show the student's ID
+        "studentId",
         "testName",
         "marksObtained",
         "totalMarks",
@@ -36,7 +52,7 @@ export const getLastTestResultsPerformanceForAllStudents = async (req, res) => {
     let totalTests = 0;
 
     // Step 4: Combine test results with student fullName, subject names, accuracy, and average marks
-    const resultWithFullName = students.map((student, index) => {
+    const resultWithFullName = students.map((student) => {
       // Get all test results for the current student
       const studentTestResults = testResults.filter(
         (testResult) => testResult.studentId === student.id
@@ -68,8 +84,13 @@ export const getLastTestResultsPerformanceForAllStudents = async (req, res) => {
       );
 
       // Calculate accuracy (overall accuracy) and average marks
-      const accuracy = ((totalMarksForStudent / totalPossibleMarks) * 100).toFixed(2); // Accuracy formula
-      const averageMarks = (totalMarksForStudent / testsTaken).toFixed(2);
+      const accuracy = totalPossibleMarks > 0 
+        ? ((totalMarksForStudent / totalPossibleMarks) * 100).toFixed(2) 
+        : "0.00";
+      
+      const averageMarks = testsTaken > 0 
+        ? (totalMarksForStudent / testsTaken).toFixed(2) 
+        : "0.00";
 
       // Update the total marks counters
       totalMarksObtained += totalMarksForStudent;
@@ -82,27 +103,32 @@ export const getLastTestResultsPerformanceForAllStudents = async (req, res) => {
       return {
         studentId: student.id,
         fullName: `${student.firstName} ${student.lastName}`,
-        subjectWisePerformance: subjectNames, // Only show subject names (Physics, Chemistry, Biology)
-        testNames: studentTestResults.map((test) => test.testName), // List of test names
+        subjectWisePerformance: subjectNames,
+        testNames: studentTestResults.map((test) => test.testName),
         testsTaken,
-        fullTestCount, // Count of how many "Full Test" the student has taken
-        accuracy, // Overall accuracy percentage
-        averageMarks, // Overall average marks obtained by this student
-        totalMarksForStudent, // This will be used to rank students based on average marks
+        fullTestCount,
+        accuracy,
+        averageMarks,
+        totalMarksForStudent,
       };
-    }).filter((result) => result !== null); // Remove students with no test results
+    }).filter((result) => result !== null);
 
     // Step 5: Sort students by fullTestCount in ascending order (fewer tests = higher rank)
     resultWithFullName.sort((a, b) => a.fullTestCount - b.fullTestCount);
 
     // Step 6: Assign ranks based on sorted order
     resultWithFullName.forEach((result, index) => {
-      result.rank = index + 1; // Rank starts from 1
+      result.rank = index + 1;
     });
 
     // Step 7: Calculate overall averages for all students
-    const overallAccuracy = ((totalMarksObtained / totalMarksAvailable) * 100).toFixed(2);
-    const overallAverageMarks = (totalMarksObtained / totalTests).toFixed(2);
+    const overallAccuracy = totalMarksAvailable > 0 
+      ? ((totalMarksObtained / totalMarksAvailable) * 100).toFixed(2) 
+      : "0.00";
+    
+    const overallAverageMarks = totalTests > 0 
+      ? (totalMarksObtained / totalTests).toFixed(2) 
+      : "0.00";
 
     return res.status(200).json({
       message: "Test summaries fetched successfully",

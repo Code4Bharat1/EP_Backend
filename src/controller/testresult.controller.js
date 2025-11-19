@@ -9,63 +9,43 @@ import path from "path";
 // Controller to get selected fields of FullTestResults for the last test of all students
 export const getLastTestResultsForAllStudents = async (req, res) => {
   try {
-    // Step 1: Get all students along with their full names (firstName, lastName)
+    const adminId = req.user?.adminId; 
+    if (!adminId) return res.status(401).json({ message: "Unauthorized" });
+
     const students = await Student.findAll({
-      attributes: ["id", "firstName", "lastName"], // Fetch id, firstName, and lastName
+      where: { addedByAdminId: adminId },
+      attributes: ["id", "firstName", "lastName"],
     });
 
-    if (!students || students.length === 0) {
-      return res.status(404).json({ message: "No students found." });
-    }
+    if (!students.length) return res.status(200).json({ results: [] });
 
-    // Step 2: Get the last test result for each student
-    const lastTestResults = await FullTestResults.findAll({
-      where: {
-        studentId: {
-          [Op.in]: students.map((student) => student.id), // Match student IDs
-        },
-      },
-      attributes: [
-        "studentId", // Include the studentId to show the student's ID
-        "marksObtained",
-        "totalMarks",
-      ],
-      order: [["createdAt", "DESC"]], // Order by createdAt to get the last test
+    const ids = students.map(s => s.id);
+
+    const tests = await FullTestResults.findAll({
+      where: { studentId: { [Op.in]: ids } },
+      attributes: ["studentId", "marksObtained", "totalMarks"],
+      order: [["createdAt", "DESC"]],
     });
 
-    // Step 3: Combine test results with student fullName, total marks, obtained marks
-    const resultWithFullName = students
-      .map((student) => {
-        const lastTestResult = lastTestResults.find(
-          (testResult) => testResult.studentId === student.id
-        );
+    const results = students.map(student => {
+      const t = tests.find(x => x.studentId === student.id);
+      if (!t) return null;
 
-        if (!lastTestResult) {
-          return null;
-        }
+      return {
+        studentId: student.id,
+        fullName: `${student.firstName} ${student.lastName}`,
+        marksObtained: t.marksObtained,
+        totalMarks: t.totalMarks
+      };
+    }).filter(Boolean);
 
-        return {
-          studentId: student.id,
-          fullName: `${student.firstName} ${student.lastName}`,
-          marksObtained: lastTestResult.marksObtained,
-          totalMarks: lastTestResult.totalMarks,
-        };
-      })
-      .filter((result) => result !== null); // Remove students with no test results
+    return res.status(200).json({ results });
 
-    return res.status(200).json({
-      message: "Last test results fetched successfully",
-      count: resultWithFullName.length,
-      results: resultWithFullName,
-    });
   } catch (error) {
-    console.error("Error fetching last test results:", error);
-    return res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
+    return res.status(500).json({ error: error.message });
   }
 };
+
 
 export const allTestReviewByTestType = async (req, res) => {
   try {

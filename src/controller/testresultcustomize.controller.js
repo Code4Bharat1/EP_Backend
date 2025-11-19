@@ -4,62 +4,41 @@ import Student from "../models/student.model.js";  // Import the Student model
 
 // Controller to get selected fields of MeTest for the last test of all students
 export const getLastTestResultsForAllStudents1 = async (req, res) => {
-    try {
-        // Step 1: Get all students along with their full names (firstName, lastName)
-        const students = await Student.findAll({
-            attributes: ["id", "firstName", "lastName"], // Fetch id, firstName, and lastName
-        });
+  try {
+    const adminId = req.user?.adminId;
+    if (!adminId) return res.status(401).json({ message: "Unauthorized" });
 
-        if (!students || students.length === 0) {
-            return res.status(404).json({ message: "No students found." });
-        }
+    const students = await Student.findAll({
+      where: { addedByAdminId: adminId },
+      attributes: ["id", "firstName", "lastName"]
+    });
 
-        // Step 2: Get the last test result for each student from the MeTest table
-        const lastTestResults = await MeTest.findAll({
-            where: {
-                studentId: {
-                    [Op.in]: students.map((student) => student.id), // Match student IDs
-                },
-            },
-            attributes: [
-                "studentId", // Include the studentId to show the student's ID
-                "totalQuestions", // Include the total number of questions
-                "overAllMarks", // Include the overall marks
-            ],
-            order: [["createdAt", "DESC"]], // Order by createdAt to get the last test
-        });
+    if (!students.length) return res.status(200).json({ results: [] });
 
-        // Step 3: Combine test results with student fullName and calculate score based on totalQuestions
-        const resultWithFullName = students.map((student) => {
-            const lastTestResult = lastTestResults.find(
-                (testResult) => testResult.studentId === student.id
-            );
+    const ids = students.map(s => s.id);
 
-            if (!lastTestResult) {
-                return null;
-            }
+    const tests = await MeTest.findAll({
+      where: { studentId: { [Op.in]: ids } },
+      attributes: ["studentId", "totalQuestions", "overAllMarks"],
+      order: [["createdAt", "DESC"]]
+    });
 
-            // Calculate the score (totalQuestions * 4)
-            const score = lastTestResult.totalQuestions * 4;
+    const results = students.map(student => {
+      const t = tests.find(x => x.studentId === student.id);
+      if (!t) return null;
 
-            return {
-                studentId: student.id,
-                fullName: `${student.firstName} ${student.lastName}`,
-                marksObtained: lastTestResult.overAllMarks, // Include overall marks
-                totalMarks:score, // Calculate score based on totalQuestions * 4
-            };
-        }).filter(result => result !== null); // Remove students with no test results
+      return {
+        studentId: student.id,
+        fullName: `${student.firstName} ${student.lastName}`,
+        marksObtained: t.overAllMarks,
+        totalMarks: t.totalQuestions * 4
+      };
+    }).filter(Boolean);
 
-        return res.status(200).json({
-            message: "Last MeTest results fetched successfully",
-            count: resultWithFullName.length,
-            results: resultWithFullName,
-        });
-    } catch (error) {
-        console.error("Error fetching last MeTest results:", error);
-        return res.status(500).json({
-            message: "Internal server error",
-            error: error.message,
-        });
-    }
+    return res.status(200).json({ results });
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };
+

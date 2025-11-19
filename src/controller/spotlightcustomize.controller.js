@@ -1,28 +1,44 @@
 import { Op } from "sequelize";
-import MeTest from "../models/saved.js";  // Import the MeTest model
-import Student from "../models/student.model.js"; // Import the Student model
+import MeTest from "../models/saved.js";
+import Student from "../models/student.model.js";
 
-// Controller to get performance data for all students based on the MeTest results (customizable test results)
+// Controller to get performance data for all students based on the MeTest results
 export const getLastTestResultsPerformanceForAllStudents1 = async (req, res) => {
     try {
-        // Step 1: Get all students along with their full names (firstName, lastName)
+        // ✔ GET NUMERIC ADMIN ID (same as your working functions)
+        const adminId = req.user?.adminId;
+        console.log("🔥 Customize Controller: Admin ID =", adminId);
+
+        if (!adminId) {
+            return res.status(401).json({ message: "Unauthorized - Missing Admin ID" });
+        }
+
+        const adminIdStr = String(adminId);
+
+        // ✔ Step 1: Get only this admin's students
         const students = await Student.findAll({
-            attributes: ["id", "firstName", "lastName"], // Fetch id, firstName, and lastName
+            where: { addedByAdminId: adminIdStr },
+            attributes: ["id", "firstName", "lastName"],
         });
 
         if (!students || students.length === 0) {
-            return res.status(404).json({ message: "No students found." });
+            return res.status(200).json({ 
+                message: "No students found for this admin.",
+                results: [] 
+            });
         }
 
-        // Step 2: Get only selected MeTest result fields for matching student IDs and include studentId
+        const studentIds = students.map((student) => student.id);
+
+        // ✔ Step 2: Get MeTest results only for this admin's students
         const meTestResults = await MeTest.findAll({
             where: {
                 studentId: {
-                    [Op.in]: students.map((student) => student.id), // Match student IDs
+                    [Op.in]: studentIds,
                 },
             },
             attributes: [
-                "studentId", // Include the studentId to show the student's ID
+                "studentId",
                 "testName",
                 "selectedChapters",
                 "difficultyLevel",
@@ -53,18 +69,23 @@ export const getLastTestResultsPerformanceForAllStudents1 = async (req, res) => 
 
             // Calculate total marks obtained by the student
             const totalMarksForStudent = studentMeTestResults.reduce(
-                (acc, test) => acc + test.score,
+                (acc, test) => acc + (test.score || 0),
                 0
             );
 
             // Calculate accuracy (overall accuracy) using totalQuestions and overAllMarks
             const totalPossibleMarks = studentMeTestResults.reduce(
-                (acc, test) => acc + test.totalQuestions * test.overAllMarks,
+                (acc, test) => acc + (test.totalQuestions || 0) * (test.overAllMarks || 1),
                 0
             );
 
-            const accuracy = ((totalMarksForStudent / totalPossibleMarks) * 100).toFixed(2); // Accuracy formula
-            const averageMarks = (totalMarksForStudent / studentMeTestResults.length).toFixed(2);
+            const accuracy = totalPossibleMarks > 0
+                ? ((totalMarksForStudent / totalPossibleMarks) * 100).toFixed(2)
+                : "0.00";
+            
+            const averageMarks = studentMeTestResults.length > 0
+                ? (totalMarksForStudent / studentMeTestResults.length).toFixed(2)
+                : "0.00";
 
             // Update the total marks counters
             totalMarksObtained += totalMarksForStudent;
@@ -73,36 +94,42 @@ export const getLastTestResultsPerformanceForAllStudents1 = async (req, res) => 
 
             // Dynamically extract subject names from subjectWiseMarks
             const subjectWisePerformance = studentMeTestResults.map((test) => {
-                const parsedSubjectWiseMarks = test.subjectWiseMarks ? JSON.parse(test.subjectWiseMarks) : {};
+                try {
+                    const parsedSubjectWiseMarks = test.subjectWiseMarks 
+                        ? (typeof test.subjectWiseMarks === 'string' 
+                            ? JSON.parse(test.subjectWiseMarks) 
+                            : test.subjectWiseMarks)
+                        : {};
+                    return Object.keys(parsedSubjectWiseMarks);
+                } catch (error) {
+                    console.error("Error parsing subjectWiseMarks:", error);
+                    return [];
+                }
+            }).flat();
 
-                // Get all the subject names dynamically from the parsed subjectWiseMarks
-                return Object.keys(parsedSubjectWiseMarks); // Get only the subject names
-            }).flat(); // Flatten the array to get all subjects in one array
-
-            // Remove duplicates from subjectWisePerformance (if any subject appears multiple times)
+            // Remove duplicates from subjectWisePerformance
             const uniqueSubjects = [...new Set(subjectWisePerformance)];
 
             return {
                 studentId: student.id,
                 fullName: `${student.firstName} ${student.lastName}`,
-                subjectWisePerformance: uniqueSubjects, // Only subject names (without marks)
-                testNames: studentMeTestResults.map((test) => test.testName), // List of test names
-                testsTaken: studentMeTestResults.length, // Count of tests taken
-                accuracy, // Overall accuracy percentage
-                averageMarks, // Overall average marks obtained by this student
-                totalMarksForStudent, // This will be used to rank students based on marks
+                subjectWisePerformance: uniqueSubjects,
+                testNames: studentMeTestResults.map((test) => test.testName),
+                testsTaken: studentMeTestResults.length,
+                accuracy,
+                averageMarks,
+                totalMarksForStudent,
             };
-        }).filter(result => result !== null); // Remove students with no test results
+        }).filter(result => result !== null);
 
         // Step 5: Sort students by testsTaken to rank them (descending order)
-        resultWithFullName.sort((a, b) => b.testsTaken - a.testsTaken); // Rank by testsTaken
+        resultWithFullName.sort((a, b) => b.testsTaken - a.testsTaken);
 
         // Step 6: Assign ranks based on sorted order
         resultWithFullName.forEach((result, index) => {
-            result.rank = index + 1; // Rank starts from 1
+            result.rank = index + 1;
         });
 
-        // Send the final response
         return res.status(200).json({
             message: "Test summaries for MeTest fetched successfully",
             count: resultWithFullName.length,
@@ -115,4 +142,4 @@ export const getLastTestResultsPerformanceForAllStudents1 = async (req, res) => 
             error: error.message,
         });
     }
-};
+}; 

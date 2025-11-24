@@ -279,7 +279,7 @@ const getSubjectWiseAverageMarks = async (req, res) => {
 const getpendingTest = async (req, res) => {
   try {
     // Validate studentId
-    const studentId = parseInt(req.params.studentId);
+   const studentId = req.user.id;  // verifyToken se jo user aata hai
     if (!studentId || isNaN(studentId)) {
       return res.status(400).json({ 
         error: "Invalid student ID", 
@@ -348,6 +348,41 @@ const getpendingTest = async (req, res) => {
       error: "Internal Server Error", 
       code: "SERVER_ERROR",
       message: "Failed to fetch pending tests" 
+    });
+  }
+};
+const getSubjectWiseMarks = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    const decoded = verifyStudentToken(token);
+    const userId = decoded.id;
+    const meTestData = await MeTest.findAll({
+      where: { studentId: userId },
+      attributes: ["id", "subjectWiseMarks", "updatedAt"],
+    });
+    const result = meTestData.map((test) => {
+      const normalizedMarks = normalizeSubjectMarks(test.subjectWiseMarks);
+      return {
+        ...normalizedMarks,
+        updatedAt: test.updatedAt,
+        testId: test.id
+      };
+    });
+    res.status(200).json(result);
+  }
+  catch (error) {
+    console.error("Error fetching subject-wise marks:", error);
+    if (error.message === "No token provided" || error.name === "JsonWebTokenError") {
+      return res.status(401).json({
+        error: "Unauthorized",
+        code: "INVALID_TOKEN",
+        message: "Invalid or expired token"
+      });
+    }
+    res.status(500).json({
+      error: "Internal Server Error",
+      code: "SERVER_ERROR",
+      message: "Failed to fetch subject-wise marks"
     });
   }
 };
@@ -435,5 +470,6 @@ export {
   getTestStatistics,
   getSubjectWiseAverageMarks,
   getpendingTest,
+  getSubjectWiseMarks,
   getVerifiedUser
 };

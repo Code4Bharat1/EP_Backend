@@ -86,28 +86,20 @@ export const allTestReviewByTestType = async (req, res) => {
         ...notAttempted.map((item) => item[0]), // Not attempted answers are in the first position (question ID)
       ];
 
-      // Fetch questions based on questionIds from the Question model
       questions = await Question.findAll({
-        where: {
-          id: questionIds,
-        },
-      });
+  where: {
+    id: questionIds,
+  },
+});
 
-      if (!questions.length) {
-        return res.status(404).json({
-          message: "Questions not found for the given test",
-        });
-      }
-    } else if (testType === "generate") {
-      // Search in GenerateTestResult based on testId
-      testData = await GenerateTestResult.findOne({
-        where: { testid: testId },
-      });
-      if (!testData) {
-        return res.status(404).json({
-          message: "Generated Test not found",
-        });
-      }
+if (!questions.length) {
+  return res.status(200).json({
+    message: "No questions were attempted",
+    testData,
+    questions: [],
+  });
+}
+
       // Directly use the testData.answers for the questions
       questions = testData.answers; // Assuming answers already include the questions
     } else if (testType === "meTest") {

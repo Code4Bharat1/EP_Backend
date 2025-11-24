@@ -13,12 +13,13 @@ import {
   getTestSeriesTestDetails,
 } from "../controller/TestSeries.controller.js";
 import { verifyToken } from "../middleware/jwtDecoder.middleware.js";
+
 const router = express.Router();
 
 // test series route
 router.post("/create-test-series", verifyToken, createTestSeries); // create test series
-router.get("/", getAllTestSeries); // get all test series
-router.get("/:id", getTestSeriesDetails); // get specific test series data
+router.get("/",verifyToken, getAllTestSeries); // get all test series
+router.get("/:id",verifyToken, getTestSeriesDetails); // get specific test series data
 
 //test series test
 router.post("/create-test-series/test", verifyToken, createTest);

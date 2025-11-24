@@ -42,9 +42,18 @@ export const createTestSeries = async (req, res) => {
 //get all test series
 export const getAllTestSeries = async (req, res) => {
   try {
+   const adminId = req.adminId;
+
+   console.log("aagaya ",adminId);  
+
     const testSeriesList = await TestSeries.findAll({
+
+      where:{
+        createdByAdminId: adminId
+      },
       order: [["createdAt", "DESC"]], // latest first
     });
+        console.log("Filtered test series count:", testSeriesList.length);
 
     res.status(200).json({
       success: true,

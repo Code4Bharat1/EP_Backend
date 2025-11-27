@@ -28,7 +28,7 @@ router.get("/test-series-test/:testId", getTestSeriesTestDetails);
 
 //test series questions 
 router.post("/question/create", addQuestions);
-router.get("/test-series-question/:testId", getTestSeriesQuestionsByTestId);
+router.get("/test-series-question/:testId", getTestSeriesQuestionsByTestId);//student 
 router.put("/question/edit" , editQuestions)
 router.delete("/question/delete" , deleteQuestions)
 

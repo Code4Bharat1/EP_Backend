@@ -310,7 +310,7 @@ const verifyOtp = async (req, res) => {
     delete otpStore[emailAddress];
 
     const token = jwt.sign(
-      { id: student.id, email: student.emailAddress },
+      { id: student.id, email: student.emailAddress,adminId: student.addedByAdminId },
       config.get("jwtSecret"),
       { expiresIn: "30d" }
     );
@@ -424,7 +424,7 @@ const login = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: student.id, email: student.emailAddress, mobile: student.mobileNumber },
+      { id: student.id, email: student.emailAddress, mobile: student.mobileNumber,adminId: student.addedByAdminId, },
       config.get("jwtSecret"),
       { expiresIn: "6h" }
     );

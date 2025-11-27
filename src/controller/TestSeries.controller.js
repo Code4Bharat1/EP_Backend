@@ -42,32 +42,47 @@ export const createTestSeries = async (req, res) => {
 //get all test series
 export const getAllTestSeries = async (req, res) => {
   try {
-   const adminId = req.adminId;
+    let testSeriesList = [];
 
-   console.log("aagaya ",adminId);  
+    console.log("USER TYPE:", req.userType);
+    console.log("USER INFO:", req.user);
 
-    const testSeriesList = await TestSeries.findAll({
+    // 1️⃣ ADMIN → only his test series   
+    if (req.userType === "admin") {
+      testSeriesList = await TestSeries.findAll({
+        where: { createdByAdminId: req.user.adminId },
+        order: [["createdAt", "DESC"]],
+      });
+    }
 
-      where:{
-        createdByAdminId: adminId
-      },
-      order: [["createdAt", "DESC"]], // latest first
-    });
-        console.log("Filtered test series count:", testSeriesList.length);
+    // 2️⃣ STUDENT ADDED BY ADMIN → only tests created by their admin
+    else if (req.userType === "student") {
+      testSeriesList = await TestSeries.findAll({
+        where: { createdByAdminId: req.user.adminId },
+        order: [["createdAt", "DESC"]],
+      });
+    }
 
-    res.status(200).json({
+    // 3️⃣ PUBLIC STUDENT → show ONLY public tests (createdByAdminId = null)
+    else if (req.userType === "public-student") {
+      testSeriesList = await TestSeries.findAll({
+        where: { createdByAdminId: null },
+        order: [["createdAt", "DESC"]],
+      });
+    }
+
+    return res.status(200).json({
       success: true,
-      message: "All Test Series fetched successfully.",
+      message: "Test Series fetched successfully.",
       data: testSeriesList,
     });
-  } catch (error) {
-    console.error("Error fetching all Test Series:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error while fetching all test series.",
-    });
+
+  } catch (err) {
+    console.error("Error fetching test series:", err);
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 // Get Test Series Details
 export const getTestSeriesDetails = async (req, res) => {
   try {

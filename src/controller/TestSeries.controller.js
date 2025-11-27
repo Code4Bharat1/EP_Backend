@@ -1,3 +1,6 @@
+
+//TestSeries.controller.js
+
 import TestSeriesTest from "../models/TestSeriesTest.model.js";
 import TestSeries from "../models/TestSeries.model.js";
 import TestSeriesQuestions from "../models/TestSeriesQuestions.model.js";
@@ -122,6 +125,7 @@ export const getTestSeriesDetails = async (req, res) => {
     });
   }
 };
+
 
 //create test for test series
 export const createTest = async (req, res) => {
@@ -252,6 +256,63 @@ export const getTestSeriesTestDetails = async (req, res) => {
     });
   }
 };
+
+
+
+
+export const editTestSeriesTest = async (req, res) => {
+  try {
+    const { testId } = req.params;
+    const {
+      testName,
+      subject,
+      visibility,
+      durationMinutes,
+      openDate,
+      closeDate,
+      isPublished,
+    } = req.body;
+
+    if (!testId) {
+      return res.status(400).json({ message: "Test ID is required." });
+    }
+
+    const test = await TestSeriesTest.findByPk(testId);
+    if (!test) {
+      return res.status(404).json({ message: "Test not found." });
+    }
+
+    await TestSeriesTest.update(
+      {
+        testName,
+        subject,
+        visibility,
+        durationMinutes,
+        openDate,
+        closeDate,
+        isPublished,
+      },
+      { where: { id: testId } }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Test updated successfully.",
+    });
+
+  } catch (error) {
+    console.error("Error editing test:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
+
+
+
+
+
+
 
 //add question to specific test series
 export const addQuestions = async (req, res) => {

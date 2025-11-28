@@ -123,6 +123,25 @@ const Student = sequelizeCon.define(
         isIn: [["Father", "Mother", "Guardian"]], // Relation validation
       },
     },
+        // Payment / subscription fields
+    paymentVerified: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    subscriptionType: {
+      type: DataTypes.STRING, // "month" | "year"
+      allowNull: true,
+    },
+    subscriptionStart: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    subscriptionEnd: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+
     // Education-related fields
     tenthBoard: {
       type: DataTypes.STRING,

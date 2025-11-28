@@ -41,7 +41,7 @@ const submitTest = async (req, res) => {
       total_marks,
       testName, // <-- 👈 pick testName if provided
     } = req.body;
-    console.log("✅ Test submission data received:", req.body);
+    // console.log("✅ Test submission data received:", req.body);
     if (!correctAnswers || !wrongAnswers || !notAttempted) {
       return res.status(400).json({ error: "Missing required answer data." });
     }
@@ -163,7 +163,7 @@ const submitTest = async (req, res) => {
       detailedAnswers: JSON.stringify(detailedAnswers),
     });
 
-    console.log("✅ Test result saved with ID:", newTestResult);
+    // console.log("✅ Test result saved with ID:", newTestResult);
 
     await applyResultUpdate({
       studentId,
@@ -240,7 +240,7 @@ const getResults = async (req, res) => {
       testResult,
     };
 
-    console.log("✅ Test Results Fetched Successfully!");
+    // console.log("✅ Test Results Fetched Successfully!");
 
     // ✅ Send Response
     res.status(200).json({

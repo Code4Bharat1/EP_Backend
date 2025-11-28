@@ -34,85 +34,73 @@ const getAllDataFromSchema = async (req, res) => {
 };
 
 // Function to calculate allocated time and questions for each subject and chapter
-const generateTestPlan = (
-  targetMarks,
-  weakSubject,
-  strongSubject,
-  availableTime
-) => {
-  const allocatedMarks = {};
+const generateTestPlan = (targetMarks, weakSubject, strongSubject, availableTime) => {
+  const subjects = ["Biology", "Physics", "Chemistry"];
 
-  // Rule-based allocation of marks for strong and weak subjects
-  if (strongSubject === "Chemistry") {
-    allocatedMarks["Chemistry"] = 180;
-    let remainingMarks = targetMarks - 180;
-    if (weakSubject === "Biology") {
-      allocatedMarks["Physics"] = Math.min(remainingMarks * 0.55, 180);
-      allocatedMarks["Biology"] =
-        targetMarks - allocatedMarks["Chemistry"] - allocatedMarks["Physics"];
-    } else if (weakSubject === "Physics") {
-      allocatedMarks["Biology"] = Math.min(remainingMarks * 0.55, 360);
-      allocatedMarks["Physics"] =
-        targetMarks - allocatedMarks["Chemistry"] - allocatedMarks["Biology"];
-    }
-  } else if (strongSubject === "Biology") {
-    allocatedMarks["Biology"] = 360;
-    let remainingMarks = targetMarks - 360;
-    if (remainingMarks < 0) {
-      allocatedMarks["Biology"] = targetMarks * 0.5;
-      allocatedMarks["Chemistry"] = targetMarks * 0.25;
-      allocatedMarks["Physics"] = targetMarks * 0.25;
-    } else if (weakSubject === "Physics") {
-      allocatedMarks["Chemistry"] = Math.min(remainingMarks * 0.55, 180);
-      allocatedMarks["Physics"] =
-        targetMarks - allocatedMarks["Biology"] - allocatedMarks["Chemistry"];
-    } else if (weakSubject === "Chemistry") {
-      allocatedMarks["Physics"] = Math.min(remainingMarks * 0.55, 180);
-      allocatedMarks["Chemistry"] =
-        targetMarks - allocatedMarks["Biology"] - allocatedMarks["Physics"];
-    }
-  } else if (strongSubject === "Physics") {
-    allocatedMarks["Physics"] = 180;
-    let remainingMarks = targetMarks - 180;
-    if (weakSubject === "Chemistry") {
-      allocatedMarks["Biology"] = Math.min(remainingMarks * 0.55, 360);
-      allocatedMarks["Chemistry"] =
-        targetMarks - allocatedMarks["Physics"] - allocatedMarks["Biology"];
-    } else if (weakSubject === "Biology") {
-      allocatedMarks["Chemistry"] = Math.min(remainingMarks * 0.55, 180);
-      allocatedMarks["Biology"] =
-        targetMarks - allocatedMarks["Physics"] - allocatedMarks["Chemistry"];
-    }
-  }
-  // Prepare the subject and chapter-wise plan
+  // ------------------------------
+  // 1. Assign multipliers
+  // ------------------------------
+  const multipliers = {};
+  subjects.forEach((sub) => {
+    if (sub === strongSubject) multipliers[sub] = 1.4;     // Strongest
+    else if (sub === weakSubject) multipliers[sub] = 0.8; // Weakest
+    else multipliers[sub] = 1.0;                           // Neutral
+  });
+
+  const totalMultiplier = Object.values(multipliers).reduce((a, b) => a + b, 0);
+
+  // ------------------------------
+  // 2. Allocate marks fairly
+  // ------------------------------
+  const allocatedMarks = {};
+  subjects.forEach((sub) => {
+    allocatedMarks[sub] = Math.max(
+      4, // At least 1 question (4 marks)
+      Math.floor((targetMarks * multipliers[sub]) / totalMultiplier)
+    );
+  });
+
+  // ------------------------------
+  // 3. Generate subject-wise plan
+  // ------------------------------
   const subjectWisePlan = {};
   const chapterWisePlan = [];
 
-  // Loop through the allocated marks for each subject
-  for (const [subject, marks] of Object.entries(allocatedMarks)) {
-    if (!(subject in syllabus)) continue;
+  subjects.forEach((subject) => {
+    if (!(subject in syllabus)) return;
+
     const chapters = syllabus[subject];
     const totalWeightage = Object.values(chapters).reduce(
-      (acc, chapter) => acc + Number(chapter.weightage),
+      (sum, chapter) => sum + Number(chapter.weightage),
       0
     );
+
+    const subjectAllocatedMarks = allocatedMarks[subject];
+    const subjectAllocatedTime = availableTime * (subjectAllocatedMarks / targetMarks);
+
     const subjectPlan = [];
-    const totalTime = availableTime * (marks / targetMarks);
-    // Loop through each chapter to calculate the allocated questions and time
-    for (const [chapter, details] of Object.entries(chapters)) {
-      const chapterWeightage = Number(details.weightage);
-      const allocatedMarksChapter = Math.max(
-        1,
-        Math.floor((chapterWeightage / totalWeightage) * marks)
+
+    // Loop each chapter
+    for (const [chapterName, details] of Object.entries(chapters)) {
+      const chapterWeight = Number(details.weightage);
+
+      const chapterMarks = Math.max(
+        4,
+        Math.floor((chapterWeight / totalWeightage) * subjectAllocatedMarks)
       );
-      const allocatedQuestions = Math.floor(allocatedMarksChapter / 4); // Assuming each question is worth 4 marks
-      const allocatedTime = totalTime * (allocatedMarksChapter / marks);
+
+      const chapterQuestions = Math.max(1, Math.floor(chapterMarks / 4));
+
+      const chapterTime = Math.max(
+        0.3, // At least 0.3 days
+        subjectAllocatedTime * (chapterMarks / subjectAllocatedMarks)
+      );
 
       const chapterPlan = {
-        chapter,
-        allocated_questions: allocatedQuestions,
-        allocated_time: `${allocatedTime.toFixed(2)} days`, // Round to 2 decimal places
-        recommended_tests: Math.max(1, Math.floor(allocatedQuestions / 3)), // 1 test per 3 questions
+        chapter: chapterName,
+        allocated_questions: chapterQuestions,
+        allocated_time: `${chapterTime.toFixed(2)} days`,
+        recommended_tests: Math.max(1, Math.floor(chapterQuestions / 3)),
       };
 
       subjectPlan.push(chapterPlan);
@@ -120,7 +108,8 @@ const generateTestPlan = (
     }
 
     subjectWisePlan[subject] = { chapters: subjectPlan };
-  }
+  });
+
   return { subjectWisePlan, chapterWisePlan };
 };
 

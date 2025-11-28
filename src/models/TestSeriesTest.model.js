@@ -1,3 +1,6 @@
+//TestSeriesTest.model.js
+
+
 import { sequelizeCon, DataTypes } from "../init/dbConnection.js";
 
 const TestSeriesTest = sequelizeCon.define(

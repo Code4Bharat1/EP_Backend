@@ -69,7 +69,7 @@ const createMeTest = async (req, res) => {
       subjectWiseMarks[subjectName] = subjectTotal;
     }
 
-    console.log(`Total Marks Calculated: ${overAllMarks}`);
+    // console.log(`Total Marks Calculated: ${overAllMarks}`);
 
     // Create new test record (store chapter data as JSON strings)
     const newTest = await MeTest.create({
@@ -322,7 +322,7 @@ const getMeTestById = async (req, res) => {
       return res.status(404).json({ message: "Test not found or unauthorized." });
     }
 
-    console.log(`Fetching Test ID: ${id}, OverAllMarks: ${test.overAllMarks}`);
+    // console.log(`Fetching Test ID: ${id}, OverAllMarks: ${test.overAllMarks}`);
 
     return res.status(200).json({
       data: {
@@ -512,7 +512,7 @@ const getSubjectsAndChapters = async (req, res) => {
     });
 
     if (!pdfs || pdfs.length === 0) {
-      console.log("No Pdf records found.");
+      // console.log("No Pdf records found.");
       return res
         .status(404)
         .json({ message: "No subjects found in Pdf table." });
@@ -547,7 +547,7 @@ const getSubjectsAndChapters = async (req, res) => {
       const pdfId = pdf.id;
       const topicTag = pdf.topic_tags;
 
-      console.log(`Processing Pdf ID: ${pdfId}, Subject: ${subjectName}`);
+      // console.log(`Processing Pdf ID: ${pdfId}, Subject: ${subjectName}`);
 
       if (!subjectsData[normalizedSubject]) {
         subjectsData[normalizedSubject] = {
@@ -569,7 +569,7 @@ const getSubjectsAndChapters = async (req, res) => {
 
     const responseData = Object.values(subjectsData);
 
-    console.log("Final Subjects Data:", JSON.stringify(responseData, null, 2));
+    // console.log("Final Subjects Data:", JSON.stringify(responseData, null, 2));
     return res.json(responseData);
   } catch (error) {
     console.error("Error fetching subjects/chapters:", error);
@@ -595,7 +595,7 @@ const fetchQuestions = async (req, res) => {
 
     // Extract and parse selectedChapters (if stored as a string)
     let { selectedChapters } = testDetails;
-    console.log("Raw selectedChapters from DB:", selectedChapters);
+    // console.log("Raw selectedChapters from DB:", selectedChapters);
 
     if (typeof selectedChapters === "string") {
       if (selectedChapters.trim() === "" || selectedChapters.trim() === "null") {
@@ -607,7 +607,7 @@ const fetchQuestions = async (req, res) => {
         if (typeof selectedChapters === "string") {
           selectedChapters = JSON.parse(selectedChapters);
         }
-        console.log("Parsed selectedChapters:", selectedChapters);
+        // console.log("Parsed selectedChapters:", selectedChapters);
       } catch (err) {
         console.error("Error parsing selectedChapters:", err);
         return res.status(400).json({ error: "Invalid selectedChapters data." });
@@ -654,7 +654,7 @@ const fetchQuestions = async (req, res) => {
         }
 
         const lowerChapter = chapterName.toLowerCase();
-        console.log(`Looking for chapter '${lowerChapter}' in subject '${lowerSubject}'`);
+        // console.log(`Looking for chapter '${lowerChapter}' in subject '${lowerSubject}'`);
 
         const matchedPdfIds = [];
         for (const pdf of pdfs) {
@@ -672,17 +672,17 @@ const fetchQuestions = async (req, res) => {
 
         // Fetch questions from each matching PDF (up to questionCount per PDF)
         for (const pdfId of matchedPdfIds) {
-          console.log(
-            `Fetching up to ${questionCount} questions from Pdf ID: ${pdfId}, chapter: ${chapterName}`
-          );
-          const questions = await Question.findAll({
-            where: { pdf_id: pdfId },
-            include: [
-              { model: Option, as: "options" },
-              { model: Diagram, as: "Diagrams", required: false },
-            ],
-            limit: questionCount,
-          });
+          // console.log(
+          //   `Fetching up to ${questionCount} questions from Pdf ID: ${pdfId}, chapter: ${chapterName}`
+          // );
+          // const questions = await Question.findAll({
+          //   where: { pdf_id: pdfId },
+          //   include: [
+          //     { model: Option, as: "options" },
+          //     { model: Diagram, as: "Diagrams", required: false },
+          //   ],
+          //   limit: questionCount,
+          // });
 
           // Process each question, extracting its options and diagrams if available
           for (let question of questions) {

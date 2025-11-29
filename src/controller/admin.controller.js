@@ -58,7 +58,7 @@ const createAdmin = async (req, res) => {
 
 
 const login = async (req, res) => {
-  console.log("🔥 Admin login attempt");  // CHECKPOINT 1
+  // console.log("🔥 Admin login attempt");  // CHECKPOINT 1
   const { AdminId, PassKey } = req.body;
 
   if (!AdminId || !PassKey) {
@@ -732,7 +732,7 @@ const getBatchNames = async(req, res) => {
       }
 
       const batchesName = batches.map((batch)=> batch.batchName);
-      console.log(batchesName);
+      // console.log(batchesName);
       
       return res.status(200).json({batchesName})
     

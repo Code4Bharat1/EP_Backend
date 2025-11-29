@@ -439,10 +439,10 @@ function calculateSubjectBreakdown(answers) {
 // Calculate focused analytics (subject-wise and test-wise only)
 function calculateFocusedAnalytics(allTests) {
   // Debug log to check test data
-  console.log(
-    "Processing tests:",
-    allTests.map((t) => ({ id: t.id, type: t.type, score: t.score }))
-  );
+  // console.log(
+  //   "Processing tests:",
+  //   allTests.map((t) => ({ id: t.id, type: t.type, score: t.score }))
+  // );
 
   // Check if user has taken at least 5 tests for comprehensive analytics
   const MIN_TESTS_FOR_ANALYTICS = 5;

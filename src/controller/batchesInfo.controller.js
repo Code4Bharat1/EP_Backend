@@ -75,7 +75,7 @@ export const testBatchesInfo = async (req, res) => {
       return res.status(400).json({ message: "Test ID is required" });
     }
 
-    console.log("Received testId:", testId);
+    // console.log("Received testId:", testId);
 
     // 1. Fetch the test and include associated batches + students
     const test = await Admintest.findOne({
@@ -254,7 +254,7 @@ const batchesAndTestInfo = async (req, res) => {
         : testData.topic_name || "", // Convert JSON array to comma-separated string
       subject: testData.subject,
     };
-    console.log("Response:", response);
+    // console.log("Response:", response);
 
     return res.status(200).json(response);
   } catch (error) {
@@ -437,7 +437,7 @@ export const removeBatchesFromTest = async (req, res) => {
     const { testId } = req.params;
 
     if (!testId || !Array.isArray(batchIds) || batchIds.length === 0) {
-      console.log("Invalid input:", { testId, batchIds });
+      // console.log("Invalid input:", { testId, batchIds });
       return res.status(400).json({
         success: false,
         message: "testId and batchIds[] are required",

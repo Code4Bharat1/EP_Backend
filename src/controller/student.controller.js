@@ -115,7 +115,7 @@ const register = async (req, res) => {
 
     // Generate a random 6-digit OTP
     const otp = crypto.randomInt(100000, 999999).toString();
-    console.log("📱 Generated OTP:", otp);
+    //console.log("📱 Generated OTP:", otp);
 
     const expirationTime = Date.now() + 10 * 60 * 1000; // OTP expires in 10 minutes
 
@@ -151,7 +151,7 @@ Thank you for using *ExamPortal*!`
       return res.status(500).json({ message: "Failed to send OTP via WhatsApp" });
     }
 
-    console.log("✅ OTP sent successfully via WhatsApp");
+    // //console.log("✅ OTP sent successfully via WhatsApp");
 
     return res.status(201).json({
       message: "Registration successful. OTP has been sent to your WhatsApp.",
@@ -165,8 +165,8 @@ Thank you for using *ExamPortal*!`
 
 const savePersonalData = async (req, res) => {
   try {
-    console.log("Received body:", req.body);
-    console.log("Received file:", req.file);
+    //console.log("Received body:", req.body);
+    //console.log("Received file:", req.file);
 
     const {
       firstName,
@@ -187,7 +187,7 @@ const savePersonalData = async (req, res) => {
     }
 
     const id = req.user.id;
-    console.log(id);
+    //console.log(id);
     const student = await Student.findOne({ where: { id } });
 
     if (!student) {
@@ -224,7 +224,7 @@ const savePersonalData = async (req, res) => {
       profileImage: updatedProfileImage,
     };
 
-    console.log("Updating with:", updateData);
+    //console.log("Updating with:", updateData);
 
     await student.update(updateData);
 
@@ -243,7 +243,7 @@ const savePersonalData = async (req, res) => {
 
 const newSavePersonalData = async (req, res) => {
   try {
-    console.log("📥 Incoming Request Body:", req.body);
+    //console.log("📥 Incoming Request Body:", req.body);
 
     const {
       id,
@@ -261,12 +261,12 @@ const newSavePersonalData = async (req, res) => {
     } = req.body;
 
     if (!id) {
-      console.log("❌ ID is missing in request body");
+      //console.log("❌ ID is missing in request body");
       return res.status(400).json({ message: "Student ID is required" });
     }
 
     const student = await Student.findOne({ where: { id } });
-    console.log("👀 Found Student:", student ? student.toJSON() : "No record found");
+    // //console.log("👀 Found Student:", student ? student.toJSON() : "No record found");
 
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
@@ -280,7 +280,7 @@ const newSavePersonalData = async (req, res) => {
         },
       });
 
-      console.log("📧 findEmail:", findEmail ? findEmail.id : "None");
+      // //console.log("📧 findEmail:", findEmail ? findEmail.id : "None");
 
       if (findEmail && findEmail.id !== student.id) {
         return res.status(409).json({ message: "Email address already exists." });
@@ -295,7 +295,7 @@ const newSavePersonalData = async (req, res) => {
         },
       });
 
-      console.log("📞 findPhone:", findPhone ? findPhone.id : "None");
+      //console.log("📞 findPhone:", findPhone ? findPhone.id : "None");
 
       if (findPhone && findPhone.id !== student.id) {
         return res.status(409).json({ message: "Phone number already exists." });
@@ -316,11 +316,11 @@ const newSavePersonalData = async (req, res) => {
       profileImage: updatedImageUrl || student.profileImage,
     };
 
-    console.log("🛠️ Update Data:", updateData);
+    //console.log("🛠️ Update Data:", updateData);
 
     await student.update(updateData);
 
-    console.log("✅ Updated Student Successfully");
+    // //console.log("✅ Updated Student Successfully");
 
     return res.status(200).json({
       message: "Personal Data Updated Successfully",
@@ -439,7 +439,7 @@ Thank you for using *ExamPortal*!`
       return res.status(500).json({ message: "Failed to send OTP via WhatsApp" });
     }
 
-    console.log("✅ OTP resent successfully via WhatsApp");
+    //console.log("✅ OTP resent successfully via WhatsApp");
 
     return res.status(200).json({ 
       message: "New OTP sent successfully to your WhatsApp.",
@@ -456,8 +456,8 @@ const login = async (req, res) => {
   try {
     const { emailAddress, mobileNumber, password } = req.body;
 
-    console.log("=== LOGIN DEBUG ===");
-    console.log("Login attempt:", { emailAddress, mobileNumber });
+    //console.log("=== LOGIN DEBUG ===");
+    //console.log("Login attempt:", { emailAddress, mobileNumber });
 
     if ((!emailAddress && !mobileNumber) || !password) {
       return res.status(400).json({
@@ -475,11 +475,11 @@ const login = async (req, res) => {
     });
 
     if (!student) {
-      console.log("No student found for given credentials");
+      //console.log("No student found for given credentials");
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    console.log("Student found:", student.id, student.emailAddress || student.mobileNumber);
+    //console.log("Student found:", student.id, student.emailAddress || student.mobileNumber);
 
     // Compare password
     const isPasswordValid = await bcrypt.compare(password, student.password);
@@ -501,7 +501,7 @@ const login = async (req, res) => {
       { expiresIn: "6h" }
     );
 
-    console.log("=== END LOGIN DEBUG ===");
+    //console.log("=== END LOGIN DEBUG ===");
 
     return res.json({
       message: "Login successful",
@@ -552,7 +552,7 @@ Thank you for using *ExamPortal*!`
       return res.status(500).json({ message: "Failed to send OTP via WhatsApp" });
     }
 
-    console.log("✅ Password reset OTP sent via WhatsApp");
+    //console.log("✅ Password reset OTP sent via WhatsApp");
 
     return res.status(200).json({ 
       message: "OTP sent to your WhatsApp for password reset",
@@ -629,7 +629,7 @@ const resetPassword = async (req, res) => {
     // Clear OTP from store
     delete otpStore[mobileNumber];
 
-    console.log("✅ Password reset successfully for mobile:", mobileNumber);
+    //console.log("✅ Password reset successfully for mobile:", mobileNumber);
 
     return res.status(200).json({ 
       message: "Password reset successfully! You can now log in with your new password." 
@@ -706,7 +706,7 @@ const getPersonalData = async (req, res) => {
 const deleteStudentAccount = async (req, res) => {
   try {
     const studentId = req.user.id;
-    console.log(`Attempting to delete student with ID: ${studentId}`);
+    //console.log(`Attempting to delete student with ID: ${studentId}`);
 
     if (!studentId) {
       return res.status(400).json({ message: "Student ID missing" });
@@ -718,7 +718,7 @@ const deleteStudentAccount = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    console.log(`Deleting student: ${student.email} (ID: ${student.id})`);
+    //console.log(`Deleting student: ${student.email} (ID: ${student.id})`);
 
     await student.destroy(); // ✅ This removes the record safely
 

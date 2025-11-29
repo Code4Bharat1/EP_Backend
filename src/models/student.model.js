@@ -1,4 +1,4 @@
-// Sync all models
+// student.model.js
 import { sequelizeCon, DataTypes, Model } from "../init/dbConnection.js";
 import bcrypt from "bcrypt";
 

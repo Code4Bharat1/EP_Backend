@@ -1,3 +1,5 @@
+// admin.model.js
+
 import { sequelizeCon, DataTypes } from "../init/dbConnection.js";
 import Student from "./student.model.js";
 import { StudentBatch } from "./BatchStudent.model.js";

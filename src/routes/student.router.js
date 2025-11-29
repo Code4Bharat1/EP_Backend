@@ -16,7 +16,23 @@ import { studentAuth } from "../middleware/studentAuth.js"; // Authentication mi
 import { otpRateLimiter } from "../middleware/rateLimiter.js";
 import { upload } from "../middleware/multer.middleware.js";
 
+
+
+
 const router = express.Router();
+
+
+
+import { googleLogin } from "../controller/student.controller.js";
+
+
+
+// Existing routes...
+// router.post("/login", login);
+
+router.post("/google-login", googleLogin);
+
+
 
 // Route to register a new student and send OTP
 router.post("/register", register);

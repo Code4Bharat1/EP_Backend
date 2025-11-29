@@ -132,6 +132,9 @@ app.use(
 // --- Other middlewares ---
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use("/adminLogos", express.static("uploads/adminLogos"));
+
+
 app.use(express.urlencoded({ extended: true }));
 app.use(logger);
 
@@ -192,6 +195,7 @@ app.use("/api/review", reviewTestRoute)
 
 app.use("/api/review", reviewQuestion);
 app.use("/api/sessions", sessionRoutes);
+
 
 // --- Start server ---
 app.listen(port, () => {

@@ -8,6 +8,78 @@ import { sendWhatsAppMessage } from "../utils/sendWhatsapp.js";
 
 let otpStore = {};
 
+
+import { OAuth2Client } from "google-auth-library";
+
+
+
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const googleLogin = async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential)
+      return res.status(400).json({ message: "Missing Google token" });
+
+    // Verify Google Token
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    const email = payload.email;
+    const name = payload.name;
+    const picture = payload.picture;
+
+    // Check if student exists
+    let student = await Student.findOne({
+      where: { emailAddress: email },
+    });
+
+    // If user doesn't exist → create one
+    if (!student) {
+      student = await Student.create({
+        fullName: name,
+        emailAddress: email,
+        password: await bcrypt.hash("google_oauth_login", 10),
+        isVerified: true,
+        profileImage: picture,
+      });
+    }
+
+    // Create token
+    // const token = jwt.sign(
+    //   {
+    //     id: student.id,
+    //     email: student.emailAddress,
+    //   },
+    //   process.env.JWT_SECRET,
+    //   { expiresIn: "6h" }
+    // );
+
+     const token = jwt.sign(
+      { id: student.id, email: student.emailAddress, mobile: student.mobileNumber,adminId: student.addedByAdminId, },
+      config.get("jwtSecret"),
+      { expiresIn: "6h" }
+    );
+
+
+    return res.json({
+      message: "Login successful",
+      token,
+      user: student,
+    });
+  } catch (err) {
+    console.error("Google Login Error:", err);
+    return res.status(500).json({ message: "Google login failed" });
+  }
+};
+
+
 //register - NOW SENDS OTP VIA WHATSAPP ONLY
 const register = async (req, res) => {
   try {
@@ -674,4 +746,5 @@ export {
   getPersonalData,
   newSavePersonalData,
   deleteStudentAccount,
+  googleLogin,
 };

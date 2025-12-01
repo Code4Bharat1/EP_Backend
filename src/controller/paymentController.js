@@ -1,31 +1,31 @@
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";                    // ✅ ADD bcrypt
 import Student from "../models/student.model.js";
-import hashPassword from "../utils/hasshedPassowrd.js"; // make sure file name is correct
+import hashPassword from "../utils/hasshedPassowrd.js";
 
-// Razorpay instance
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// ---------- CREATE ORDER (Step 1.1) ----------
+// ---------- CREATE ORDER (Fixed for existing students) ----------
 export const createOrder = async (req, res) => {
   try {
-    const { name, email, phone, password, planType } = req.body;
+    const { name, email, phone, planType } = req.body;  // ✅ Removed password requirement
 
-    if (!name || !email || !phone || !password || !planType) {
-      return res.status(400).json({ message: "Missing required fields" });
+    if (!name || !email || !phone || !planType) {
+      return res.status(400).json({ message: "Missing required fields: name, email, phone, planType" });
     }
 
-    const amount = planType === "year" ? 50000 : 5000; // paise (₹500 / ₹50 etc.)
+    const amount = planType === "year" ? 50000 : 5000; // ₹500 / ₹50
 
     const order = await razorpay.orders.create({
       amount,
       currency: "INR",
-      receipt: `signup_${Date.now()}`,
-      notes: { signup_email: email, plan: planType },
+      receipt: `upgrade_${Date.now()}`,
+      notes: { email, plan: planType },
     });
 
     return res.status(200).json({
@@ -44,15 +44,7 @@ export const createOrder = async (req, res) => {
   }
 };
 
-// ---------- SIGNATURE HELPER ----------
-const verifySignature = (orderId, paymentId, signature, keySecret) => {
-  const hmac = crypto.createHmac("sha256", keySecret);
-  hmac.update(`${orderId}|${paymentId}`);
-  const digest = hmac.digest("hex");
-  return digest === signature;
-};
-
-// ---------- VERIFY PAYMENT + CREATE STUDENT (Step 1.5) ----------
+// ---------- VERIFY PAYMENT (Fixed) ----------
 export const verifyPayment = async (req, res) => {
   try {
     const {
@@ -60,10 +52,16 @@ export const verifyPayment = async (req, res) => {
       razorpay_payment_id,
       razorpay_signature,
       signupData,
-      skipSig, // for Postman testing only
+      skipSig,
     } = req.body;
 
-    // For real Razorpay flow, skipSig will be undefined/false
+    console.log("🔍 verifyPayment:", signupData?.email);  // ✅ Debug
+
+    if (!signupData?.email) {
+      return res.status(400).json({ message: "signupData.email required" });
+    }
+
+    // Skip signature for testing
     if (!skipSig) {
       const valid = verifySignature(
         razorpay_order_id,
@@ -71,32 +69,43 @@ export const verifyPayment = async (req, res) => {
         razorpay_signature,
         process.env.RAZORPAY_KEY_SECRET
       );
-
-      if (!valid) {
-        return res.status(400).json({ message: "Invalid signature" });
-      }
+      if (!valid) return res.status(400).json({ message: "Invalid signature" });
     }
 
-    // hash password
-    const hashedPassword = await hashPassword(signupData.password);
+    // ✅ Find existing student
+    const student = await Student.findOne({ 
+      where: { emailAddress: signupData.email } 
+    });
+    
+    console.log("🔍 Student:", student?.id);  // ✅ Debug
+    
+    if (!student) {
+      return res.status(404).json({ 
+        message: `Student not found: ${signupData.email}` 
+      });
+    }
+
+    // Hash password ONLY if provided
+    let hashedPassword = student.password;
+    if (signupData.password) {
+      hashedPassword = await bcrypt.hash(signupData.password, 10);
+    }
 
     const now = new Date();
-    const subscriptionEnd =
-      signupData.planType === "year"
-        ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000)
-        : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const subscriptionEnd = signupData.planType === "year"
+      ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000)
+      : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    // IMPORTANT: match your Sequelize fields (emailAddress, mobileNumber, etc.)
-    const student = await Student.create({
-      fullName: signupData.name,
-      emailAddress: signupData.email,
-      mobileNumber: signupData.phone,
+    // ✅ Upgrade student
+    await student.update({
+      fullName: signupData.name || student.fullName,
+      mobileNumber: signupData.phone || student.mobileNumber,
       password: hashedPassword,
-      addedByAdminId: null,          // public student
       paymentVerified: true,
       subscriptionType: signupData.planType,
       subscriptionStart: now,
       subscriptionEnd,
+      freeUsageCount: 0,
     });
 
     const token = jwt.sign(
@@ -105,13 +114,21 @@ export const verifyPayment = async (req, res) => {
       { expiresIn: "365d" }
     );
 
+    console.log("✅ UPGRADED student:", student.id);
+
     return res.status(200).json({
       token,
-      message: "Signup & payment successful",
+      message: "Subscription activated! Unlimited access granted.",
       studentId: student.id,
     });
   } catch (err) {
-    console.error("verifyPayment error:", err);
+    console.error("verifyPayment ERROR:", err);
     return res.status(500).json({ message: "Payment verification failed" });
   }
+};
+
+const verifySignature = (orderId, paymentId, signature, keySecret) => {
+  const hmac = crypto.createHmac("sha256", keySecret);
+  hmac.update(`${orderId}|${paymentId}`);
+  return hmac.digest("hex") === signature;
 };

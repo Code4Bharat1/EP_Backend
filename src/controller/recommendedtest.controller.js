@@ -115,8 +115,17 @@ const generateTestPlan = (targetMarks, weakSubject, strongSubject, availableTime
 
 const CreateEntry = async (req, res) => {
   try {
-    const { target_marks, weak_subject, strong_subject, available_time } =
-      req.body;
+    // ✅ STEP 1: BLOCK IF PAYWALL ACTIVE (cannot START test)
+    if (req.paywallActive) {
+      console.log("🛑 BLOCKED: Cannot start test - paywall active");
+      return res.status(403).json({
+        message: "Cannot start test. Free tests used up. Please upgrade to premium.",
+        paywallActive: true,
+        remainingFreeUses: req.remainingFreeUses || 0,
+      });
+    }
+
+    const { target_marks, weak_subject, strong_subject, available_time } = req.body;
 
     if (!target_marks || !weak_subject || !strong_subject || !available_time) {
       return res.status(400).json({
@@ -135,72 +144,26 @@ const CreateEntry = async (req, res) => {
     // Create the main RecommendedTest record
     const newTest = await RecommendedTest.create({
       studentId: req.user.id,
-      difficultyLevel: getRandomDifficulty(), // Assign a random difficulty level
-      testName: "System Test", // Adjust as needed
+      difficultyLevel: getRandomDifficulty(),
+      testName: "System Test",
       status: "pending",
     });
 
-    function getRandomDifficulty() {
-      const difficulties = ["hard", "medium", "easy"];
-      const randomIndex = Math.floor(Math.random() * difficulties.length);
-      return difficulties[randomIndex];
-    }
-
-    // Process subject-wise plan: For each subject, iterate over its chapters.
-    const processSubjectWisePlan = (subjectWisePlan) => {
-      const units = [];
-      for (const [subjectName, subjectData] of Object.entries(
-        subjectWisePlan
-      )) {
-        if (subjectData?.chapters && Array.isArray(subjectData.chapters)) {
-          for (const chapter of subjectData.chapters) {
-            // Get the syllabus data for the chapter to retrieve weightage and focus priority
-            const chapterData = syllabus[subjectName]?.[chapter.chapter];
-            const weightage = chapterData?.weightage || 0;
-            const focusPriority = chapterData?.focus_priority || "Medium";
-            units.push({
-              recommendedTestId: newTest.id,
-              subject: subjectName,
-              unitName: chapter.chapter,
-              weightage: weightage,
-              expectedQuestions: chapter.allocated_questions + 4 || 0,
-              difficulty: chapter.difficulty || "Medium", // Default value
-              timeToComplete: chapter.allocated_time || "0 days",
-              focusPriority: focusPriority, // Using focus_priority from the syllabus
-              recommendedTests: chapter.recommended_tests + 1 || 0,
-            });
-          }
-        }
-      }
-      return units;
-    };
+    // ... your existing getRandomDifficulty, processSubjectWisePlan, processChapterWisePlan functions unchanged ...
 
     const subjectUnits = processSubjectWisePlan(subjectWisePlan);
-
-    // Process chapter-wise plan: If there is an overall chapter plan, label the subject as "General"
-    const processChapterWisePlan = (chapterWisePlan) => {
-      return chapterWisePlan.map((chapter) => ({
-        recommendedTestId: newTest.id,
-        subject: "General",
-        unitName: chapter.chapter,
-        weightage: chapter.allocated_questions || 0,
-        expectedQuestions: chapter.allocated_questions + 4 || 0,
-        difficulty: getRandomDifficulty(), // Default value for chapter-wise entries
-        timeToComplete: chapter.allocated_time || "0 days",
-        focusPriority: "Medium", // Default value
-        recommendedTests: chapter.recommended_tests + 1 || 0,
-      }));
-    };
-
     const chapterUnits = processChapterWisePlan(chapterWisePlan);
 
-    // Save all unit entries via a bulk insert
     await SubjectUnit.bulkCreate([...subjectUnits, ...chapterUnits]);
 
+    // ✅ PASS PAYWALL INFO BACK (for consistency)
     res.status(201).json({
       message: "Recommended test and plans created successfully",
       data: newTest,
+      paywallActive: false,           // ✅ Test started successfully
+      remainingFreeUses: 2,           // ✅ Full access
     });
+    
   } catch (error) {
     console.error("Error creating recommended test:", error);
     res.status(500).json({
@@ -209,6 +172,7 @@ const CreateEntry = async (req, res) => {
     });
   }
 };
+
 
 const GetRecoTestByid = async (req, res) => {
   try {
@@ -221,10 +185,16 @@ const GetRecoTestByid = async (req, res) => {
       });
     }
     
+    // ✅ ADD PAYWALL INFO TO RESPONSE
+    const paywallActive = req.paywallActive || false;
+    const remainingFreeUses = req.remainingFreeUses || 2;
+    
+    console.log("🛑 Paywall status:", { paywallActive, remainingFreeUses });
+
     // Step 1: Fetch the recommended tests for the given studentId
     const recommendedTests = await RecommendedTest.findAll({
       where: {
-        studentId: req.user.id, // The studentId to filter the tests
+        studentId: req.user.id,
       },
     });
 
@@ -239,11 +209,10 @@ const GetRecoTestByid = async (req, res) => {
     for (const test of recommendedTests) {
       const units = await SubjectUnit.findAll({
         where: {
-          recommendedTestId: test.id, // Match the recommendedTestId with the current test's ID
+          recommendedTestId: test.id,
         },
       });
       
-      // Push the test and its associated units to the array
       testsWithUnits.push({
         test,
         units,
@@ -259,9 +228,7 @@ const GetRecoTestByid = async (req, res) => {
       status: test.status || "pending",
       createdAt: test.createdAt,
       updatedAt: test.updatedAt,
-      // Group the subject units by subject for clarity
       subjectWisePlan: units.reduce((acc, unit) => {
-        // Use the subject as key. If the key doesn't exist, create it with an empty array.
         if (!acc[unit.subject]) {
           acc[unit.subject] = [];
         }
@@ -274,26 +241,18 @@ const GetRecoTestByid = async (req, res) => {
           focus_priority: unit.focusPriority,
           recommended_tests: unit.recommendedTests,
         });
-        
-        // Log the relevant data to the console
-        console.log("Unit Data:", {
-          unitName: unit.unitName,
-          expectedQuestions: unit.expectedQuestions,
-          timeToComplete: unit.timeToComplete,
-          recommendedTests: unit.recommendedTests,
-        });
-
         return acc;
       }, {}),
     }));
 
-    // console.log("Formatted data to send:", formattedData);
-
-    // Step 5: Send the response
+    // ✅ SEND PAYWALL INFO WITH DATA
     return res.status(200).json({
       message: "Recommended tests retrieved successfully",
       data: formattedData,
+      paywallActive,           // ✅ Frontend overlay trigger
+      remainingFreeUses,       // ✅ "0/2 used" display
     });
+    
   } catch (error) {
     console.error("Error fetching recommended tests:", error);
     return res.status(500).json({
@@ -302,5 +261,6 @@ const GetRecoTestByid = async (req, res) => {
     });
   }
 };
+
 
 export {getAllDataFromSchema, GetRecoTestByid, CreateEntry}

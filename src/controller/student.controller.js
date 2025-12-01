@@ -125,13 +125,23 @@ const register = async (req, res) => {
     otpStore[emailAddress] = { otp, expirationTime, mobileNumber };
 
     // Create the new student in DB with isVerified=false
-    await Student.create({
-      name,
-      emailAddress,
-      mobileNumber,
-      password: hashedPassword,
-      isVerified: false,
-    });
+    // Create the new student in DB with 2 free uses + trial fields
+await Student.create({
+  fullName: name,           // match your model field
+  emailAddress,
+  mobileNumber,
+  password: hashedPassword,
+  isVerified: false,
+  
+  // ✅ FREE TRIAL FIELDS (2 free tests)
+  freeUsageCount: 2,        // starts with 2 free tests
+  paymentVerified: false,   // not paid yet
+  subscriptionType: null,   // no subscription
+  subscriptionStart: null,
+  subscriptionEnd: null,
+  addedByAdminId: null,     // public student
+});
+
 
     // ✅ SEND OTP VIA WHATSAPP ONLY - NO EMAIL
     const whatsappResult = await sendWhatsAppMessage(

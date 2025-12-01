@@ -123,6 +123,11 @@ const Student = sequelizeCon.define(
         isIn: [["Father", "Mother", "Guardian"]], // Relation validation
       },
     },
+    freeUsageCount: {
+  type: DataTypes.INTEGER,
+  allowNull: false,
+  defaultValue: 2,  // 2 free tests on signup
+},
         // Payment / subscription fields
     paymentVerified: {
       type: DataTypes.BOOLEAN,

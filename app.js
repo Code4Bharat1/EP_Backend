@@ -1,3 +1,5 @@
+// app.js
+
 import express from 'express';
 import config from 'config';
 import studentRoutes from './src/routes/student.router.js';

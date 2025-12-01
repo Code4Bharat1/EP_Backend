@@ -1,3 +1,5 @@
+// admin.controller.js
+
 import {Admin, Batch} from '../models/admin.model.js'
 import XLSX from "xlsx";
 import multer from "multer";

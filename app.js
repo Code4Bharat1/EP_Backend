@@ -198,7 +198,7 @@ app.use("/api/review", reviewTestRoute)
 
 app.use("/api/review", reviewQuestion);
 app.use("/api/sessions", sessionRoutes);
-app.use("/api/payment", paymentRoutes)
+// app.use("/api/payment", paymentRoutes)
 // --- Start server ---
 app.listen(port, () => {
   console.log(`🚀 Server running securely on port ${port}`);

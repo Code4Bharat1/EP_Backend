@@ -146,6 +146,142 @@ import jwt from "jsonwebtoken";
 //   }
 // };
 
+// const createAdmin = async (req, res) => {
+//   try {
+//     const {
+//       PassKey,
+//       name,
+//       Course,
+//       Email,
+//       mobileNumber,
+//       whatsappNumber,
+//       StartDate,
+//       ExpiryDate,
+//       address,
+//       HodName,
+//       navbarColor,
+//       sidebarColor,
+//       otherColor,
+//       role,
+//     } = req.body;
+
+//     // file from multer
+//     const uploadedLogo = req.file
+//       ? `/adminLogos/${req.file.filename}`
+//       : null;
+
+//     let creatorAdminId = null;
+//     const MAX_SUB_ADMINS = 4;
+
+//     if (req.user?.AdminId) {
+//       creatorAdminId = req.user.AdminId;
+//     } else if (req.body.addedByAdminId) {
+//       creatorAdminId = req.body.addedByAdminId;
+//     }
+
+//     const processedWhatsappNumber =
+//       whatsappNumber && whatsappNumber.trim() !== ""
+//         ? whatsappNumber
+//         : null;
+
+//     if (!PassKey || !name || !Email || !mobileNumber) {
+//       return res.status(400).json({ message: "Missing required fields." });
+//     }
+
+//     // Validate creator
+//     if (creatorAdminId !== null) {
+//       const creator = await Admin.findOne({
+//         where: { AdminId: creatorAdminId },
+//         attributes: ["AdminId", "role"],
+//       });
+
+//       if (!creator) {
+//         return res.status(400).json({ message: "Creator admin not found." });
+//       }
+
+//       if (!["superadmin", "admin"].includes(creator.role)) {
+//         return res
+//           .status(403)
+//           .json({ message: "Only superadmin or admin can add admins." });
+//       }
+
+//       const subAdminCount = await Admin.count({
+//         where: { created_by_admin_id: creatorAdminId },
+//       });
+
+//       if (subAdminCount >= MAX_SUB_ADMINS) {
+//         return res.status(403).json({
+//           message: `You have reached the maximum limit of ${MAX_SUB_ADMINS} sub-admins.`,
+//         });
+//       }
+//     }
+
+//     const newAdminId = `ADM-${Date.now()}-${Math.floor(
+//       Math.random() * 1000
+//     )}`;
+
+//     let emailExists = false;
+
+//     if (creatorAdminId) {
+//       emailExists = await Admin.findOne({
+//         where: {
+//           Email,
+//           created_by_admin_id: creatorAdminId,
+//         },
+//         attributes: ["id"],
+//       });
+//     }
+
+//     if (emailExists) {
+//       return res.status(400).json({
+//         message: "Admin with this Email already exists under your account.",
+//       });
+//     }
+
+//     const hashedPassKey = await bcrypt.hash(PassKey, 10);
+
+//     const newAdmin = await Admin.create({
+//       AdminId: newAdminId,
+//       PassKey: hashedPassKey,
+//       name,
+//       Course,
+//       Email,
+//       mobileNumber,
+//       whatsappNumber: processedWhatsappNumber,
+//       StartDate,
+//       ExpiryDate,
+//       address,
+//       HodName,
+//       logo: uploadedLogo, // ✔ STORE LOGO
+//       navbarColor,
+//       sidebarColor,
+//       otherColor,
+//       role: role || "admin",
+//       created_by_admin_id: creatorAdminId,
+//       credentials: "pending",
+//     });
+
+//     return res.status(201).json({
+//       message: "Admin registered successfully",
+//       admin: {
+//         id: newAdmin.id,
+//         AdminId: newAdmin.AdminId,
+//         name: newAdmin.name,
+//         email: newAdmin.Email,
+//         logo: newAdmin.logo,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Error creating admin:", error);
+//     return res.status(500).json({
+//       message: "Internal server error",
+//       error: error.message,
+//     });
+//   }
+// };
+
+
+
 const createAdmin = async (req, res) => {
   try {
     const {
@@ -163,9 +299,9 @@ const createAdmin = async (req, res) => {
       sidebarColor,
       otherColor,
       role,
+      instituteName,  // <-- NEW FIELD
     } = req.body;
 
-    // file from multer
     const uploadedLogo = req.file
       ? `/adminLogos/${req.file.filename}`
       : null;
@@ -188,7 +324,6 @@ const createAdmin = async (req, res) => {
       return res.status(400).json({ message: "Missing required fields." });
     }
 
-    // Validate creator
     if (creatorAdminId !== null) {
       const creator = await Admin.findOne({
         where: { AdminId: creatorAdminId },
@@ -200,9 +335,9 @@ const createAdmin = async (req, res) => {
       }
 
       if (!["superadmin", "admin"].includes(creator.role)) {
-        return res
-          .status(403)
-          .json({ message: "Only superadmin or admin can add admins." });
+        return res.status(403).json({
+          message: "Only superadmin or admin can add admins.",
+        });
       }
 
       const subAdminCount = await Admin.count({
@@ -220,17 +355,13 @@ const createAdmin = async (req, res) => {
       Math.random() * 1000
     )}`;
 
-    let emailExists = false;
-
-    if (creatorAdminId) {
-      emailExists = await Admin.findOne({
-        where: {
-          Email,
-          created_by_admin_id: creatorAdminId,
-        },
-        attributes: ["id"],
-      });
-    }
+    const emailExists = await Admin.findOne({
+      where: {
+        Email,
+        created_by_admin_id: creatorAdminId,
+      },
+      attributes: ["id"],
+    });
 
     if (emailExists) {
       return res.status(400).json({
@@ -252,11 +383,12 @@ const createAdmin = async (req, res) => {
       ExpiryDate,
       address,
       HodName,
-      logo: uploadedLogo, // ✔ STORE LOGO
       navbarColor,
       sidebarColor,
       otherColor,
+      logo: uploadedLogo,
       role: role || "admin",
+      instituteName,  // <-- SAVE IT
       created_by_admin_id: creatorAdminId,
       credentials: "pending",
     });
@@ -269,6 +401,7 @@ const createAdmin = async (req, res) => {
         name: newAdmin.name,
         email: newAdmin.Email,
         logo: newAdmin.logo,
+        instituteName: newAdmin.instituteName,
       },
     });
   } catch (error) {
@@ -401,6 +534,37 @@ const getStaffMember = async (req, res) => {
 //   }
 // };
 
+// const getadmin = async (req, res) => {
+//   try {
+//     const { adminId } = req.params;
+
+//     if (!adminId) {
+//       return res.status(400).json({ message: "required field not found: adminId" });
+//     }
+
+//     // 🟢 FIX: AdminId is NOT primary key — find using where
+//     const admin = await Admin.findOne({
+//       where: { AdminId: adminId },
+//     });
+
+//     if (!admin) {
+//       return res.status(404).json({ message: "admin not found" });
+//     }
+
+//     return res.status(200).json({
+//       message: "success",
+//       data: admin,
+//     });
+    
+//   } catch (error) {
+//     console.error("error in getadmin:", error);
+//     return res.status(500).json({
+//       message: "Internal server error",
+//       error: error.message,
+//     });
+//   }
+// };
+
 const getadmin = async (req, res) => {
   try {
     const { adminId } = req.params;
@@ -409,10 +573,8 @@ const getadmin = async (req, res) => {
       return res.status(400).json({ message: "required field not found: adminId" });
     }
 
-    // 🟢 FIX: AdminId is NOT primary key — find using where
-    const admin = await Admin.findOne({
-      where: { AdminId: adminId },
-    });
+    // Find by primary key
+    const admin = await Admin.findByPk(adminId);
 
     if (!admin) {
       return res.status(404).json({ message: "admin not found" });
@@ -422,7 +584,7 @@ const getadmin = async (req, res) => {
       message: "success",
       data: admin,
     });
-    
+
   } catch (error) {
     console.error("error in getadmin:", error);
     return res.status(500).json({

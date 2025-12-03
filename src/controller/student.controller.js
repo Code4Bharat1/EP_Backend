@@ -506,7 +506,8 @@ const login = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: student.id, email: student.emailAddress, mobile: student.mobileNumber,adminId: student.addedByAdminId, },
+      { id: student.id, email: student.emailAddress, mobile: student.mobileNumber,adminId: student.addedByAdminId,addedByAdminId: student.addedByAdminId
+ },
       config.get("jwtSecret"),
       { expiresIn: "6h" }
     );

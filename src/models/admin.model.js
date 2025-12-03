@@ -58,6 +58,12 @@ const Admin = sequelizeCon.define(
       allowNull: false,
       defaultValue: "#3B82F6",
     },
+
+    instituteName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
     sidebarColor: {
       type: DataTypes.STRING,
       allowNull: false,

@@ -19,7 +19,7 @@ const verifyStudentToken = (token) => {
   if (!token) {
     throw new Error("No token provided");
   }
-  const secret = config.get("jwtSecret");
+  const secret = process.env.JWT_SECRET;
   return jwt.verify(token, secret);
 };
 

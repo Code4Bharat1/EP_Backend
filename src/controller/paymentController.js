@@ -1,3 +1,4 @@
+// paymentController.js
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
@@ -19,7 +20,7 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: "Missing required fields: name, email, phone, planType" });
     }
 
-    const amount = planType === "year" ? 50000 : 5000; // ₹500 / ₹50
+    const amount = planType === "year" ? 182500 : 34900; // ₹500 / ₹50
 
     const order = await razorpay.orders.create({
       amount,
@@ -45,6 +46,88 @@ export const createOrder = async (req, res) => {
 };
 
 // ---------- VERIFY PAYMENT (Fixed) ----------
+// export const verifyPayment = async (req, res) => {
+//   try {
+//     const {
+//       razorpay_order_id,
+//       razorpay_payment_id,
+//       razorpay_signature,
+//       signupData,
+//       skipSig,
+//     } = req.body;
+
+//     console.log("🔍 verifyPayment:", signupData?.email);  // ✅ Debug
+
+//     if (!signupData?.email) {
+//       return res.status(400).json({ message: "signupData.email required" });
+//     }
+
+//     // Skip signature for testing
+//     if (!skipSig) {
+//       const valid = verifySignature(
+//         razorpay_order_id,
+//         razorpay_payment_id,
+//         razorpay_signature,
+//         process.env.RAZORPAY_KEY_SECRET
+//       );
+//       if (!valid) return res.status(400).json({ message: "Invalid signature" });
+//     }
+
+//     // ✅ Find existing student
+//     const student = await Student.findOne({ 
+//       where: { emailAddress: signupData.email } 
+//     });
+    
+//     console.log("🔍 Student:", student?.id);  // ✅ Debug
+    
+//     if (!student) {
+//       return res.status(404).json({ 
+//         message: `Student not found: ${signupData.email}` 
+//       });
+//     }
+
+//     // Hash password ONLY if provided
+//     let hashedPassword = student.password;
+//     if (signupData.password) {
+//       hashedPassword = await bcrypt.hash(signupData.password, 10);
+//     }
+
+//     const now = new Date();
+//     const subscriptionEnd = signupData.planType === "year"
+//       ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000)
+//       : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+//     // ✅ Upgrade student
+//     await student.update({
+//       fullName: signupData.name || student.fullName,
+//       mobileNumber: signupData.phone || student.mobileNumber,
+//       password: hashedPassword,
+//       paymentVerified: true,
+//       subscriptionType: signupData.planType,
+//       subscriptionStart: now,
+//       subscriptionEnd,
+//       freeUsageCount: 0,
+//     });
+
+//     const token = jwt.sign(
+//       { id: student.id, email: student.emailAddress },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "365d" }
+//     );
+
+//     console.log("✅ UPGRADED student:", student.id);
+
+//     return res.status(200).json({
+//       token,
+//       message: "Subscription activated! Unlimited access granted.",
+//       studentId: student.id,
+//     });
+//   } catch (err) {
+//     console.error("verifyPayment ERROR:", err);
+//     return res.status(500).json({ message: "Payment verification failed" });
+//   }
+// };
+
 export const verifyPayment = async (req, res) => {
   try {
     const {
@@ -55,77 +138,98 @@ export const verifyPayment = async (req, res) => {
       skipSig,
     } = req.body;
 
-    console.log("🔍 verifyPayment:", signupData?.email);  // ✅ Debug
-
     if (!signupData?.email) {
       return res.status(400).json({ message: "signupData.email required" });
     }
 
-    // Skip signature for testing
+    // ✅ Signature verify (skip only for testing)
     if (!skipSig) {
-      const valid = verifySignature(
+      const isValid = verifySignature(
         razorpay_order_id,
         razorpay_payment_id,
         razorpay_signature,
         process.env.RAZORPAY_KEY_SECRET
       );
-      if (!valid) return res.status(400).json({ message: "Invalid signature" });
+
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid Razorpay signature" });
+      }
     }
 
-    // ✅ Find existing student
-    const student = await Student.findOne({ 
-      where: { emailAddress: signupData.email } 
+    // ✅ Find student
+    const student = await Student.findOne({
+      where: { emailAddress: signupData.email },
     });
-    
-    console.log("🔍 Student:", student?.id);  // ✅ Debug
-    
+
     if (!student) {
-      return res.status(404).json({ 
-        message: `Student not found: ${signupData.email}` 
+      return res.status(404).json({
+        message: `Student not found: ${signupData.email}`,
       });
     }
 
-    // Hash password ONLY if provided
-    let hashedPassword = student.password;
-    if (signupData.password) {
-      hashedPassword = await bcrypt.hash(signupData.password, 10);
-    }
-
     const now = new Date();
-    const subscriptionEnd = signupData.planType === "year"
-      ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000)
-      : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    // ✅ Upgrade student
+    const subscriptionEnd =
+      signupData.planType === "year"
+        ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000)
+        : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    // ✅ ✅ ✅ THIS MAKES USER PRO (NOT ADMIN)
     await student.update({
-      fullName: signupData.name || student.fullName,
-      mobileNumber: signupData.phone || student.mobileNumber,
-      password: hashedPassword,
       paymentVerified: true,
       subscriptionType: signupData.planType,
       subscriptionStart: now,
-      subscriptionEnd,
-      freeUsageCount: 0,
+      subscriptionEnd: subscriptionEnd,
+      freeUsageCount: 0, // ✅ Free limit over
     });
 
-    const token = jwt.sign(
-      { id: student.id, email: student.emailAddress },
-      process.env.JWT_SECRET,
-      { expiresIn: "365d" }
-    );
+    // ✅ ✅ ✅ MOST IMPORTANT FIX — paymentVerified IN JWT
+    // const token = jwt.sign(
+    //   {
+    //     id: student.id,
+    //     email: student.emailAddress,
+    //     mobile: student.mobileNumber,
 
-    console.log("✅ UPGRADED student:", student.id);
+    //     // ✅ PRO FLAGS
+    //     paymentVerified: true,
+    //     subscriptionType: student.subscriptionType,
+    //     subscriptionEnd: student.subscriptionEnd,
+
+    //     // ✅ PUBLIC HI RAHEGA (admin nahi banega)
+    //     addedByAdminId: student.addedByAdminId || null,
+    //     adminId: student.addedByAdminId || null,
+    //   },
+    //    process.env.JWT_SECRET,
+    //   { expiresIn: "365d" }
+    // );
+const token = jwt.sign(
+  {
+    id: student.id,
+    email: student.emailAddress,
+    mobile: student.mobileNumber,
+
+    adminId: student.addedByAdminId || null,
+    addedByAdminId: student.addedByAdminId || null,
+
+    paymentVerified: true,
+    subscriptionType: student.subscriptionType,
+    subscriptionEnd: student.subscriptionEnd,
+  },
+  process.env.JWT_SECRET,   // ✅ SAME SECRET
+  { expiresIn: "365d" }
+);
 
     return res.status(200).json({
       token,
-      message: "Subscription activated! Unlimited access granted.",
+      message: "✅ Subscription activated! PRO access granted.",
       studentId: student.id,
     });
   } catch (err) {
-    console.error("verifyPayment ERROR:", err);
+    console.error("❌ verifyPayment ERROR:", err);
     return res.status(500).json({ message: "Payment verification failed" });
   }
 };
+
 
 const verifySignature = (orderId, paymentId, signature, keySecret) => {
   const hmac = crypto.createHmac("sha256", keySecret);

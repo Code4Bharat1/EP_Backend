@@ -169,7 +169,7 @@ const submitTest = async (req, res) => {
         .status(401)
         .json({ error: "Unauthorized: Invalid token format" });
 
-    const secret = config.get("jwtSecret");
+    const secret = process.env.JWT_SECRET;
     let studentId;
     try {
       const decoded = jwt.verify(token, secret);
@@ -325,7 +325,7 @@ const viewAnalytics = async (req, res) => {
       return res.status(401).json({ error: "Unauthorized: No token provided" });
     }
 
-    const secret = config.get("jwtSecret");
+    const secret = process.env.JWT_SECRET;
     let decoded;
     try {
       decoded = jwt.verify(token, secret);

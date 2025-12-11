@@ -1,3 +1,5 @@
+// checkStudentAccess.js
+
 import Student from "../models/student.model.js";
 export const checkStudentAccess = async (req, res, next) => {
   try {

@@ -12,7 +12,7 @@ const pastTest = async (req, res) => {
     }
 
     const token = authHeader.split(" ")[1];
-    const secret = config.get("jwtSecret");
+    const secret = process.env.JWT_SECRET;
 
     let decoded;
     try {

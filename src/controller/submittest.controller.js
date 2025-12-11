@@ -19,7 +19,7 @@ const submitTest = async (req, res) => {
     }
 
     // ✅ Verify and Decode Token
-    const secret = config.get("jwtSecret");
+    const secret = process.env.JWT_SECRET;
     let studentId;
     try {
       const decoded = jwt.verify(token, secret);

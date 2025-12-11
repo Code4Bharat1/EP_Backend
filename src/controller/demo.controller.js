@@ -218,7 +218,7 @@ export const completeSignup = async (req, res) => {
     });
 
     // Generate JWT token
-    const JWT_SECRET = process.env.JWT_SECRET || config.get("jwtSecret") || "your-secret-key";
+    const JWT_SECRET = process.env.JWT_SECRET || process.env.JWT_SECRET || "your-secret-key";
 
     const tokenPayload = {
       id: newStudent.id,

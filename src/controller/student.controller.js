@@ -66,7 +66,7 @@ const googleLogin = async (req, res) => {
 
      const token = jwt.sign(
       { id: student.id, email: student.emailAddress, mobile: student.mobileNumber,adminId: student.addedByAdminId,addedByAdminId: student.addedByAdminId },
-      config.get("jwtSecret"),
+     process.env.JWT_SECRET,
       { expiresIn: "6h" }
     );
 
@@ -396,7 +396,7 @@ const verifyOtp = async (req, res) => {
 
     const token = jwt.sign(
       { id: student.id, email: student.emailAddress,adminId: student.addedByAdminId },
-      config.get("jwtSecret"),
+      process.env.JWT_SECRET,
       { expiresIn: "30d" }
     );
 
@@ -465,12 +465,72 @@ Thank you for using *ExamPortal*!`
 };
 
 // Login Controller
+// const login = async (req, res) => {
+//   try {
+//     const { emailAddress, mobileNumber, password } = req.body;
+
+//     //console.log("=== LOGIN DEBUG ===");
+//     //console.log("Login attempt:", { emailAddress, mobileNumber });
+
+//     if ((!emailAddress && !mobileNumber) || !password) {
+//       return res.status(400).json({
+//         message: "Please provide either Email or Mobile number and password",
+//       });
+//     }
+
+//     // Find student by email OR mobile number
+//     const student = await Student.findOne({
+//       where: {
+//         ...(emailAddress
+//           ? { emailAddress }
+//           : { mobileNumber }),
+//       },
+//     });
+
+//     if (!student) {
+//       //console.log("No student found for given credentials");
+//       return res.status(400).json({ message: "Invalid credentials" });
+//     }
+
+//     //console.log("Student found:", student.id, student.emailAddress || student.mobileNumber);
+
+//     // Compare password
+//     const isPasswordValid = await bcrypt.compare(password, student.password);
+//     if (!isPasswordValid) {
+//       return res.status(400).json({ message: "Invalid credentials" });
+//     }
+
+//     // Check verification
+//     if (!student.isVerified) {
+//       return res
+//         .status(400)
+//         .json({ message: "Please verify your account before logging in" });
+//     }
+
+//     // Generate JWT token
+//     const token = jwt.sign(
+//       { id: student.id, email: student.emailAddress, mobile: student.mobileNumber,adminId: student.addedByAdminId,addedByAdminId: student.addedByAdminId
+//  },
+//      process.env.JWT_SECRET,
+//       { expiresIn: "6h" }
+//     );
+
+//     //console.log("=== END LOGIN DEBUG ===");
+
+//     return res.json({
+//       message: "Login successful",
+//       token,
+//     });
+//   } catch (error) {
+//     console.error("Error in login:", error);
+//     return res.status(500).json({ message: "Internal server error" });
+//   }
+// };
+
+
 const login = async (req, res) => {
   try {
     const { emailAddress, mobileNumber, password } = req.body;
-
-    //console.log("=== LOGIN DEBUG ===");
-    //console.log("Login attempt:", { emailAddress, mobileNumber });
 
     if ((!emailAddress && !mobileNumber) || !password) {
       return res.status(400).json({
@@ -478,44 +538,45 @@ const login = async (req, res) => {
       });
     }
 
-    // Find student by email OR mobile number
     const student = await Student.findOne({
       where: {
-        ...(emailAddress
-          ? { emailAddress }
-          : { mobileNumber }),
+        ...(emailAddress ? { emailAddress } : { mobileNumber }),
       },
     });
 
     if (!student) {
-      //console.log("No student found for given credentials");
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    //console.log("Student found:", student.id, student.emailAddress || student.mobileNumber);
-
-    // Compare password
     const isPasswordValid = await bcrypt.compare(password, student.password);
     if (!isPasswordValid) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Check verification
     if (!student.isVerified) {
       return res
         .status(400)
         .json({ message: "Please verify your account before logging in" });
     }
 
-    // Generate JWT token
+    // ✅ ✅ ✅ IMPORTANT FIX — PRO DATA JWT ME DAALO
     const token = jwt.sign(
-      { id: student.id, email: student.emailAddress, mobile: student.mobileNumber,adminId: student.addedByAdminId,addedByAdminId: student.addedByAdminId
- },
-      config.get("jwtSecret"),
+      {
+        id: student.id,
+        email: student.emailAddress,
+        mobile: student.mobileNumber,
+
+        adminId: student.addedByAdminId || null,
+        addedByAdminId: student.addedByAdminId || null,
+
+        // ✅ ✅ ✅ PRO FLAGS
+        paymentVerified: student.paymentVerified,
+        subscriptionType: student.subscriptionType,
+        subscriptionEnd: student.subscriptionEnd,
+      },
+      process.env.JWT_SECRET,
       { expiresIn: "6h" }
     );
-
-    //console.log("=== END LOGIN DEBUG ===");
 
     return res.json({
       message: "Login successful",
@@ -654,9 +715,74 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// const getPersonalData = async (req, res) => {
+//   try {
+//     const studentId = req.user.id;
+//     const student = await Student.findOne({ 
+//       where: { id: studentId },
+//       attributes: [
+//         "firstName",
+//         "lastName",
+//         "emailAddress",
+//         "examType",
+//         "studentClass",
+//         "targetYear",
+//         "fullName",
+//         "dateOfBirth",
+//         "gender",
+//         "mobileNumber",
+//         "fullAddress",
+//         "domicileState",
+//         "parentName",
+//         "parentContactNumber",
+//         "relationToStudent",
+//         "tenthBoard",
+//         "tenthYearOfPassing",
+//         "tenthPercentage",
+//         "eleventhYearOfCompletion",
+//         "eleventhpercentage",
+//         "twelfthBoard",
+//         "twelfthYearofPassing",
+//         "twelfthPercentage",
+//         "hasAppearedForNEET",
+//         "neetAttempts",
+//         "targetMarks",
+//         "hasTargetFlexibility",
+//         "deferredColleges",
+//         "PreferredCourses",
+//         "CoachingInstituteName",
+//         "studyMode",
+//         "dailyStudyHours",
+//         "takesPracticeTestsRegularly",
+//         "completedMockTests",
+//         "Credits",
+//         "subjectNeedsMostAttention",
+//         "chapterWiseTests",
+//         "topicWiseTests",
+//         "weakAreas",
+//         "profileImage",
+//         "createdAt",
+//         "updatedAt",
+//         "addedbyAdminId",
+//         "batchId",
+//       ],
+//     });
+
+//     if (!student) {
+//       return res.status(404).json({ message: "Student not found" });
+//     }
+
+//     return res.status(200).json(student);
+//   } catch (error) {
+//     console.error("Error fetching student data:", error);
+//     return res.status(500).json({ message: "Internal server error" });
+//   }
+// };
+
 const getPersonalData = async (req, res) => {
   try {
     const studentId = req.user.id;
+
     const student = await Student.findOne({ 
       where: { id: studentId },
       attributes: [
@@ -702,8 +828,12 @@ const getPersonalData = async (req, res) => {
         "profileImage",
         "createdAt",
         "updatedAt",
-        "addedbyAdminId",
         "batchId",
+
+        // ✅ ✅ ✅ ✅ ✅ MOST IMPORTANT FIXES
+        "freeUsageCount",        // ✅ FREE TEST COUNT
+        "paymentVerified",      // ✅ PRO USER CHECK
+        "addedByAdminId"        // ✅ ADMIN STUDENT CHECK  ✅ (CASE FIX)
       ],
     });
 
@@ -717,6 +847,7 @@ const getPersonalData = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 const deleteStudentAccount = async (req, res) => {
   try {
     const studentId = req.user.id;

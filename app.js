@@ -53,7 +53,9 @@ import sessionRoutes from "./src/routes/sessionRoutes.js";
 import mysql from "mysql2/promise";
 
 import helmet from "helmet";
-// import paymentRoutes from "./src/routes/paymentRoutes.js";
+ import paymentRoutes from "./src/routes/paymentRoutes.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 
 // ✅ MySQL Database Connection
@@ -198,7 +200,7 @@ app.use("/api/review", reviewTestRoute)
 
 app.use("/api/review", reviewQuestion);
 app.use("/api/sessions", sessionRoutes);
-// app.use("/api/payment", paymentRoutes)
+app.use("/api/payment", paymentRoutes)
 // --- Start server ---
 app.listen(port, () => {
   console.log(`🚀 Server running securely on port ${port}`);

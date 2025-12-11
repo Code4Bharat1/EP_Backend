@@ -142,7 +142,7 @@ const loginAdmin = async (req, res) => {
       // Generate a JWT token
       token = jwt.sign(
         { id: admin.id, role: admin.role, adminId: admin.AdminId },
-        config.get("jwtSecret"),
+        process.env.JWT_SECRET,
         {
           expiresIn: "30d", // Token expires in 30 days
         }
@@ -155,7 +155,7 @@ const loginAdmin = async (req, res) => {
           role: admin.role,
           adminId: admin.AdminId,
         },
-        config.get("jwtSecret"),
+        process.env.JWT_SECRET,
         {
           expiresIn: "30d", // Token expires in 30 days
         }

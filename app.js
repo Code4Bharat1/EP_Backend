@@ -173,7 +173,7 @@ app.use("/api/dashboard", dashboardRoute);
 app.use("/api/studentdata", studentviewRoute);
 app.use("/api/admintest", admingenerateRoute);
 app.use("/api/newadmin", newAdminRoute);
-app.use("/api/dashboard", dsb);
+app.use("/api/dashboards", dsb);
 app.use("/api/logout", studentslogged);
 app.use("/api/testresult", testresult);
 app.use("/api/spotlight", spotlight);

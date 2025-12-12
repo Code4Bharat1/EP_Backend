@@ -1129,70 +1129,125 @@ export const getAdminColors = async (req, res) => {
   }
 };
 
+// export const getAdminColorsByStudentId = async (req, res) => {
+//   try {
+//     const { studentId } = req.body;
+
+//     if (!studentId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Student ID is required",
+//       });
+//     }
+
+//     // Find the student by id and get addedByAdminId
+//     const student = await Student.findOne({
+//       where: { id: studentId },
+//       attributes: ["addedByAdminId"],
+//     });
+
+//     if (!student) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Student not found",
+//       });
+//     }
+
+//     const adminId = student.addedByAdminId;
+//     if (!adminId) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Admin ID for the student not found",
+//       });
+//     }
+
+//     // Fetch the admin colors
+//     const admin = await Admin.findOne({
+//       where: { id: adminId },
+//       attributes: ["navbarColor", "sidebarColor", "otherColor"],
+//     });
+
+//     if (!admin) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Admin not found",
+//       });
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       colors: {
+//         navbarColor: admin.navbarColor || "#ffffff",
+//         sidebarColor: admin.sidebarColor || "#ffffff",
+//         textColor: admin.otherColor || "#000000",
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Error fetching admin colors by student ID:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to fetch admin color settings",
+//       error: error.message,
+//     });
+//   }
+// };
+
+// get student test details by admin
+
 export const getAdminColorsByStudentId = async (req, res) => {
   try {
     const { studentId } = req.body;
 
     if (!studentId) {
-      return res.status(400).json({
-        success: false,
-        message: "Student ID is required",
-      });
+      return res.status(400).json({ success: false, message: "Student ID is required" });
     }
 
-    // Find the student by id and get addedByAdminId
     const student = await Student.findOne({
       where: { id: studentId },
       attributes: ["addedByAdminId"],
     });
 
     if (!student) {
-      return res.status(404).json({
-        success: false,
-        message: "Student not found",
-      });
+      return res.status(404).json({ success: false, message: "Student not found" });
     }
 
     const adminId = student.addedByAdminId;
+
+    // ⭐ PUBLIC STUDENT → USE DEFAULT COLORS
     if (!adminId) {
-      return res.status(404).json({
-        success: false,
-        message: "Admin ID for the student not found",
+      return res.status(200).json({
+        success: true,
+        colors: {
+          navbarColor: "#0077B6",
+          sidebarColor: "#0077B6",
+          textColor: "#FFFFFF"
+        }
       });
     }
 
-    // Fetch the admin colors
     const admin = await Admin.findOne({
       where: { id: adminId },
       attributes: ["navbarColor", "sidebarColor", "otherColor"],
     });
 
-    if (!admin) {
-      return res.status(404).json({
-        success: false,
-        message: "Admin not found",
-      });
-    }
-
     return res.status(200).json({
       success: true,
       colors: {
-        navbarColor: admin.navbarColor || "#ffffff",
-        sidebarColor: admin.sidebarColor || "#ffffff",
-        textColor: admin.otherColor || "#000000",
+        navbarColor: admin?.navbarColor || "#0077B6",
+        sidebarColor: admin?.sidebarColor || "#0077B6",
+        textColor: admin?.otherColor || "#FFFFFF",
       },
     });
-  } catch (error) {
-    console.error("Error fetching admin colors by student ID:", error);
+  } catch (err) {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch admin color settings",
-      error: error.message,
+      error: err.message,
     });
   }
 };
 
-// get student test details by admin
+
 const getBatchByStudentTest = async (req, res) => {
   try {
     const { id } = req.user;

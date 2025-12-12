@@ -1,3 +1,5 @@
+// dashboard.controller.js
+
 import jwt from "jsonwebtoken";
 import config from "config";
 import Student from "../models/student.model.js";
@@ -276,81 +278,258 @@ const getSubjectWiseAverageMarks = async (req, res) => {
 /**
  * Fetches pending tests for a student with batch optimization
  */
+// const getpendingTest = async (req, res) => {
+//   try {
+//     // Validate studentId
+//    const studentId = req.user.id;  // verifyToken se jo user aata hai
+//     if (!studentId || isNaN(studentId)) {
+//       return res.status(400).json({ 
+//         error: "Invalid student ID", 
+//         code: "INVALID_STUDENT_ID",
+//         message: "Student ID must be a valid number" 
+//       });
+//     }
+
+//     // Find student's batch in a single query
+//     const studentBatch = await StudentBatch.findOne({
+//       where: { studentId },
+//       attributes: ["batchId"]
+//     });
+
+//     if (!studentBatch) {
+//       return res.status(404).json({
+//         success: false,
+//         error: "Student batch not found",
+//         code: "BATCH_NOT_FOUND",
+//         message: "Student is not assigned to any batch"
+//       });
+//     }
+
+//     const batchId = studentBatch.batchId;
+
+//     // Fetch all tests for the batch and student attempts in parallel
+//     const [batchTests, attemptedTests] = await Promise.all([
+//       BatchAdmintest.findAll({
+//         where: { batchId },
+//         attributes: ["admintestId", "testname"]
+//       }),
+//       generateTestresult.findAll({
+//         where: { studentId },
+//         attributes: ["testid", "status"]
+//       })
+//     ]);
+
+//     // Create a map of attempted tests for quick lookup
+//     const attemptedTestMap = new Map(
+//       attemptedTests.map(attempt => [attempt.testid, attempt.status])
+//     );
+
+//     // Filter pending tests in memory (no N+1 queries)
+//     const pendingTests = batchTests
+//       .filter(test => {
+//         const status = attemptedTestMap.get(test.admintestId);
+//         return !status || status === "Pending";
+//       })
+//       .map(test => ({
+//         testId: test.admintestId,
+//         testName: test.testname,
+//         status: attemptedTestMap.get(test.admintestId) || "Not Attempted"
+//       }));
+
+//     res.status(200).json({
+//       success: true,
+//       data: pendingTests,
+//       count: pendingTests.length,
+//       message: pendingTests.length > 0 
+//         ? "Pending tests retrieved successfully" 
+//         : "No pending tests found"
+//     });
+//   } catch (error) {
+//     console.error("Error fetching pending tests:", error);
+//     res.status(500).json({ 
+//       error: "Internal Server Error", 
+//       code: "SERVER_ERROR",
+//       message: "Failed to fetch pending tests" 
+//     });
+//   }
+// };
+
+// const getpendingTest = async (req, res) => {
+//   try {
+//     // Extract student ID from token
+//     const token = req.headers.authorization?.split(" ")[1];
+//     const decoded = verifyStudentToken(token);
+//     const studentId = decoded.id;
+
+//     if (!studentId) {
+//       return res.status(401).json({
+//         success: false,
+//         error: "Invalid token",
+//         code: "INVALID_TOKEN"
+//       });
+//     }
+
+//     // Get student's batch
+//     const studentBatch = await StudentBatch.findOne({
+//       where: { studentId },
+//       attributes: ["batchId"]
+//     });
+
+//     if (!studentBatch) {
+//       return res.status(404).json({
+//         success: false,
+//         error: "Student batch not found",
+//         code: "BATCH_NOT_FOUND",
+//         message: "Student is not assigned to any batch"
+//       });
+//     }
+
+//     const batchId = studentBatch.batchId;
+
+//     // Fetch batch tests + attempted tests
+//     const [batchTests, attemptedTests] = await Promise.all([
+//       BatchAdmintest.findAll({
+//         where: { batchId },
+//         attributes: ["admintestId", "testname"]
+//       }),
+//       generateTestresult.findAll({
+//         where: { studentId },
+//         attributes: ["testid", "status"]
+//       })
+//     ]);
+
+//     // Map attempted tests
+//     const attemptedMap = new Map(
+//       attemptedTests.map(test => [test.testid, test.status])
+//     );
+
+//     // Identify pending tests
+//     const pending = batchTests
+//       .filter(test => {
+//         const status = attemptedMap.get(test.admintestId);
+//         return !status || status === "Pending" || status === "Not Attempted";
+//       })
+//       .map(test => ({
+//         testId: test.admintestId,
+//         testName: test.testname,
+//         status: attemptedMap.get(test.admintestId) || "Not Attempted"
+//       }));
+
+//     res.status(200).json({
+//       success: true,
+//       count: pending.length,
+//       data: pending,
+//       message: pending.length ? 
+//         "Pending tests retrieved successfully" : 
+//         "No pending tests found"
+//     });
+
+//   } catch (error) {
+//     console.error("Error fetching pending tests:", error);
+//     res.status(500).json({
+//       success: false,
+//       error: "Internal Server Error",
+//       code: "SERVER_ERROR"
+//     });
+//   }
+// };
+
+
 const getpendingTest = async (req, res) => {
   try {
-    // Validate studentId
-   const studentId = req.user.id;  // verifyToken se jo user aata hai
-    if (!studentId || isNaN(studentId)) {
-      return res.status(400).json({ 
-        error: "Invalid student ID", 
-        code: "INVALID_STUDENT_ID",
-        message: "Student ID must be a valid number" 
+    // Extract student ID from token
+    const token = req.headers.authorization?.split(" ")[1];
+    const decoded = verifyStudentToken(token);
+    const studentId = decoded.id;
+
+    if (!studentId) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid token",
       });
     }
 
-    // Find student's batch in a single query
+    // 1️⃣ Check if student belongs to any batch
     const studentBatch = await StudentBatch.findOne({
       where: { studentId },
-      attributes: ["batchId"]
+      attributes: ["batchId"],
     });
 
+    // 2️⃣ If NO BATCH → Public student → get pending from generateTestresult
     if (!studentBatch) {
-      return res.status(404).json({
-        success: false,
-        error: "Student batch not found",
-        code: "BATCH_NOT_FOUND",
-        message: "Student is not assigned to any batch"
+      const attempts = await generateTestresult.findAll({
+        where: { studentId },
+        attributes: ["testid", "status"],
+      });
+
+      const pendingPublic = attempts
+        .filter(test => test.status === "Pending" || test.status === "Not Attempted")
+        .map(test => ({
+          testId: test.testid,
+          status: test.status,
+        }));
+
+      return res.status(200).json({
+        success: true,
+        publicStudent: true,
+        count: pendingPublic.length,
+        data: pendingPublic,
+        message: pendingPublic.length
+          ? "Pending tests fetched for public student"
+          : "No pending tests",
       });
     }
 
+    // 3️⃣ If STUDENT HAS BATCH → NORMAL logic (admins assign tests)
     const batchId = studentBatch.batchId;
 
-    // Fetch all tests for the batch and student attempts in parallel
+    // Fetch batch tests + student attempts
     const [batchTests, attemptedTests] = await Promise.all([
       BatchAdmintest.findAll({
         where: { batchId },
-        attributes: ["admintestId", "testname"]
+        attributes: ["admintestId", "testname"],
       }),
       generateTestresult.findAll({
         where: { studentId },
-        attributes: ["testid", "status"]
-      })
+        attributes: ["testid", "status"],
+      }),
     ]);
 
-    // Create a map of attempted tests for quick lookup
-    const attemptedTestMap = new Map(
-      attemptedTests.map(attempt => [attempt.testid, attempt.status])
+    const attemptedMap = new Map(
+      attemptedTests.map(test => [test.testid, test.status])
     );
 
-    // Filter pending tests in memory (no N+1 queries)
-    const pendingTests = batchTests
+    const pending = batchTests
       .filter(test => {
-        const status = attemptedTestMap.get(test.admintestId);
-        return !status || status === "Pending";
+        const status = attemptedMap.get(test.admintestId);
+        return !status || status === "Pending" || status === "Not Attempted";
       })
       .map(test => ({
         testId: test.admintestId,
         testName: test.testname,
-        status: attemptedTestMap.get(test.admintestId) || "Not Attempted"
+        status: attemptedMap.get(test.admintestId) || "Not Attempted",
       }));
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      data: pendingTests,
-      count: pendingTests.length,
-      message: pendingTests.length > 0 
-        ? "Pending tests retrieved successfully" 
-        : "No pending tests found"
+      publicStudent: false,
+      count: pending.length,
+      data: pending,
+      message: pending.length
+        ? "Pending tests fetched successfully"
+        : "No pending tests found",
     });
   } catch (error) {
     console.error("Error fetching pending tests:", error);
-    res.status(500).json({ 
-      error: "Internal Server Error", 
-      code: "SERVER_ERROR",
-      message: "Failed to fetch pending tests" 
+    res.status(500).json({
+      success: false,
+      error: "Internal Server Error",
     });
   }
 };
+
+
+
 const getSubjectWiseMarks = async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];

@@ -1,3 +1,5 @@
+//  practice.controller.js
+
 import { Op } from "sequelize";
 import MeTest from "../models/saved.js";  // Import the MeTest model
 import FullTestResults from "../models/fullTestResults.model.js";  // Import the FullTestResults model
@@ -6,7 +8,7 @@ import Student from "../models/student.model.js";  // Import the Student model
 // Unified Controller to get highest test results for all students (both FullTest and MeTest)
 export const getHighestTestResultsForAdminStudents = async (req, res) => {
     try {
-        const { adminId } = req // or req.query (depends on your route)
+        const { adminId } = req.user // or req.query (depends on your route)
 
         if (!adminId) {
             return res.status(400).json({ message: "Admin ID is required." });

@@ -1,3 +1,5 @@
+//practice.router.js
+
 import express from 'express';
 import { getHighestTestResultsForAdminStudents } from '../controller/practice.controller.js';
 import { verifyToken } from '../middleware/jwtDecoder.middleware.js';

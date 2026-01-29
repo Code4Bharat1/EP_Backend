@@ -14,7 +14,7 @@ import { Op } from "sequelize";
 
 const createAdmin = async (req, res) => {
   try {
-      const { name, Email, mobileNumber, whatsappNumber, address, HodName } = req.body;
+      const { name, Email, mobileNumber, whatsappNumber, address, HodName, branch } = req.body;
 
       // Basic validation
       if (!name || !Email || !mobileNumber) {
@@ -35,6 +35,7 @@ const createAdmin = async (req, res) => {
           whatsappNumber,
           address,
           HodName,
+          branch,
       });
 
       const emailSubject = "Welcome to Our Neet 720!";
@@ -261,7 +262,8 @@ const addStudent = async (req, res) => {
     gender,
     dateOfBirth,
     addedByAdminId,
-    batchId
+    batchId,
+    branch
   } = req.body;
 
   // Validate input
@@ -293,6 +295,7 @@ const addStudent = async (req, res) => {
       password: hashedPassword,
       addedByAdminId, 
       batchId,
+      branch,
       status: "active",
     });
 
@@ -326,6 +329,7 @@ const addStudent = async (req, res) => {
         dateOfBirth: newStudent.dateOfBirth,
         addedByAdminId: newStudent.addedByAdminId,
         batchId:newStudent.batchId,
+        branch: newStudent.branch,
       },
     });
   } catch (error) {

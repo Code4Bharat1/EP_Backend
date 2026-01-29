@@ -26,6 +26,7 @@ const getStudentInfo = async (req, res) => {
         "dateOfBirth",
         "isVerified",
         "addedByAdminId",
+        "branch",
       ],
       where: { addedByAdminId },
     });
@@ -51,6 +52,7 @@ const getStudentInfo = async (req, res) => {
         dateOfBirth: student.dateOfBirth,
         status,
         addedByAdminId: student.addedByAdminId,
+        branch: student.branch,
       };
     });
 
@@ -135,6 +137,7 @@ const saveBasicStudentData = async (req, res) => {
       phoneNumber,
       gender,
       addedByAdminId,
+      branch,
     } = req.body;
 
     if (
@@ -187,6 +190,7 @@ const saveBasicStudentData = async (req, res) => {
       mobileNumber: phoneNumber,
       gender,
       addedByAdminId,
+      branch,
       isVerified: true, // Auto-verify since admin is creating
     });
 
@@ -229,6 +233,7 @@ Thank you for joining *ExamPortal*!`
       dateOfBirth: newStudent.dateOfBirth,
       mobileNumber: newStudent.mobileNumber,
       gender: newStudent.gender,
+      branch: newStudent.branch,
     };
 
     return res.status(201).json({
@@ -302,6 +307,7 @@ const bulkSaveStudents = async (req, res) => {
         mobileNumber,
         gender,
         addedByAdminId,
+        branch,
       } = student;
 
       // Validate required fields
@@ -393,6 +399,7 @@ const bulkSaveStudents = async (req, res) => {
         mobileNumber,
         gender,
         addedByAdminId,
+        branch: branch || null,
         isVerified: true,
         batchId: null,
         examType: null,
@@ -928,7 +935,7 @@ const getBatchNames = async (req, res) => {
 
 const getBatchInfo = async (req, res) => {
   try {
-    const adminId = req.adminId;
+    const adminId = req.user.adminId;
     if (!adminId) {
       return res.status(400).json({
         message: "Admin ID is required",
@@ -938,7 +945,7 @@ const getBatchInfo = async (req, res) => {
     const batchData = await Batch.findAll({
       attributes: ["batchId", "batchName", "no_of_students"],
       where: {
-        admin_id: req.adminId,
+        admin_id: req.user.adminId,
       },
     });
 

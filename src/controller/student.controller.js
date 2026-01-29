@@ -833,7 +833,8 @@ const getPersonalData = async (req, res) => {
         // ✅ ✅ ✅ ✅ ✅ MOST IMPORTANT FIXES
         "freeUsageCount",        // ✅ FREE TEST COUNT
         "paymentVerified",      // ✅ PRO USER CHECK
-        "addedByAdminId"        // ✅ ADMIN STUDENT CHECK  ✅ (CASE FIX)
+        "addedByAdminId",       // ✅ ADMIN STUDENT CHECK  ✅ (CASE FIX)
+        "branch",               // ✅ BRANCH FIELD
       ],
     });
 

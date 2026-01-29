@@ -30,6 +30,13 @@ const Student = sequelizeCon.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    branch: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        len: [1, 100],
+      },
+    },
 
     // In student.model.js
     password: {

@@ -22,18 +22,14 @@ router.post("/batch-student", getStudentInfoByBatch); // get student info by bat
 router.get("/batch/:batchId", verifyToken, getBatchById); // get batch by ID
 router.post("/save", saveBasicStudentData);
 router.post("/bulk-save", bulkSaveStudents);
-router.post("/update", updateBatchIdForUsers);
+router.put("/update", updateStudentData); // Fixed: use PUT for updates and proper function
+router.post("/batch-update", updateBatchIdForUsers); // Renamed to avoid conflict
 router.post("/batch", verifyToken, createBatch); // create batches
-// PUT /api/batch/:batchId
-router.put("/batch/:batchId", verifyToken, updateBatch);
-// DELETE /api/batch/:batchId
-router.delete("/batch/:batchId", verifyToken, deleteBatch);
-router.get("/getbatch", verifyToken, getBatchInfo); // get batch info
-// router.get("/batches/:batchId", deleteBatch); // delete batch by ID
-router.post("/batchnames", getBatchNames);
-
-router.delete("/delete", deleteStudentById); // delete student 
-router.put("/update" , updateStudentData)
-
+router.put("/batch/:batchId", verifyToken, updateBatch); // PUT /api/batch/:batchId
+router.delete("/batch/:batchId", verifyToken, deleteBatch); // DELETE /api/batch/:batchId
+router.delete("/delete", deleteStudentById); // delete student by ID
+router.get("/batch-names", getBatchNames); // get batch names
+router.get("/batch-info", verifyToken, getBatchInfo); // get batch info
+router.post("/batchnames", getBatchNames); // alternative endpoint for batch names
 
 export default router;

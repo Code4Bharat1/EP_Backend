@@ -64,6 +64,14 @@ const Admin = sequelizeCon.define(
       allowNull: true,
     },
 
+    branch: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        len: [1, 100],
+      },
+    },
+
     sidebarColor: {
       type: DataTypes.STRING,
       allowNull: false,

@@ -72,7 +72,6 @@ export const verifyToken = (req, res, next) => {
   }
 
   const token = authHeader.split(" ")[1];
-
   try {
     // ✅ ✅ ✅ ONLY ONE SECRET IN WHOLE PROJECT
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -91,7 +90,7 @@ export const verifyToken = (req, res, next) => {
     if (decoded.role === "admin") {
       req.userType = "admin";
       req.user = {
-        adminId: decoded.id,
+        adminId: decoded.adminId,
       };
       return next();
     }

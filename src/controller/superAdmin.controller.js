@@ -300,6 +300,7 @@ const createAdmin = async (req, res) => {
       otherColor,
       role,
       instituteName,  // <-- NEW FIELD
+      branch,         // <-- NEW BRANCH FIELD
     } = req.body;
 
     const uploadedLogo = req.file
@@ -389,6 +390,7 @@ const createAdmin = async (req, res) => {
       logo: uploadedLogo,
       role: role || "admin",
       instituteName,  // <-- SAVE IT
+      branch,         // <-- SAVE BRANCH
       created_by_admin_id: creatorAdminId,
       credentials: "pending",
     });
@@ -402,6 +404,7 @@ const createAdmin = async (req, res) => {
         email: newAdmin.Email,
         logo: newAdmin.logo,
         instituteName: newAdmin.instituteName,
+        branch: newAdmin.branch,
       },
     });
   } catch (error) {

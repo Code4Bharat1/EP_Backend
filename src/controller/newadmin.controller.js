@@ -744,6 +744,15 @@ const dashboardDetails = async (req, res) => {
       return res.status(400).json({ message: "Admin ID is required" });
     }
 
+    // Get admin profile data including branch
+    const admin = await Admin.findByPk(adminId, {
+      attributes: ['name', 'branch', 'instituteName', 'Email']
+    });
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
     // Count students added by admin
     const studentCount = await Student.count({
       where: { addedByAdminId: adminId },
@@ -765,6 +774,12 @@ const dashboardDetails = async (req, res) => {
         totalStudents: studentCount,
         totalBatches: batchCount,
         totalTests: testCount,
+        adminProfile: {
+          name: admin.name,
+          branch: admin.branch,
+          instituteName: admin.instituteName,
+          email: admin.Email
+        }
       },
     });
   } catch (error) {
@@ -891,94 +906,168 @@ const getTestResults = async (req, res) => {
 
 const getProfile = async (req, res) => {
   try {
-    const adminId = req.adminId; // Decode the JWT token to get the admin ID
-
-    if (!adminId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Admin ID is required" });
+    // Handle both token formats - get admin ID from token payload directly
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "Authorization token required" });
     }
 
-    const admin = await Admin.findOne({ where: { id: adminId } });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const adminId = decoded.id; // Use the ID from token directly
+
+    const admin = await Admin.findByPk(adminId, {
+      attributes: [
+        'id',
+        'AdminId', 
+        'name',
+        'Email',
+        'mobileNumber',
+        'whatsappNumber',
+        'address',
+        'HodName',
+        'branch',
+        'StartDate',
+        'ExpiryDate',
+        'instituteName',
+        'Course'
+      ]
+    });
 
     if (!admin) {
       return res.status(404).json({ message: "Admin not found" });
     }
-    console.log(admin);
+
     return res.status(200).json({
-      message: "Admin profile fetched successfully",
+      success: true,
+      message: "Profile fetched successfully",
       data: {
         id: admin.id,
-        adminId: admin.AdminId,
+        AdminId: admin.AdminId,
         name: admin.name,
-        email: admin.Email, // ✅ fixed casing: Email → email
+        email: admin.Email,
         mobileNumber: admin.mobileNumber,
         whatsappNumber: admin.whatsappNumber,
-        startDate: admin.StartDate, // ✅ fixed casing: StartDate → startDate
-        expiryDate: admin.ExpiryDate,
         address: admin.address,
         hodName: admin.HodName,
-      },
+        branch: admin.branch,
+        startDate: admin.StartDate,
+        expiryDate: admin.ExpiryDate,
+        instituteName: admin.instituteName,
+        course: admin.Course
+      }
     });
   } catch (error) {
     console.error("Error fetching admin profile:", error);
     return res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
+      success: false,
+      message: "Failed to fetch profile",
+      error: error.message
     });
   }
 };
 
 const updateProfile = async (req, res) => {
   try {
-    const adminId = req.adminId;
-
-    if (!adminId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Admin ID is required" });
+    // Handle both token formats - get admin ID from token payload directly
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "Authorization token required" });
     }
-    // Decode the JWT token to get the admin ID
-    const admin = await Admin.findOne({ where: { id: adminId } });
 
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const adminId = decoded.id; // Use the ID from token directly
+
+    const {
+      name,
+      email,
+      mobileNumber,
+      whatsappNumber,
+      address,
+      hodName,
+      branch,
+      instituteName
+    } = req.body;
+
+    // Basic validation
+    if (!name || !email || !mobileNumber) {
+      return res.status(400).json({ 
+        message: "Name, email, and mobile number are required" 
+      });
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        message: "Please enter a valid email address" 
+      });
+    }
+
+    // Phone validation
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(mobileNumber)) {
+      return res.status(400).json({ 
+        message: "Please enter a valid 10-digit mobile number" 
+      });
+    }
+
+    const admin = await Admin.findByPk(adminId);
     if (!admin) {
       return res.status(404).json({ message: "Admin not found" });
     }
 
-    // Allowed fields to update (excluding id, adminId, StartDate, ExpiryDate)
-    const { name, Email, mobileNumber, whatsappNumber, address, HodName } =
-      req.body;
+    // Check if email is being changed and if it already exists
+    if (email !== admin.Email) {
+      const existingAdmin = await Admin.findOne({ 
+        where: { 
+          Email: email,
+          id: { [Op.ne]: adminId } // Exclude current admin
+        } 
+      });
+      if (existingAdmin) {
+        return res.status(400).json({ 
+          message: "Email already exists for another admin" 
+        });
+      }
+    }
 
-    // Update only allowed fields
-    if (name) admin.name = name;
-    if (Email) admin.Email = Email;
-    if (mobileNumber) admin.mobileNumber = mobileNumber;
-    if (whatsappNumber) admin.whatsappNumber = whatsappNumber;
-    if (address) admin.address = address;
-    if (HodName) admin.HodName = HodName;
-
-    await admin.save();
+    // Update admin profile
+    await admin.update({
+      name,
+      Email: email,
+      mobileNumber,
+      whatsappNumber,
+      address,
+      HodName: hodName,
+      branch,
+      instituteName
+    });
 
     return res.status(200).json({
-      message: "Admin profile updated successfully",
+      success: true,
+      message: "Profile updated successfully",
       data: {
         id: admin.id,
-        adminId: admin.AdminId,
+        AdminId: admin.AdminId,
         name: admin.name,
         email: admin.Email,
         mobileNumber: admin.mobileNumber,
         whatsappNumber: admin.whatsappNumber,
-        startDate: admin.StartDate, // returned but not updated
-        expiryDate: admin.ExpiryDate, // returned but not updated
         address: admin.address,
         hodName: admin.HodName,
-      },
+        branch: admin.branch,
+        startDate: admin.StartDate,
+        expiryDate: admin.ExpiryDate,
+        instituteName: admin.instituteName,
+        course: admin.Course
+      }
     });
   } catch (error) {
     console.error("Error updating admin profile:", error);
     return res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
+      success: false,
+      message: "Failed to update profile",
+      error: error.message
     });
   }
 };
@@ -1340,7 +1429,7 @@ const getUserSubmittedTestsByEmail = async (req, res) => {
   }
 };
 
-export const deleteAdmintest = async (req, res) => {
+const deleteAdmintest = async (req, res) => {
   try {
     const { testId } = req.body;
 
@@ -1379,10 +1468,11 @@ export {
   updateTest,
   dashboardStudentData,
   getTestResults,
-  getProfile,
-  updateProfile,
   getTestData,
   getUpcomingTestByBatch,
   getBatchByStudentTest,
   getUserSubmittedTestsByEmail,
+  deleteAdmintest,
+  getProfile,
+  updateProfile,
 };

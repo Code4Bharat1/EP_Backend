@@ -92,6 +92,9 @@ export const verifyToken = (req, res, next) => {
       req.user = {
         adminId: decoded.adminId,
       };
+      req.admin = {
+        id: decoded.adminId || decoded.id, // Support both token formats
+      };
       return next();
     }
 

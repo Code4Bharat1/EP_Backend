@@ -1,7 +1,7 @@
 // superAdmin.controller.js
 
 import { Admin } from "../models/admin.model.js";
-import { Op, where } from "sequelize";
+import { Op } from "sequelize";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
@@ -292,28 +292,46 @@ const createAdmin = async (req, res) => {
       mobileNumber,
       whatsappNumber,
       StartDate,
-      ExpiryDate,
       address,
       HodName,
       navbarColor,
       sidebarColor,
       otherColor,
       role,
-      instituteName,  // <-- NEW FIELD
-      branch,         // <-- NEW BRANCH FIELD
+      instituteName,
+      branch,
     } = req.body;
 
     const uploadedLogo = req.file
       ? `/adminLogos/${req.file.filename}`
       : null;
 
-    let creatorAdminId = null;
-    const MAX_SUB_ADMINS = 4;
+    let creatorAdminId = null;  // This will be the numeric ID
+    let creatorAdminIdString = null;  // This will be the string AdminId (ADM-xxx)
+    let creatorRole = null;
+    let creatorBranch = null;
 
-    if (req.user?.AdminId) {
-      creatorAdminId = req.user.AdminId;
+    // Get creator information from middleware (roleAuth sets this)
+    if (req.user?.adminId) {
+      creatorAdminId = req.user.adminId; // Numeric ID
+      creatorAdminIdString = req.user.AdminId; // String AdminId (ADM-xxx)
+      creatorRole = req.user.role;
+      creatorBranch = req.user.branch;
     } else if (req.body.addedByAdminId) {
-      creatorAdminId = req.body.addedByAdminId;
+      // Fallback for backward compatibility
+      creatorAdminIdString = req.body.addedByAdminId;
+      
+      // Need to fetch creator details
+      const creator = await Admin.findOne({
+        where: { AdminId: creatorAdminIdString },
+        attributes: ["id", "AdminId", "role", "branch"],
+      });
+      
+      if (creator) {
+        creatorAdminId = creator.id;
+        creatorRole = creator.role;
+        creatorBranch = creator.branch;
+      }
     }
 
     const processedWhatsappNumber =
@@ -321,33 +339,67 @@ const createAdmin = async (req, res) => {
         ? whatsappNumber
         : null;
 
-    if (!PassKey || !name || !Email || !mobileNumber) {
+    // Validate required fields
+    if (!PassKey || !name || !Email || !mobileNumber || !role || !branch) {
       return res.status(400).json({ message: "Missing required fields." });
     }
 
-    if (creatorAdminId !== null) {
+    // Validate creator and get their role (if not already set from req.user)
+    if (creatorAdminIdString && !creatorRole) {
       const creator = await Admin.findOne({
-        where: { AdminId: creatorAdminId },
-        attributes: ["AdminId", "role"],
+        where: { AdminId: creatorAdminIdString },
+        attributes: ["id", "AdminId", "role", "branch"],
       });
 
       if (!creator) {
         return res.status(400).json({ message: "Creator admin not found." });
       }
 
-      if (!["superadmin", "admin"].includes(creator.role)) {
-        return res.status(403).json({
-          message: "Only superadmin or admin can add admins.",
-        });
-      }
+      creatorAdminId = creator.id;
+      creatorRole = creator.role;
+      creatorBranch = creator.branch;
+    }
 
-      const subAdminCount = await Admin.count({
-        where: { created_by_admin_id: creatorAdminId },
-      });
+    // Role-based permissions
+    if (creatorRole) {
+      if (creatorRole === "admin") {
+        // Admin can create sub-admins and branch staff
+        if (!["sub-admin", "batchmanager", "teacher", "supporter", "content_manager"].includes(role)) {
+          return res.status(403).json({
+            message: "Admin can only create sub-admin or branch-specific roles.",
+          });
+        }
 
-      if (subAdminCount >= MAX_SUB_ADMINS) {
+        // Check sub-admin limit (only 1 admin per institute)
+        if (role === "admin") {
+          return res.status(403).json({
+            message: "There can only be one Admin per institute.",
+          });
+        }
+      } else if (creatorRole === "sub-admin") {
+        // Sub-admin cannot create admin or sub-admin
+        if (["admin", "sub-admin"].includes(role)) {
+          return res.status(403).json({
+            message: "Sub-admin cannot create Admin or Sub-Admin roles.",
+          });
+        }
+
+        // Sub-admin can only create staff for their own branch
+        if (!["batchmanager", "teacher", "supporter", "content_manager"].includes(role)) {
+          return res.status(403).json({
+            message: "Sub-admin can only create branch-specific roles.",
+          });
+        }
+
+        // Force branch to be the same as creator's branch
+        if (branch !== creatorBranch) {
+          return res.status(403).json({
+            message: "Sub-admin can only create staff for their own branch.",
+          });
+        }
+      } else if (!["superadmin", "admin"].includes(creatorRole)) {
         return res.status(403).json({
-          message: `You have reached the maximum limit of ${MAX_SUB_ADMINS} sub-admins.`,
+          message: "Insufficient permissions to add staff.",
         });
       }
     }
@@ -356,18 +408,31 @@ const createAdmin = async (req, res) => {
       Math.random() * 1000
     )}`;
 
+    // Check email uniqueness
     const emailExists = await Admin.findOne({
-      where: {
-        Email,
-        created_by_admin_id: creatorAdminId,
-      },
+      where: { Email },
       attributes: ["id"],
     });
 
     if (emailExists) {
       return res.status(400).json({
-        message: "Admin with this Email already exists under your account.",
+        message: "Admin with this Email already exists.",
       });
+    }
+
+    // Fetch creator's logo and instituteName to inherit
+    let creatorLogo = null;
+    let creatorInstituteName = instituteName;
+    
+    if (creatorAdminId) {
+      const creator = await Admin.findByPk(creatorAdminId, {
+        attributes: ["logo", "instituteName"],
+      });
+      
+      if (creator) {
+        creatorLogo = creator.logo;
+        creatorInstituteName = creator.instituteName || instituteName;
+      }
     }
 
     const hashedPassKey = await bcrypt.hash(PassKey, 10);
@@ -381,27 +446,27 @@ const createAdmin = async (req, res) => {
       mobileNumber,
       whatsappNumber: processedWhatsappNumber,
       StartDate,
-      ExpiryDate,
       address,
       HodName,
       navbarColor,
       sidebarColor,
       otherColor,
-      logo: uploadedLogo,
-      role: role || "admin",
-      instituteName,  // <-- SAVE IT
-      branch,         // <-- SAVE BRANCH
+      logo: uploadedLogo || creatorLogo,  // Use uploaded logo or inherit from creator
+      role,
+      instituteName: creatorInstituteName,  // Inherit from creator
+      branch,
       created_by_admin_id: creatorAdminId,
       credentials: "pending",
     });
 
     return res.status(201).json({
-      message: "Admin registered successfully",
+      message: "Staff member registered successfully",
       admin: {
         id: newAdmin.id,
         AdminId: newAdmin.AdminId,
         name: newAdmin.name,
         email: newAdmin.Email,
+        role: newAdmin.role,
         logo: newAdmin.logo,
         instituteName: newAdmin.instituteName,
         branch: newAdmin.branch,
@@ -492,6 +557,7 @@ const getStaffMember = async (req, res) => {
         "whatsappNumber",
         "address",
         "HodName",
+        "branch",
       ],
       order: [["created_at", "DESC"]], // underscored: true => created_at
     });
@@ -576,8 +642,15 @@ const getadmin = async (req, res) => {
       return res.status(400).json({ message: "required field not found: adminId" });
     }
 
-    // Find by primary key
-    const admin = await Admin.findByPk(adminId);
+    // Try to find by primary key (numeric id) first
+    let admin = await Admin.findByPk(adminId);
+
+    // If not found and adminId looks like a string (ADM-xxx), try finding by AdminId field
+    if (!admin && isNaN(adminId)) {
+      admin = await Admin.findOne({
+        where: { AdminId: adminId },
+      });
+    }
 
     if (!admin) {
       return res.status(404).json({ message: "admin not found" });
@@ -600,45 +673,14 @@ const getadmin = async (req, res) => {
 
 const updateAdmin = async (req, res) => {
   try {
-    // Identify the admin to update: prefer :id param, else body.id, else AdminId
     const { adminId } = req.params;
 
-    console.log(adminId);
-
-    // Load record
     const admin = await Admin.findByPk(adminId);
-    console.log(admin);
     if (!admin) {
       return res.status(404).json({ message: "Admin not found." });
     }
 
-    // Destructure possible inputs
-    const {
-      name,
-      Course,
-      Email,
-      mobileNumber,
-      whatsappNumber,
-      StartDate,
-      ExpiryDate,
-      address,
-      HodName,
-      // role is intentionally ignored; we don't allow updating it here
-      role,
-    } = req.body || {};
-
-    // // Enforce uniqueness if AdminId or Email are changing
-    // if (newAdminId && newAdminId !== admin.AdminId) {
-    //   const clash = await Admin.count({
-    //     where: { AdminId: newAdminId, id: { [Op.ne]: admin.id } },
-    //   });
-    //   if (clash) {
-    //     return res.status(400).json({ message: "Another admin already uses this AdminId." });
-    //   }
-    // }
-
-    console.log(Email);
-    console.log(admin.Email);
+    const { Email } = req.body || {};
 
     if (Email && Email !== admin.Email) {
       const clash = await Admin.count({
@@ -651,15 +693,8 @@ const updateAdmin = async (req, res) => {
       }
     }
 
-    // Build a whitelist payload (role is intentionally excluded)
     const payload = {};
 
-    // // Hash password if provided
-    // if (typeof PassKey === "string" && PassKey.trim() !== "") {
-    //   payload.PassKey = await bcrypt.hash(PassKey, 10);
-    // }
-
-    // Copy allowed fields if they were provided
     const allowed = [
       "AdminId",
       "name",
@@ -668,29 +703,26 @@ const updateAdmin = async (req, res) => {
       "mobileNumber",
       "whatsappNumber",
       "StartDate",
-      "ExpiryDate",
       "address",
       "HodName",
       "logo",
       "navbarColor",
       "sidebarColor",
       "otherColor",
-      "credentials", // include if you want to allow toggling pending/sent/etc.
+      "credentials",
+      "branch",
     ];
 
-    // Assign values only if explicitly present in the body (including empty string/null if you want to allow clears)
     for (const key of allowed) {
       if (Object.prototype.hasOwnProperty.call(req.body, key)) {
         payload[key] = req.body[key];
       }
     }
 
-    // Nothing to update?
     if (!Object.keys(payload).length) {
       return res.status(400).json({ message: "No updatable fields provided." });
     }
 
-    // Apply update
     await admin.update(payload);
 
     return res.status(200).json({
@@ -700,7 +732,6 @@ const updateAdmin = async (req, res) => {
         AdminId: admin.AdminId,
         name: admin.name,
         email: admin.Email,
-        // role not returned/changed here
       },
     });
   } catch (error) {

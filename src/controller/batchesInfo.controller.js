@@ -27,7 +27,8 @@ const batchesInfo = async (req, res) => {
     const students = await batch.getStudents({
       attributes: [
         "id",
-        "fullName",
+        "firstName",
+        "lastName",
         "emailAddress",
         "mobileNumber",
         "domicileState",

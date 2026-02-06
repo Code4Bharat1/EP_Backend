@@ -90,10 +90,10 @@ export const verifyToken = (req, res, next) => {
     if (decoded.role === "admin") {
       req.userType = "admin";
       req.user = {
-        adminId: decoded.adminId,
+        adminId: decoded.id,
       };
       req.admin = {
-        id: decoded.adminId || decoded.id, // Support both token formats
+        id: decoded.id, // Support both token formats
       };
       return next();
     }

@@ -82,11 +82,13 @@ const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // ⭐ FIXED: USE admin.AdminId for filtering students
+    // Create JWT token with consistent format
     const token = jwt.sign(
       {
-        adminId: admin.id,     // 👈 use this, not admin.id
-        email: admin.Email
+        id: admin.id,              // numeric primary key
+        adminId: admin.AdminId,    // string AdminId (ADM-xxx)
+        email: admin.Email,
+        role: admin.role
       },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }

@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken";
-import config from "config";
 
 const verifyAdmin = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -15,15 +14,21 @@ const verifyAdmin = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // THE ONLY VALID FORMAT
+    // Handle different token formats
+    // Format 1: { id: X, role: Y, adminId: "ADM-xxx" } from newadmin.controller
+    // Format 2: { adminId: X, email: Y } from admin.controller
+    const adminId = decoded.adminId || decoded.id;
+    
     req.user = {
-      adminId: decoded.id,        // numeric DB admin.id
-      loginId: decoded.adminId,   // ADM-xxxx
-      email: decoded.email
+      adminId: adminId,                    // numeric DB admin.id
+      loginId: decoded.AdminId || null,    // ADM-xxxx (if available)
+      email: decoded.email || null,
+      role: decoded.role || null
     };
 
     next();
   } catch (err) {
+    console.error("JWT verification error:", err.message);
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 };

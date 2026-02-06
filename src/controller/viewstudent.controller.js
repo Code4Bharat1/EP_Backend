@@ -1,10 +1,10 @@
-import Student from "../models/student.model.js";
-import bcrypt from "bcrypt";
-import { Batch } from "../models/admin.model.js";
-import Sequelize from "sequelize";
-import { StudentBatch } from "../models/ModelManager.js";
-import { Op } from "sequelize";
-import { sendWhatsAppMessage } from "../utils/sendWhatsapp.js";
+import Student from '../models/student.model.js';
+import bcrypt from 'bcrypt';
+import { Batch } from '../models/admin.model.js';
+import Sequelize from 'sequelize';
+import { StudentBatch } from '../models/ModelManager.js';
+import { Op } from 'sequelize';
+import { sendWhatsAppMessage } from '../utils/sendWhatsapp.js';
 
 // Controller to fetch student information
 const getStudentInfo = async (req, res) => {
@@ -12,34 +12,36 @@ const getStudentInfo = async (req, res) => {
     const { addedByAdminId } = req.body;
 
     if (!addedByAdminId) {
-      return res.status(400).json({ message: "Admin ID is required" });
+      return res.status(400).json({
+        message: 'Admin ID is required',
+      });
     }
 
     const studentData = await Student.findAll({
       attributes: [
-        "id",
-        "firstName",
-        "lastName",
-        "emailAddress",
-        "mobileNumber",
-        "gender",
-        "dateOfBirth",
-        "isVerified",
-        "addedByAdminId",
-        "branch",
+        'id',
+        'firstName',
+        'lastName',
+        'emailAddress',
+        'mobileNumber',
+        'gender',
+        'dateOfBirth',
+        'isVerified',
+        'addedByAdminId',
+        'branch',
       ],
       where: { addedByAdminId },
     });
 
     if (studentData.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No students found for the given admin" });
+      return res.status(404).json({
+        message: 'No students found for the given admin',
+      });
     }
 
-    const studentInfo = studentData.map((student) => {
+    const studentInfo = studentData.map(student => {
       const fullName = `${student.firstName} ${student.lastName}`;
-      const status = student.isVerified ? "Active" : "Inactive";
+      const status = student.isVerified ? 'Active' : 'Inactive';
 
       return {
         id: student.id,
@@ -58,20 +60,22 @@ const getStudentInfo = async (req, res) => {
 
     res.status(200).json({ studentInfo });
   } catch (error) {
-    console.error("Error fetching student data:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error('Error fetching student data:', error);
+    res.status(500).json({
+      message: 'Internal Server Error',
+    });
   }
 };
 
 const getStudentInfoByBatch = async (req, res) => {
   try {
     const { addedByAdminId, batchId } = req.body;
-    console.log("Added By Admin ID:", addedByAdminId);
-    console.log("Batch ID:", batchId);
+    console.log('Added By Admin ID:', addedByAdminId);
+    console.log('Batch ID:', batchId);
     if (!addedByAdminId || !batchId) {
-      return res
-        .status(400)
-        .json({ message: "Both Admin ID and Batch ID are required" });
+      return res.status(400).json({
+        message: 'Both Admin ID and Batch ID are required',
+      });
     }
 
     const batch = await Batch.findOne({
@@ -79,17 +83,17 @@ const getStudentInfoByBatch = async (req, res) => {
       include: [
         {
           model: Student,
-          as: "Students",
+          as: 'Students',
           attributes: [
-            "id",
-            "firstName",
-            "lastName",
-            "emailAddress",
-            "mobileNumber",
-            "gender",
-            "dateOfBirth",
-            "isVerified",
-            "addedByAdminId",
+            'id',
+            'firstName',
+            'lastName',
+            'emailAddress',
+            'mobileNumber',
+            'gender',
+            'dateOfBirth',
+            'isVerified',
+            'addedByAdminId',
           ],
           through: { attributes: [] },
         },
@@ -97,30 +101,34 @@ const getStudentInfoByBatch = async (req, res) => {
     });
 
     if (!batch) {
-      return res.status(404).json({ message: "Batch not found" });
+      return res.status(404).json({
+        message: 'Batch not found',
+      });
     }
-    console.log("Batch Students:", batch);
+    console.log('Batch Students:', batch);
 
     const studentInfo = batch.Students.filter(
-      (s) => String(s.addedByAdminId) === String(addedByAdminId)
-    ).map((s) => ({
+      s => String(s.addedByAdminId) === String(addedByAdminId)
+    ).map(s => ({
       id: s.id,
       fullName: `${s.firstName} ${s.lastName}`,
       email: s.emailAddress,
       phone: s.mobileNumber,
-      status: s.isVerified ? "Active" : "Inactive",
+      status: s.isVerified ? 'Active' : 'Inactive',
     }));
 
     if (!studentInfo.length) {
-      return res
-        .status(404)
-        .json({ message: "No students in this batch for that admin" });
+      return res.status(404).json({
+        message: 'No students in this batch for that admin',
+      });
     }
 
     return res.status(200).json({ studentInfo });
   } catch (error) {
-    console.error("Error fetching student data:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+    console.error('Error fetching student data:', error);
+    return res.status(500).json({
+      message: 'Internal Server Error',
+    });
   }
 };
 
@@ -150,35 +158,47 @@ const saveBasicStudentData = async (req, res) => {
       !gender ||
       !addedByAdminId
     ) {
-      return res
-        .status(400)
-        .json({ message: "All required fields must be provided" });
+      return res.status(400).json({
+        message: 'All required fields must be provided',
+      });
     }
 
     // Validate mobile number (10 digits)
     if (!/^\d{10}$/.test(phoneNumber)) {
-      return res.status(400).json({ message: "Enter a valid 10-digit mobile number" });
+      return res.status(400).json({
+        message: 'Enter a valid 10-digit mobile number',
+      });
     }
 
     // Check if email already exists
-    const existingStudent = await Student.findOne({ where: { emailAddress: email } });
+    const existingStudent = await Student.findOne({
+      where: { emailAddress: email },
+    });
     if (existingStudent) {
-      return res.status(409).json({ message: "Email already registered" });
+      return res.status(409).json({
+        message: 'Email already registered',
+      });
     }
 
     // Check if mobile number already exists
-    const existingPhone = await Student.findOne({ where: { mobileNumber: phoneNumber } });
+    const existingPhone = await Student.findOne({
+      where: {
+        mobileNumber: phoneNumber,
+      },
+    });
     if (existingPhone) {
-      return res.status(409).json({ message: "Mobile number already registered" });
+      return res.status(409).json({
+        message: 'Mobile number already registered',
+      });
     }
 
     // Store original password to send via WhatsApp
     const originalPassword = String(password).trim();
 
     // Hash password for database
-    console.log("Original password:", originalPassword);
+    console.log('Original password:', originalPassword);
     const hashedPassword = await bcrypt.hash(originalPassword, 10);
-    console.log("Hashed password:", hashedPassword);
+    console.log('Hashed password:', hashedPassword);
 
     const newStudent = await Student.create({
       emailAddress: email,
@@ -214,13 +234,13 @@ Thank you for joining *ExamPortal*!`
       );
 
       if (!whatsappResult) {
-        console.error("⚠️ Failed to send credentials via WhatsApp");
+        console.error('⚠️ Failed to send credentials via WhatsApp');
         // Don't fail the request, but log the error
       } else {
-        console.log("✅ Login credentials sent via WhatsApp to:", phoneNumber);
+        console.log('✅ Login credentials sent via WhatsApp to:', phoneNumber);
       }
     } catch (whatsappError) {
-      console.error("❌ WhatsApp error:", whatsappError);
+      console.error('❌ WhatsApp error:', whatsappError);
       // Continue even if WhatsApp fails
     }
 
@@ -237,12 +257,15 @@ Thank you for joining *ExamPortal*!`
     };
 
     return res.status(201).json({
-      message: "Student created successfully. Login credentials sent to WhatsApp.",
+      message:
+        'Student created successfully. Login credentials sent to WhatsApp.',
       student: studentResponse,
     });
   } catch (error) {
-    console.error("❌ Error saving student data:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+    console.error('❌ Error saving student data:', error);
+    return res.status(500).json({
+      message: 'Internal Server Error',
+    });
   }
 };
 
@@ -252,7 +275,7 @@ const deleteStudentById = async (req, res) => {
 
     if (!studentId) {
       return res.status(400).json({
-        message: "Student ID is required",
+        message: 'Student ID is required',
       });
     }
 
@@ -260,20 +283,20 @@ const deleteStudentById = async (req, res) => {
 
     if (!student) {
       return res.status(404).json({
-        message: "Student not found",
+        message: 'Student not found',
       });
     }
 
     await student.destroy();
 
     return res.status(200).json({
-      message: "Student deleted successfully",
+      message: 'Student deleted successfully',
       deletedStudentId: studentId,
     });
   } catch (error) {
-    console.error("Error deleting student:", error);
+    console.error('Error deleting student:', error);
     return res.status(500).json({
-      message: "Internal Server Error",
+      message: 'Internal Server Error',
       error: error.message,
     });
   }
@@ -285,9 +308,9 @@ const bulkSaveStudents = async (req, res) => {
     const { students } = req.body;
 
     if (!students || !Array.isArray(students) || students.length === 0) {
-      console.error("Invalid students array:", students);
+      console.error('Invalid students array:', students);
       return res.status(400).json({
-        message: "Students array is required and must be a non-empty array",
+        message: 'Students array is required and must be a non-empty array',
       });
     }
 
@@ -312,25 +335,37 @@ const bulkSaveStudents = async (req, res) => {
 
       // Validate required fields
       if (!emailAddress) {
-        console.error(`Missing emailAddress for student at index ${i + 1}:`, student);
+        console.error(
+          `Missing emailAddress for student at index ${i + 1}:`,
+          student
+        );
         return res.status(400).json({
           message: `Missing EMAIL for student at index ${i + 1}`,
         });
       }
       if (!firstName) {
-        console.error(`Missing firstName for student at index ${i + 1}:`, student);
+        console.error(
+          `Missing firstName for student at index ${i + 1}:`,
+          student
+        );
         return res.status(400).json({
           message: `Missing FIRST NAME for student at index ${i + 1}`,
         });
       }
       if (!dateOfBirth) {
-        console.error(`Missing dateOfBirth for student at index ${i + 1}:`, student);
+        console.error(
+          `Missing dateOfBirth for student at index ${i + 1}:`,
+          student
+        );
         return res.status(400).json({
           message: `Missing DOB for student at index ${i + 1}`,
         });
       }
       if (!mobileNumber) {
-        console.error(`Missing mobileNumber for student at index ${i + 1}:`, student);
+        console.error(
+          `Missing mobileNumber for student at index ${i + 1}:`,
+          student
+        );
         return res.status(400).json({
           message: `Missing PHONE NUMBER for student at index ${i + 1}`,
         });
@@ -342,7 +377,10 @@ const bulkSaveStudents = async (req, res) => {
         });
       }
       if (!addedByAdminId) {
-        console.error(`Missing addedByAdminId for student at index ${i + 1}:`, student);
+        console.error(
+          `Missing addedByAdminId for student at index ${i + 1}:`,
+          student
+        );
         return res.status(400).json({
           message: `Missing addedByAdminId for student at index ${i + 1}`,
         });
@@ -351,7 +389,10 @@ const bulkSaveStudents = async (req, res) => {
       // Validate email format
       const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
       if (!emailRegex.test(emailAddress)) {
-        console.error(`Invalid email format for student at index ${i + 1}:`, emailAddress);
+        console.error(
+          `Invalid email format for student at index ${i + 1}:`,
+          emailAddress
+        );
         return res.status(400).json({
           message: `Invalid EMAIL format for student at index ${i + 1}: ${emailAddress}`,
         });
@@ -359,7 +400,10 @@ const bulkSaveStudents = async (req, res) => {
 
       // Validate mobile number
       if (!/^[6-9]\d{9}$/.test(mobileNumber)) {
-        console.error(`Invalid mobile number for student at index ${i + 1}:`, mobileNumber);
+        console.error(
+          `Invalid mobile number for student at index ${i + 1}:`,
+          mobileNumber
+        );
         return res.status(400).json({
           message: `Invalid PHONE NUMBER for student at index ${i + 1}: ${mobileNumber}. Must be 10 digits starting with 6-9.`,
         });
@@ -384,7 +428,9 @@ const bulkSaveStudents = async (req, res) => {
 
       // Generate password if not provided
       const birthYear = new Date(dateOfBirth).getFullYear();
-      const originalPassword = providedPassword || `${firstName.charAt(0).toUpperCase()}${birthYear}${Math.floor(1000 + Math.random() * 9000)}`;
+      const originalPassword =
+        providedPassword ||
+        `${firstName.charAt(0).toUpperCase()}${birthYear}${Math.floor(1000 + Math.random() * 9000)}`;
 
       // Hash password
       const hashedPassword = await bcrypt.hash(originalPassword, 10);
@@ -405,7 +451,7 @@ const bulkSaveStudents = async (req, res) => {
         examType: null,
         studentClass: null,
         targetYear: null,
-        fullName: `${firstName} ${lastName || ""}`.trim() || null,
+        fullName: `${firstName} ${lastName || ''}`.trim() || null,
         fullAddress: null,
         domicileState: null,
         parentName: null,
@@ -464,11 +510,11 @@ Thank you for joining *ExamPortal*!`,
 
       // Send WhatsApp messages
       const whatsappResults = await Promise.allSettled(
-        whatsappMessages.map((msg) => sendWhatsAppMessage(msg.phone, msg.message))
+        whatsappMessages.map(msg => sendWhatsAppMessage(msg.phone, msg.message))
       );
 
       const successfulWhatsApp = whatsappResults.filter(
-        (result) => result.status === "fulfilled" && result.value
+        result => result.status === 'fulfilled' && result.value
       ).length;
 
       console.log(
@@ -476,7 +522,7 @@ Thank you for joining *ExamPortal*!`,
       );
 
       // Trim savedStudents for response
-      const savedStudentsTrimmed = savedStudents.map((s) => ({
+      const savedStudentsTrimmed = savedStudents.map(s => ({
         id: s.id,
         firstName: s.firstName,
         lastName: s.lastName,
@@ -507,15 +553,15 @@ Thank you for joining *ExamPortal*!`,
       });
     } else {
       return res.status(400).json({
-        message: "No valid students to add",
+        message: 'No valid students to add',
         existingEmails,
         existingPhones,
       });
     }
   } catch (error) {
-    console.error("❌ Error saving student data:", error);
+    console.error('❌ Error saving student data:', error);
     return res.status(500).json({
-      message: "Internal Server Error",
+      message: 'Internal Server Error',
       error: error.message,
     });
   }
@@ -527,13 +573,15 @@ const updateBatchIdForUsers = async (req, res) => {
     const { emails, batchId } = req.body;
 
     if (!emails || !Array.isArray(emails) || emails.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "Emails are required and should be an array" });
+      return res.status(400).json({
+        message: 'Emails are required and should be an array',
+      });
     }
 
     if (!batchId) {
-      return res.status(400).json({ message: "Batch ID is required" });
+      return res.status(400).json({
+        message: 'Batch ID is required',
+      });
     }
 
     const [affectedCount] = await Student.update(
@@ -546,14 +594,14 @@ const updateBatchIdForUsers = async (req, res) => {
     );
 
     if (affectedCount === 0) {
-      return res
-        .status(404)
-        .json({ message: "No students found with the provided emails" });
+      return res.status(404).json({
+        message: 'No students found with the provided emails',
+      });
     }
 
     const updatedStudents = await Student.findAll({
       where: { emailAddress: emails },
-      attributes: ["id", "emailAddress", "firstName", "lastName", "batchId"],
+      attributes: ['id', 'emailAddress', 'firstName', 'lastName', 'batchId'],
     });
 
     return res.status(200).json({
@@ -561,8 +609,10 @@ const updateBatchIdForUsers = async (req, res) => {
       updatedStudents,
     });
   } catch (error) {
-    console.error("Error updating batchId:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+    console.error('Error updating batchId:', error);
+    return res.status(500).json({
+      message: 'Internal Server Error',
+    });
   }
 };
 
@@ -579,9 +629,11 @@ const updateStudentData = async (req, res) => {
     } = req.body;
 
     if (!id) {
-      return res.status(400).json({ message: "Student ID is required" });
+      return res.status(400).json({
+        message: 'Student ID is required',
+      });
     }
-    
+
     if (
       !firstName ||
       !lastName ||
@@ -592,37 +644,51 @@ const updateStudentData = async (req, res) => {
     ) {
       return res.status(400).json({
         message:
-          "All fields (firstName, lastName, emailAddress, dateOfBirth, mobileNumber, gender) are required",
+          'All fields (firstName, lastName, emailAddress, dateOfBirth, mobileNumber, gender) are required',
       });
     }
 
     // Validate mobile number
     if (!/^\d{10}$/.test(mobileNumber)) {
-      return res.status(400).json({ message: "Enter a valid 10-digit mobile number" });
+      return res.status(400).json({
+        message: 'Enter a valid 10-digit mobile number',
+      });
     }
 
     const student = await Student.findByPk(id);
     if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(404).json({
+        message: 'Student not found',
+      });
     }
 
     // Check if email is being changed and if new email exists
     if (emailAddress !== student.emailAddress) {
       const existingEmail = await Student.findOne({
-        where: { emailAddress, id: { [Op.ne]: id } },
+        where: {
+          emailAddress,
+          id: { [Op.ne]: id },
+        },
       });
       if (existingEmail) {
-        return res.status(409).json({ message: "Email already exists" });
+        return res.status(409).json({
+          message: 'Email already exists',
+        });
       }
     }
 
     // Check if phone is being changed and if new phone exists
     if (mobileNumber !== student.mobileNumber) {
       const existingPhone = await Student.findOne({
-        where: { mobileNumber, id: { [Op.ne]: id } },
+        where: {
+          mobileNumber,
+          id: { [Op.ne]: id },
+        },
       });
       if (existingPhone) {
-        return res.status(409).json({ message: "Mobile number already exists" });
+        return res.status(409).json({
+          message: 'Mobile number already exists',
+        });
       }
     }
 
@@ -636,7 +702,7 @@ const updateStudentData = async (req, res) => {
     await student.save();
 
     return res.status(200).json({
-      message: "Student updated successfully",
+      message: 'Student updated successfully',
       student: {
         id: student.id,
         firstName: student.firstName,
@@ -648,8 +714,10 @@ const updateStudentData = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error updating student data:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+    console.error('Error updating student data:', error);
+    return res.status(500).json({
+      message: 'Internal Server Error',
+    });
   }
 };
 
@@ -657,49 +725,62 @@ const updateStudentData = async (req, res) => {
 const createBatch = async (req, res) => {
   try {
     const { batchName, no_of_students, studentIds, status } = req.body;
-    const adminId = req.adminId;
+    const adminId = req.admin.id;
 
     if (!adminId) {
-      return res.status(400).json({ message: "Admin ID is required" });
+      return res.status(400).json({
+        message: 'Admin ID is required',
+      });
     }
 
     if (
       !batchName ||
       !no_of_students ||
       !Array.isArray(studentIds) ||
-      typeof status !== "boolean"
+      typeof status !== 'boolean'
     ) {
       return res.status(400).json({
         message:
-          "Batch Name, Number of Students, Student IDs (array), and Status are required.",
+          'Batch Name, Number of Students, Student IDs (array), and Status are required.',
       });
     }
 
     const year = new Date().getFullYear();
-    const month = (new Date().getMonth() + 1).toString().padStart(2, "0");
+    const month = (new Date().getMonth() + 1).toString().padStart(2, '0');
 
     const lastBatch = await Batch.findOne({
-      where: { batchId: { [Op.like]: `BATCH-${year}-${month}-%` } },
-      order: [["batchId", "DESC"]],
+      where: {
+        batchId: {
+          [Op.like]: `BATCH-${year}-${month}-%`,
+        },
+      },
+      order: [['batchId', 'DESC']],
     });
 
     const sequenceNumber = lastBatch
-      ? parseInt(lastBatch.batchId.split("-")[3]) + 1
+      ? parseInt(lastBatch.batchId.split('-')[3]) + 1
       : 1;
-    const batchId = `BATCH-${year}-${month}-${sequenceNumber.toString().padStart(3, "0")}`;
+    const batchId = `BATCH-${year}-${month}-${sequenceNumber.toString().padStart(3, '0')}`;
 
-    const existingBatchById = await Batch.findOne({ where: { batchId } });
+    const existingBatchById = await Batch.findOne({
+      where: { batchId },
+    });
     if (existingBatchById) {
-      return res.status(409).json({ message: "Batch ID already exists" });
+      return res.status(409).json({
+        message: 'Batch ID already exists',
+      });
     }
 
     const existingBatchByName = await Batch.findOne({
-      where: { batchName, admin_id: adminId },
+      where: {
+        batchName,
+        admin_id: adminId,
+      },
     });
     if (existingBatchByName) {
-      return res
-        .status(409)
-        .json({ message: "You already have a batch with this name" });
+      return res.status(409).json({
+        message: 'You already have a batch with this name',
+      });
     }
 
     const newBatch = await Batch.create({
@@ -716,12 +797,12 @@ const createBatch = async (req, res) => {
       });
 
       if (students.length !== studentIds.length) {
-        return res
-          .status(400)
-          .json({ message: "One or more student IDs are invalid" });
+        return res.status(400).json({
+          message: 'One or more student IDs are invalid',
+        });
       }
 
-      const studentBatchAssociations = students.map((student) => ({
+      const studentBatchAssociations = students.map(student => ({
         studentId: student.id,
         batchId: newBatch.batchId,
       }));
@@ -730,14 +811,15 @@ const createBatch = async (req, res) => {
     }
 
     return res.status(201).json({
-      message: "Batch created successfully",
+      message: 'Batch created successfully',
       batch: newBatch,
     });
   } catch (error) {
-    console.error("Error creating batch:", error);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    console.error('Error creating batch:', error);
+    return res.status(500).json({
+      message: 'Internal Server Error',
+      error: error.message,
+    });
   }
 };
 
@@ -746,30 +828,45 @@ const updateBatch = async (req, res) => {
   try {
     const { batchId } = req.params;
     const { batchName, no_of_students, status, studentIds } = req.body;
-    const adminId = req.adminId;
+    const adminId = req.admin.id;
 
     if (!adminId) {
-      return res.status(400).json({ message: "Admin ID is required" });
+      return res.status(400).json({
+        message: 'Admin ID is required',
+      });
     }
 
     const batch = await Batch.findOne({
-      where: { batchId, admin_id: adminId },
+      where: {
+        batchId,
+        admin_id: adminId,
+      },
       include: {
         model: Student,
         through: { attributes: [] },
-        as: "Students",
+        as: 'Students',
       },
     });
 
     if (!batch) {
-      return res
-        .status(404)
-        .json({ message: "Batch not found or unauthorized" });
+      return res.status(404).json({
+        message: 'Batch not found or unauthorized',
+      });
     }
 
     if (batchName !== undefined) batch.batchName = batchName;
     if (no_of_students !== undefined) batch.no_of_students = no_of_students;
-    if (status !== undefined) batch.status = status;
+    // status validation
+    if (status !== undefined && !['Active', 'Inactive'].includes(status)) {
+      return res.status(400).json({
+        message: 'Invalid status value',
+      });
+    }
+
+    // status update (THIS WAS MISSING)
+    if (status !== undefined) {
+      batch.status = status;
+    }
 
     if (studentIds !== undefined) {
       const students = await Student.findAll({
@@ -778,25 +875,23 @@ const updateBatch = async (req, res) => {
 
       if (students.length !== studentIds.length) {
         return res.status(400).json({
-          message: "One or more student IDs are invalid",
-          invalidIds: studentIds.filter(
-            (id) => !students.some((s) => s.id === id)
-          ),
+          message: 'One or more student IDs are invalid',
+          invalidIds: studentIds.filter(id => !students.some(s => s.id === id)),
         });
       }
 
-      const currentStudentIds = batch.Students.map((student) => student.id);
+      const currentStudentIds = batch.Students.map(student => student.id);
 
       const studentsToAdd = studentIds.filter(
-        (id) => !currentStudentIds.includes(id)
+        id => !currentStudentIds.includes(id)
       );
 
       const studentsToRemove = currentStudentIds.filter(
-        (id) => !studentIds.includes(id)
+        id => !studentIds.includes(id)
       );
 
       if (studentsToAdd.length > 0) {
-        const newStudents = students.filter((student) =>
+        const newStudents = students.filter(student =>
           studentsToAdd.includes(student.id)
         );
         await batch.addStudents(newStudents);
@@ -814,22 +909,20 @@ const updateBatch = async (req, res) => {
     await batch.save();
 
     const updatedBatch = await Batch.findOne({
-      where: { batchId },
-      include: {
-        model: Student,
-        through: { attributes: [] },
-        as: "Students",
+      where: {
+        batchId,
+        admin_id: adminId,
       },
     });
-
     res.status(200).json({
-      message: "Batch updated successfully",
+      success: true,
+      message: 'Batch updated successfully',
       batch: updatedBatch,
     });
   } catch (error) {
-    console.error("Error updating batch:", error);
+    console.error('Error updating batch:', error);
     res.status(500).json({
-      message: "Internal Server Error",
+      message: 'Internal Server Error',
       error: error.message,
     });
   }
@@ -842,28 +935,36 @@ const deleteBatch = async (req, res) => {
     const adminId = req.adminId;
 
     if (!adminId) {
-      return res.status(400).json({ message: "Admin ID is required" });
+      return res.status(400).json({
+        message: 'Admin ID is required',
+      });
     }
 
     const batch = await Batch.findOne({
-      where: { batchId, admin_id: adminId },
+      where: {
+        batchId,
+        admin_id: adminId,
+      },
     });
 
     if (!batch) {
-      return res
-        .status(404)
-        .json({ message: "Batch not found or unauthorized" });
+      return res.status(404).json({
+        message: 'Batch not found or unauthorized',
+      });
     }
 
     await batch.setStudents([]);
     await batch.destroy();
 
-    res.status(200).json({ message: "Batch deleted successfully" });
+    res.status(200).json({
+      message: 'Batch deleted successfully',
+    });
   } catch (error) {
-    console.error("Error deleting batch:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    console.error('Error deleting batch:', error);
+    res.status(500).json({
+      message: 'Internal Server Error',
+      error: error.message,
+    });
   }
 };
 
@@ -871,21 +972,24 @@ const deleteBatch = async (req, res) => {
 const getBatchById = async (req, res) => {
   try {
     const { batchId } = req.params;
-    const adminId = req.adminId;
+    const adminId = req.admin.id;
 
     const batch = await Batch.findOne({
-      where: { batchId, admin_id: adminId },
+      where: {
+        batchId,
+        admin_id: adminId,
+      },
       include: [
         {
           model: Student,
-          as: "Students",
+          as: 'Students',
           attributes: [
-            "id",
-            "firstName",
-            "lastName",
-            "emailAddress",
-            "mobileNumber",
-            "isVerified",
+            'id',
+            'firstName',
+            'lastName',
+            'emailAddress',
+            'mobileNumber',
+            'isVerified',
           ],
           through: { attributes: [] },
         },
@@ -893,13 +997,17 @@ const getBatchById = async (req, res) => {
     });
 
     if (!batch) {
-      return res.status(404).json({ message: "Batch not found" });
+      return res.status(404).json({
+        message: 'Batch not found',
+      });
     }
 
     return res.status(200).json({ batch });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({
+      message: 'Internal Server Error',
+    });
   }
 };
 
@@ -909,25 +1017,27 @@ const getBatchNames = async (req, res) => {
     const { adminId } = req.body;
 
     if (!adminId) {
-      return res.status(400).json({ message: "Admin ID is required." });
+      return res.status(400).json({
+        message: 'Admin ID is required.',
+      });
     }
 
     const batchData = await Batch.findAll({
       where: { admin_id: adminId },
-      attributes: ["batch_id", "batchName"],
+      attributes: ['batch_id', 'batchName'],
     });
 
     if (batchData.length === 0) {
       return res.status(404).json({
-        message: "No batches found.",
+        message: 'No batches found.',
       });
     }
 
     return res.status(200).json({ batchData });
   } catch (error) {
-    console.error("Error fetching batch names:", error);
+    console.error('Error fetching batch names:', error);
     return res.status(500).json({
-      message: "Error finding batches",
+      message: 'Error finding batches',
       error: error.message,
     });
   }
@@ -938,12 +1048,12 @@ const getBatchInfo = async (req, res) => {
     const adminId = req.user.adminId;
     if (!adminId) {
       return res.status(400).json({
-        message: "Admin ID is required",
+        message: 'Admin ID is required',
       });
     }
 
     const batchData = await Batch.findAll({
-      attributes: ["batchId", "batchName", "no_of_students"],
+      attributes: ['batchId', 'batchName', 'no_of_students', 'status'],
       where: {
         admin_id: req.user.adminId,
       },
@@ -951,15 +1061,15 @@ const getBatchInfo = async (req, res) => {
 
     if (batchData.length === 0) {
       return res.status(404).json({
-        message: "No batches found",
+        message: 'No batches found',
       });
     }
 
     res.status(200).json({ batchData });
   } catch (error) {
-    console.error("Error fetching batch data:", error);
+    console.error('Error fetching batch data:', error);
     res.status(500).json({
-      message: "Internal Server Error",
+      message: 'Internal Server Error',
     });
   }
 };

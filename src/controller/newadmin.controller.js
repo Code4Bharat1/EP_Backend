@@ -137,30 +137,20 @@ const loginAdmin = async (req, res) => {
     // console.log("admin : ", admin);
 
     let token;
-    if (admin.created_by_admin_id == null) {
-      console.log("null");
-      // Generate a JWT token
-      token = jwt.sign(
-        { id: admin.id, role: admin.role, adminId: admin.AdminId },
-        process.env.JWT_SECRET,
-        {
-          expiresIn: "30d", // Token expires in 30 days
-        }
-      );
-    } else {
-      // Generate a JWT token
-      token = jwt.sign(
-        {
-          id: admin.created_by_admin_id,
-          role: admin.role,
-          adminId: admin.AdminId,
-        },
-        process.env.JWT_SECRET,
-        {
-          expiresIn: "30d", // Token expires in 30 days
-        }
-      );
-    }
+    // Generate a JWT token with consistent format
+    token = jwt.sign(
+      { 
+        id: admin.id,              // Always use the logged-in admin's own ID
+        role: admin.role, 
+        adminId: admin.AdminId,
+        email: admin.Email,
+        createdBy: admin.created_by_admin_id  // Store creator ID separately if needed
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "30d", // Token expires in 30 days
+      }
+    );
 
     // Return success message along with the token and admin details
     return res.status(200).json({
@@ -738,7 +728,13 @@ const updateTest = async (req, res) => {
 
 const dashboardDetails = async (req, res) => {
   try {
-    const { adminId } = req.body;
+    // Get adminId from body or from token (req.user set by verifyToken middleware)
+    let adminId = req.body.adminId;
+    console.log("Admin ID" ,adminId)
+    // If not in body, try to get from token
+    if (!adminId && req.user) {
+      adminId = req.user.adminId || req.user.studentId;
+    }
 
     if (!adminId) {
       return res.status(400).json({ message: "Admin ID is required" });

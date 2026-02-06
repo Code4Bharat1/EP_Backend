@@ -201,6 +201,20 @@ app.use("/api/review", reviewTestRoute)
 app.use("/api/review", reviewQuestion);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/payment", paymentRoutes)
+
+
+
+app.use((req, res) => {
+  console.log(
+    "❌ 404 HIT:",
+    req.method,
+    req.originalUrl,
+  );
+  res
+    .status(404)
+    .json({ error: "Not found" });
+});
+
 // --- Start server ---
 app.listen(port, () => {
   console.log(`🚀 Server running securely on port ${port}`);

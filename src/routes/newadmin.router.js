@@ -22,7 +22,7 @@ router.post("/test-result", getTestResults);
 router.get("/getProfile",verifyToken, getProfile);
 router.put("/updateProfile",verifyToken, updateProfile);
 router.get("/getTestData",verifyToken, getTestData);
-router.post("/dashboard-details", dashboardDetails);
+router.post("/dashboard-details", verifyToken, dashboardDetails);
 router.get("/upcomingtest-data", verifyToken, getUpcomingTestByBatch);
 router.post("/colors", getAdminColors);
 router.post("/studentcolors", getAdminColorsByStudentId);

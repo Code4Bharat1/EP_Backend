@@ -6,6 +6,7 @@ import {Pdf, Question
 import { Op } from "../init/dbConnection.js"; // Ensure Op is imported
 import { sequelizeCon } from "../init/dbConnection.js"; 
 import { Sequelize } from "sequelize";
+import { log } from "console";
 
 
 const createTest = async (req, res) => {
@@ -188,8 +189,7 @@ const createdTests = async (req, res)=> {
 
 const getTestCountByAdmin = async (req, res) => {
   try {
-    const adminId = req.adminId;
-
+    const adminId = req.admin.id;
     if (!adminId) {
       return res.status(400).json({ success: false, message: "Admin ID is required" });
     }
@@ -205,7 +205,7 @@ const getTestCountByAdmin = async (req, res) => {
         }
       }
     });
-
+    log(testCount)
     res.status(200).json({ success: true, testCount });
   } catch (error) {
     console.error("Error fetching test count:", error);

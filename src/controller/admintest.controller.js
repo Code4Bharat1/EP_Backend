@@ -189,12 +189,17 @@ const createdTests = async (req, res)=> {
 
 const getTestCountByAdmin = async (req, res) => {
   try {
-    const adminId = req.admin.id;
+    // Support both req.admin.id and req.user.adminId
+    const adminId = req.admin?.id || req.user?.adminId;
+    
     if (!adminId) {
-      return res.status(400).json({ success: false, message: "Admin ID is required" });
+      return res.status(400).json({ 
+        success: false, 
+        message: "Admin ID is required. Please log in again." 
+      });
     }
 
-    const currentDate = new Date(); // or use moment().toDate()
+    const currentDate = new Date();
 
     // Count active (non-expired) tests
     const testCount = await Admintest.count({
@@ -205,7 +210,7 @@ const getTestCountByAdmin = async (req, res) => {
         }
       }
     });
-    log(testCount)
+    
     res.status(200).json({ success: true, testCount });
   } catch (error) {
     console.error("Error fetching test count:", error);

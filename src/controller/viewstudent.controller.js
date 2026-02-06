@@ -725,11 +725,12 @@ const updateStudentData = async (req, res) => {
 const createBatch = async (req, res) => {
   try {
     const { batchName, no_of_students, studentIds, status } = req.body;
-    const adminId = req.admin.id;
+    // Support both req.admin.id and req.user.adminId
+    const adminId = req.admin?.id || req.user?.adminId;
 
     if (!adminId) {
       return res.status(400).json({
-        message: 'Admin ID is required',
+        message: 'Admin ID is required. Please log in again.',
       });
     }
 
@@ -828,11 +829,12 @@ const updateBatch = async (req, res) => {
   try {
     const { batchId } = req.params;
     const { batchName, no_of_students, status, studentIds } = req.body;
-    const adminId = req.admin.id;
+    // Support both req.admin.id and req.user.adminId
+    const adminId = req.admin?.id || req.user?.adminId;
 
     if (!adminId) {
       return res.status(400).json({
-        message: 'Admin ID is required',
+        message: 'Admin ID is required. Please log in again.',
       });
     }
 
@@ -972,7 +974,14 @@ const deleteBatch = async (req, res) => {
 const getBatchById = async (req, res) => {
   try {
     const { batchId } = req.params;
-    const adminId = req.admin.id;
+    // Support both req.admin.id and req.user.adminId
+    const adminId = req.admin?.id || req.user?.adminId;
+
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'Admin ID is required. Please log in again.',
+      });
+    }
 
     const batch = await Batch.findOne({
       where: {

@@ -88,6 +88,7 @@ const login = async (req, res) => {
         id: admin.id,              // numeric primary key
         adminId: admin.AdminId,    // string AdminId (ADM-xxx)
         email: admin.Email,
+        name: admin.name,          // Include admin name in token
         role: admin.role
       },
       process.env.JWT_SECRET,

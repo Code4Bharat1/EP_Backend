@@ -86,14 +86,16 @@ export const verifyToken = (req, res, next) => {
       3) Public Student -> { id, email }
     */
 
-    // 1️⃣ ADMIN
-    if (decoded.role === "admin") {
+    // 1️⃣ ADMIN (all admin roles)
+    if (decoded.role && ["admin", "sub-admin", "teacher", "batchmanager", "supporter", "content_manager"].includes(decoded.role)) {
       req.userType = "admin";
       req.user = {
         adminId: decoded.id,
+        role: decoded.role,
       };
       req.admin = {
         id: decoded.id, // Support both token formats
+        role: decoded.role,
       };
       return next();
     }

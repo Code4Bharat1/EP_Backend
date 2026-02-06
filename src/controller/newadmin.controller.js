@@ -144,6 +144,7 @@ const loginAdmin = async (req, res) => {
         role: admin.role, 
         adminId: admin.AdminId,
         email: admin.Email,
+        name: admin.name,          // Include admin name in token
         createdBy: admin.created_by_admin_id  // Store creator ID separately if needed
       },
       process.env.JWT_SECRET,
